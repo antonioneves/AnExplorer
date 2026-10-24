@@ -166,21 +166,30 @@ public class ListDocumentHolder extends DocumentHolder {
             oldSizeTask.preempt();
             size.setTag(null);
         }
-        if (state.showSize) {
+        if (Utils.isDir(mDoc.mimeType)) {
+            // Folders show how many items they hold (and their size when that is turned on)
             size.setVisibility(View.VISIBLE);
-            if (Utils.isDir(mDoc.mimeType) || mDoc.size == -1) {
-                ArrayMap<Integer, Long> sizes = DocumentsApplication.getFolderSizes();
-                size.setText(null);
-                if (state.showFolderSize) {
-                    long sizeInBytes = sizes.containsKey(position) ? sizes.get(position) : -1;
-                    if (sizeInBytes != -1) {
-                        size.setText(Formatter.formatFileSize(context, sizeInBytes));
-                    } else {
-                        final FolderSizeAsyncTask task = new FolderSizeAsyncTask(size, mDoc.path, position);
-                        size.setTag(task);
-                        ProviderExecutor.forAuthority(mDoc.authority).execute(task);
-                    }
+            size.setText(null);
+            if (!TextUtils.isEmpty(mDoc.path)) {
+                final boolean withSize = state.showSize && state.showFolderSize;
+                final ArrayMap<Integer, Integer> counts = DocumentsApplication.getFolderCounts();
+                final ArrayMap<Integer, Long> sizes = DocumentsApplication.getFolderSizes();
+                final int count = counts.containsKey(position) ? counts.get(position) : -1;
+                final long sizeInBytes = sizes.containsKey(position) ? sizes.get(position) : -1;
+                if (count != -1 && (!withSize || sizeInBytes != -1)) {
+                    size.setText(FolderSizeAsyncTask.format(context, count, withSize ? sizeInBytes : -1));
+                } else {
+                    final FolderSizeAsyncTask task = new FolderSizeAsyncTask(size, mDoc.path, position,
+                            withSize, state.showHiddenFiles);
+                    size.setTag(task);
+                    ProviderExecutor.forAuthority(mDoc.authority).execute(task);
                 }
+                hasLine2 = true;
+            }
+        } else if (state.showSize) {
+            size.setVisibility(View.VISIBLE);
+            if (mDoc.size == -1) {
+                size.setText(null);
             } else {
                 size.setText(Formatter.formatFileSize(context, mDoc.size));
                 hasLine2 = true;

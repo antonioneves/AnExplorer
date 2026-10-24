@@ -48,6 +48,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         mCursorCount = mCursor != null ? mCursor.getCount() : 0;
 
         DocumentsApplication.getFolderSizes().clear();
+        DocumentsApplication.getFolderCounts().clear();
         mFooters.clear();
 
         final Bundle extras = mCursor != null ? mCursor.getExtras() : null;

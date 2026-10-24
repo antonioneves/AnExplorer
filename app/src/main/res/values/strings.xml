@@ -88,6 +88,11 @@
 
     <!-- Text shown when a directory of documents is empty [CHAR LIMIT=24] -->
     <string name="empty">No items</string>
+    <!-- How many items a folder holds, shown on its card -->
+    <plurals name="folder_item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
 
     <!-- Toast shown when no app can be found to open the selected document [CHAR LIMIT=48] -->
     <string name="toast_no_application">Can\'t open file</string>

@@ -117,7 +117,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start"
-                    android:layout_weight="0.5"
+                    android:layout_weight="1"
                     android:ellipsize="end"
                     android:singleLine="true"
                     android:textAlignment="viewStart"
@@ -126,12 +126,11 @@
 
                 <TextView
                     android:id="@+id/size"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start"
                     android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
-                    android:layout_weight="0.5"
                     android:ellipsize="end"
                     android:singleLine="true"
                     android:textAlignment="viewStart"
