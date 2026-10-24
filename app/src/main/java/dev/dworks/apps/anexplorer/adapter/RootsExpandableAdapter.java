@@ -90,7 +90,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Storage", home));
         }
 
-        connection.addAll(quickShare);
+        connection.addAll(0, quickShare);
         if(!network.isEmpty()){
             network.addAll(connection);
             groupRoots.add(new GroupInfo("Network & Cloud", network));
