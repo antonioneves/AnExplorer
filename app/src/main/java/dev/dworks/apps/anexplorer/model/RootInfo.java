@@ -16,6 +16,7 @@
 
 package dev.dworks.apps.anexplorer.model;
 
+import java.util.Comparator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
@@ -215,6 +216,7 @@ public class RootInfo implements Durable, Parcelable {
             derivedTag = "usb_storage";
         } else if (isDownloadsFolder()) {
             derivedIcon = R.drawable.ic_root_download;
+            derivedColor = R.color.item_root_download;
             derivedTag = "downloads";
         } else if (isBluetoothFolder()) {
             derivedIcon = R.drawable.ic_root_bluetooth;
@@ -600,16 +602,35 @@ public class RootInfo implements Durable, Parcelable {
         return root.isHome() || root.isPhoneStorage() || root.isStorage() || root.isUsbStorage();
     }
 
-    public static boolean isLibraryMedia(RootInfo root){
-        return root.isRecents() || root.isImages() || root.isVideos() || root.isAudio();
+    /**
+     * Position of the root in the Library, shown both as the Home cards and in the sidebar,
+     * or -1 when it isn't part of it.
+     */
+    public static int getLibraryPosition(RootInfo root){
+        if (root.isImages()) return 0;
+        if (root.isAudio()) return 1;
+        if (root.isVideos()) return 2;
+        if (root.isDocument()) return 3;
+        if (root.isArchive()) return 4;
+        if (root.isApk()) return 5;
+        if (root.isDownloadsFolder()) return 6;
+        return -1;
     }
 
-    public static boolean isLibraryNonMedia(RootInfo root){
-        return root.isDocument() || root.isArchive() || root.isApk();
+    public static boolean isLibrary(RootInfo root){
+        return getLibraryPosition(root) != -1;
     }
+
+    /** Puts Library roots in their Library order. */
+    public static final Comparator<RootInfo> LIBRARY_ORDER = new Comparator<RootInfo>() {
+        @Override
+        public int compare(RootInfo a, RootInfo b) {
+            return getLibraryPosition(a) - getLibraryPosition(b);
+        }
+    };
 
     public static boolean isFolder(RootInfo root){
-        return root.isBluetoothFolder() || root.isDownloadsFolder() || root.isDownloads();
+        return root.isBluetoothFolder() || root.isDownloads();
     }
 
     public static boolean isBookmark(RootInfo root){

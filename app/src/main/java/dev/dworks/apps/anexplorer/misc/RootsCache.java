@@ -35,6 +35,7 @@ import androidx.annotation.GuardedBy;
 import androidx.collection.ArraySet;
 import android.util.Log;
 
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -479,16 +480,17 @@ public class RootsCache {
         return null;
     }
 
-    public ArrayList<RootInfo> getShortcutsInfo(){
+    /** Every Library root, empty or not, in Library order. */
+    public ArrayList<RootInfo> getLibraryRoots(){
         ArrayList<RootInfo> list = new ArrayList<>();
-        if(Utils.hasWiFi(mContext)) {
-            list.add(getServerRoot());
-        }
-        for (RootInfo root : mRoots.get(MediaDocumentsProvider.AUTHORITY)) {
-            if (RootInfo.isLibraryMedia(root)) {
-                list.add(root);
+        synchronized (mLock) {
+            for (RootInfo root : mRoots.values()) {
+                if (RootInfo.isLibrary(root)) {
+                    list.add(root);
+                }
             }
         }
+        Collections.sort(list, RootInfo.LIBRARY_ORDER);
         return list;
     }
 

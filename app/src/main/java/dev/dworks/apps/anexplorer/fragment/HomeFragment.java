@@ -152,17 +152,10 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     }
 
     private void getShortcutsData(){
-        ArrayList<RootInfo> data = roots.getShortcutsInfo();
         shortcutsData = new ArrayList<>();
-        for (RootInfo root: data) {
+        for (RootInfo root: roots.getLibraryRoots()) {
             shortcutsData.add(CommonInfo.from(root, TYPE_SHORTCUT));
         }
-        // TV keeps Recent out of the drawer and offers it here instead
-        if(null != roots.getRecentsRoot()) {
-            shortcutsData.add(CommonInfo.from(roots.getRecentsRoot(), TYPE_SHORTCUT));
-        }
-        // TV lists Quick Share in the drawer
-
     }
 
     private void getRecentsData(){

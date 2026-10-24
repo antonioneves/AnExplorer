@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
 
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +33,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         List<GroupInfo> groupRoots = new ArrayList<>();
         final List<Item> home = new ArrayList<>();
         final List<Item> phone = new ArrayList<>();
-        final List<Item> recent = new ArrayList<>();
         final List<Item> connection = new ArrayList<>();
         final List<Item> rooted = new ArrayList<>();
         final List<Item> usb = new ArrayList<>();
@@ -42,8 +42,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> network = new ArrayList<>();
         final List<Item> quickShare = new ArrayList<>();
         final List<Item> cloud = new ArrayList<>();
-        final List<Item> libraryMedia = new ArrayList<>();
-        final List<Item> libraryNonMedia = new ArrayList<>();
+        final List<RootInfo> library = new ArrayList<>();
         final List<Item> folders = new ArrayList<>();
         final List<Item> bookmarks = new ArrayList<>();
 
@@ -62,10 +61,9 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
                 phone.add(new RootItem(root));
             } else if (root.isUsbStorage()) {
                 usb.add(new RootItem(root));
-            } else if (RootInfo.isLibraryMedia(root)) {
-                libraryMedia.add(new RootItem(root));
-            } else if (RootInfo.isLibraryNonMedia(root)) {
-                libraryNonMedia.add(new RootItem(root));
+            } else if (RootInfo.isLibrary(root)) {
+                // Empty roots never get here, so only the non-empty ones are listed
+                library.add(root);
             } else if (RootInfo.isFolder(root)) {
                 folders.add(new RootItem(root));
             } else if (RootInfo.isBookmark(root)) {
@@ -100,12 +98,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Network & Cloud", connection));
         }
 
-        if(!libraryMedia.isEmpty() || !libraryNonMedia.isEmpty()){
-            recent.addAll(libraryMedia);
-            recent.addAll(libraryNonMedia);
-            groupRoots.add(new GroupInfo("Library", recent));
-        } else if(!recent.isEmpty()){
-            groupRoots.add(new GroupInfo("Library", recent));
+        if(!library.isEmpty()){
+            Collections.sort(library, RootInfo.LIBRARY_ORDER);
+            final List<Item> libraryItems = new ArrayList<>();
+            for (RootInfo root : library) {
+                libraryItems.add(new RootItem(root));
+            }
+            groupRoots.add(new GroupInfo("Library", libraryItems));
         }
 
         if(!folders.isEmpty()){
