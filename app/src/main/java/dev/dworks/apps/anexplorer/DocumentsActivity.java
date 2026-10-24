@@ -92,7 +92,6 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.cloudrail.si.CloudRail;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
@@ -106,7 +105,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
 import dev.dworks.apps.anexplorer.archive.DocumentArchiveHelper;
@@ -183,7 +181,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private static final String EXTRA_ACTIONMODE = "actionmode";
     private static final String EXTRA_SEARCH_STATE = "searchsate";
     private static final String EXTRA_SETTINGS = "settings";
-    private static final String BROWSABLE = "android.intent.category.BROWSABLE";
     private static final int UPLOAD_FILE = 99;
 
     private static final int CODE_FORWARD = 42;
@@ -332,19 +329,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 .setUpdateFrom(updateFrom)
                 .setDisplay(Display.DIALOG);
         appUpdater.start();
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        Set<String> categories = intent.getCategories();
-        if(null != categories && categories.contains(BROWSABLE)) {
-            try {
-                // Here we pass the response to the SDK which will automatically
-                // complete the authentication process
-                CloudRail.setAuthenticationResponse(intent);
-            } catch (Exception ignore) {}
-        }
-        super.onNewIntent(intent);
     }
 
     @Override

@@ -100,7 +100,7 @@ public class ConnectionsAdapter extends CursorRecyclerViewAdapter<ConnectionsAda
         public void setData(Cursor cursor){
             NetworkConnection networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
             if(networkConnection.type.startsWith(TYPE_CLOUD)){
-                title.setText(CloudConnection.getTypeName(networkConnection.type));
+                title.setText(CloudConnection.getTypeName(mContext, networkConnection.type));
                 summary.setText(networkConnection.username);
                 iconMimeBackground.setVisibility(View.VISIBLE);
                 iconMimeBackground.setBackgroundColor(

@@ -1,118 +1,97 @@
 package dev.dworks.apps.anexplorer.cloud;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.provider.BaseColumns;
 import android.text.TextUtils;
 
-import com.cloudrail.si.CloudRail;
-import com.cloudrail.si.exceptions.ParseException;
-import com.cloudrail.si.interfaces.CloudStorage;
-import com.cloudrail.si.services.Box;
-import com.cloudrail.si.services.Dropbox;
-import com.cloudrail.si.services.GoogleDrive;
-import com.cloudrail.si.services.OneDrive;
-
+import java.io.IOException;
 import java.io.InputStream;
 
-import dev.dworks.apps.anexplorer.BaseActivity;
-import dev.dworks.apps.anexplorer.BuildConfig;
-import dev.dworks.apps.anexplorer.fragment.ConnectionsFragment;
-import dev.dworks.apps.anexplorer.misc.AsyncTask;
-import dev.dworks.apps.anexplorer.misc.RootsCache;
-import dev.dworks.apps.anexplorer.network.NetworkConnection;
-import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
+import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
-import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
+import dev.dworks.apps.anexplorer.provider.ExplorerProvider.ConnectionColumns;
 
-import static dev.dworks.apps.anexplorer.BuildConfig.BOX_CLIENT_ID;
-import static dev.dworks.apps.anexplorer.BuildConfig.BOX_CLIENT_KEY;
-import static dev.dworks.apps.anexplorer.BuildConfig.DROPBOX_CLIENT_ID;
-import static dev.dworks.apps.anexplorer.BuildConfig.DROPBOX_CLIENT_KEY;
-import static dev.dworks.apps.anexplorer.BuildConfig.GOOGLE_DRIVE_CLIENT_ID;
-import static dev.dworks.apps.anexplorer.BuildConfig.ONEDRIVE_CLIENT_ID;
-import static dev.dworks.apps.anexplorer.BuildConfig.ONEDRIVE_CLIENT_KEY;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_BOX;
-import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_CLOUD;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_DROPBOX;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_GDRIVE;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_ONEDRIVE;
 
-public class CloudConnection {
+/** A signed-in cloud account, saved as a row of the connections table */
+public class CloudConnection implements CloudService.TokenListener {
 
-    private static final String TAG = NetworkConnection.class.getSimpleName();
     private static final String ROOT = "/";
 
-    public final static String GOOGLE_DRIVE_REDIRECT_URI = BuildConfig.APPLICATION_ID+":/oauth2redirect";
-    public final static String DROPBOX_REDIRECT_URI = "https://auth.cloudrail.com/"+BuildConfig.APPLICATION_ID;
-
-    public CloudStorage cloudStorage;
-    public CloudFile file;
-    public String path;
+    public final CloudService service;
+    /** The connection's row id, 0 until it is saved */
+    public int id;
+    /** The root id the provider shows it under, like cloud_dropbox_4 */
+    public String clientId;
     public String name;
     public String username;
-    public boolean isLoggedIn = false;
-    public String clientId;
+    private boolean isLoggedIn;
+    private Context mContext;
 
-    public CloudConnection(CloudStorage cloudStorage, String name, String path, String id){
-        this.cloudStorage = cloudStorage;
-        this.path = path;
-        this.file = new CloudFile(path, id);
-        this.name = name;
-        this.clientId = id;
+    public CloudConnection(Context context, CloudService service) {
+        this.mContext = context.getApplicationContext();
+        this.service = service;
     }
 
-    public static CloudConnection fromCursor(Context context, Cursor cursor){
-        int id = getCursorInt(cursor, BaseColumns._ID);
-        String name = getCursorString(cursor, ExplorerProvider.ConnectionColumns.NAME);
-        String username = getCursorString(cursor, ExplorerProvider.ConnectionColumns.USERNAME);
-        String result = getCursorString(cursor, ExplorerProvider.ConnectionColumns.PASSWORD);
-        String path = getCursorString(cursor, ExplorerProvider.ConnectionColumns.PATH);
-        String type = getCursorString(cursor, ExplorerProvider.ConnectionColumns.TYPE);
-        CloudRail.setAppKey(BuildConfig.LICENSE_KEY);
-
-        String clientId = CloudConnection.getCloudStorageId(type, id);
-        CloudConnection cloudConnection = new CloudConnection(createCloudStorage(context, type), type, path, clientId);
-        cloudConnection.username = username;
-        cloudConnection.name = name;
-        cloudConnection.clientId = clientId;
-        cloudConnection.load(context, result);
-        return cloudConnection;
-    }
-
-    public static CloudConnection createCloudConnections(Context context, String type){
-        CloudConnection cloudConnection = new CloudConnection(createCloudStorage(context, type), getTypeName(type), "/", "");
-        cloudConnection.load(context, "");
-        return cloudConnection;
-    }
-
-    public static CloudStorage createCloudStorage(Context context, String type) {
-        CloudStorage cloudStorage = null;
-
-        if (type.equals(TYPE_GDRIVE)) {
-            cloudStorage = new GoogleDrive(context, GOOGLE_DRIVE_CLIENT_ID, "",
-                    GOOGLE_DRIVE_REDIRECT_URI, "");
-        } else if (type.equals(TYPE_DROPBOX)) {
-            cloudStorage = new Dropbox(context, DROPBOX_CLIENT_ID, DROPBOX_CLIENT_KEY,
-                    DROPBOX_REDIRECT_URI, "");
-        } else if (type.equals(TYPE_ONEDRIVE)) {
-            cloudStorage = new OneDrive(context, ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_KEY);
-        } else if (type.equals(TYPE_BOX)) {
-            cloudStorage = new Box(context, BOX_CLIENT_ID, BOX_CLIENT_KEY);
+    public static CloudConnection fromCursor(Context context, Cursor cursor) {
+        final String type = getCursorString(cursor, ConnectionColumns.TYPE);
+        final CloudService service = createService(context, type);
+        if (service == null) {
+            return null;
         }
-
-        return cloudStorage;
+        final CloudConnection connection = new CloudConnection(context, service);
+        connection.id = getCursorInt(cursor, BaseColumns._ID);
+        connection.clientId = getCloudStorageId(type, connection.id);
+        connection.name = getCursorString(cursor, ConnectionColumns.NAME);
+        connection.username = getCursorString(cursor, ConnectionColumns.USERNAME);
+        service.userName = connection.name;
+        service.userLogin = connection.username;
+        connection.isLoggedIn = service.loadTokens(
+                getCursorString(cursor, ConnectionColumns.PASSWORD));
+        service.setTokenListener(connection);
+        return connection;
     }
 
-    public void prepare(){
-        this.name = cloudStorage.getUserName();
-        this.username = cloudStorage.getUserLogin();
+    public static CloudService createService(Context context, String type) {
+        if (TYPE_GDRIVE.equals(type)) {
+            return new GoogleDriveService(context);
+        } else if (TYPE_DROPBOX.equals(type)) {
+            return new DropboxService(context);
+        } else if (TYPE_ONEDRIVE.equals(type)) {
+            return new OneDriveService(context);
+        } else if (TYPE_BOX.equals(type)) {
+            return new BoxService(context);
+        }
+        return null;
+    }
+
+    /** Whether this build carries the app keys the service needs */
+    public static boolean isConfigured(String type) {
+        if (TYPE_DROPBOX.equals(type)) {
+            return DropboxService.isConfigured();
+        } else if (TYPE_ONEDRIVE.equals(type)) {
+            return OneDriveService.isConfigured();
+        } else if (TYPE_BOX.equals(type)) {
+            return BoxService.isConfigured();
+        }
+        // Google Drive is set up in the Google Cloud console instead, by package and signature
+        return TYPE_GDRIVE.equals(type);
+    }
+
+    public String getType() {
+        return service.getType();
     }
 
     public String getPath() {
-        return path;
+        return ROOT;
     }
 
     public String getSummary() {
@@ -123,109 +102,82 @@ public class CloudConnection {
         return isLoggedIn;
     }
 
-    public String getType(){
-        if (cloudStorage instanceof GoogleDrive) {
-            return TYPE_GDRIVE;
-        } else if (cloudStorage instanceof Dropbox) {
-            return TYPE_DROPBOX;
-        } if (cloudStorage instanceof OneDrive) {
-            return TYPE_ONEDRIVE;
-        } if (cloudStorage instanceof Box) {
-            return TYPE_BOX;
-        } else {
-            return TYPE_CLOUD;
+    public String getTypeName(Context context) {
+        return getTypeName(context, getType());
+    }
+
+    public static String getTypeName(Context context, String type) {
+        if (TYPE_GDRIVE.equals(type)) {
+            return context.getString(R.string.cloud_gdrive);
+        } else if (TYPE_DROPBOX.equals(type)) {
+            return context.getString(R.string.cloud_dropbox);
+        } else if (TYPE_ONEDRIVE.equals(type)) {
+            return context.getString(R.string.cloud_onedrive);
+        } else if (TYPE_BOX.equals(type)) {
+            return context.getString(R.string.cloud_box);
         }
+        return context.getString(R.string.cloud);
     }
 
-    public String getTypeName(){
-        return getTypeName(getType());
+    public InputStream getInputStream(CloudFile file) throws IOException {
+        return service.download(file);
     }
 
-    public static String getTypeName(String type){
-        if (type.equals(TYPE_GDRIVE)) {
-            return "Google Drive";
-        } else if (type.equals(TYPE_DROPBOX)) {
-            return "Drop Box";
-        } else if (type.equals(TYPE_ONEDRIVE)) {
-            return "One Drive";
-        } else if (type.equals(TYPE_BOX)) {
-            return "Box";
-        } else {
-            return "Cloud";
+    public InputStream getThumbnailInputStream(CloudFile file) throws IOException {
+        return service.thumbnail(file);
+    }
+
+    /**
+     * Saves a freshly signed-in account. Signing in to the same account again replaces it,
+     * as the table keeps one row per name, host and path.
+     */
+    public boolean save() {
+        final ContentValues values = new ContentValues();
+        values.put(ConnectionColumns.NAME, TextUtils.isEmpty(service.userName)
+                ? service.userLogin : service.userName);
+        values.put(ConnectionColumns.SCHEME, "");
+        values.put(ConnectionColumns.TYPE, getType());
+        values.put(ConnectionColumns.HOST, getType() + ":" + service.userLogin);
+        values.put(ConnectionColumns.PATH, ROOT);
+        values.put(ConnectionColumns.USERNAME, service.userLogin);
+        values.put(ConnectionColumns.PASSWORD, service.saveTokens());
+        values.put(ConnectionColumns.ANONYMOUS_LOGIN, false);
+        if (mContext.getContentResolver().insert(ExplorerProvider.buildConnection(), values) == null) {
+            return false;
         }
-    }
 
-    public void login() {
-        String type = getType();
-        if (type.equals(TYPE_GDRIVE)) {
-            ((GoogleDrive) cloudStorage).useAdvancedAuthentication();
-        } else if (type.equals(TYPE_DROPBOX)) {
-            ((Dropbox) cloudStorage).useAdvancedAuthentication();
-        }
-        cloudStorage.login();
-    }
-
-    public boolean load(Context context, String result){
-        if(!TextUtils.isEmpty(result)){
-            try {
-                cloudStorage.loadAsString(result);
+        Cursor cursor = null;
+        try {
+            cursor = mContext.getContentResolver().query(ExplorerProvider.buildConnection(), null,
+                    ConnectionColumns.TYPE + "=? AND " + ConnectionColumns.HOST + "=?",
+                    new String[]{getType(), getType() + ":" + service.userLogin}, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                id = getCursorInt(cursor, BaseColumns._ID);
+                clientId = getCloudStorageId(getType(), id);
+                name = getCursorString(cursor, ConnectionColumns.NAME);
+                username = service.userLogin;
                 isLoggedIn = true;
-                return isLoggedIn;
-            } catch (ParseException e) {
-                e.printStackTrace();
+                return true;
             }
+        } finally {
+            IoUtils.closeQuietly(cursor);
         }
         return false;
     }
 
-    public InputStream getInputStream(CloudFile file) {
-        return cloudStorage.download(file.getAbsolutePath());
+    /** Keeps renewed tokens so the account stays signed in */
+    @Override
+    public void onTokensChanged(CloudService service) {
+        if (id == 0) {
+            return;
+        }
+        final ContentValues values = new ContentValues();
+        values.put(ConnectionColumns.PASSWORD, service.saveTokens());
+        mContext.getContentResolver().update(ExplorerProvider.buildConnection(), values,
+                BaseColumns._ID + "=?", new String[]{Integer.toString(id)});
     }
 
-    public InputStream getThumbnailInputStream(CloudFile file) {
-        return cloudStorage.getThumbnail(file.getAbsolutePath());
-    }
-
-    public static class CreateConnectionTask extends AsyncTask<Void, Void, Boolean> {
-        private final BaseActivity mActivity;
-        private final CloudConnection mCloudConnection;
-
-        public CreateConnectionTask(
-                BaseActivity activity, CloudConnection cloudConnection) {
-            mActivity = activity;
-            mCloudConnection = cloudConnection;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            mActivity.setPending(true);
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            try {
-                mCloudConnection.login();
-                mCloudConnection.prepare();
-                return CloudStorageProvider.addUpdateConnection(mActivity, mCloudConnection);
-            } catch (Exception e) {
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            if (result) {
-                RootsCache.updateRoots(mActivity, CloudStorageProvider.AUTHORITY);
-                ConnectionsFragment connectionsFragment = ConnectionsFragment.get(mActivity.getFragmentManager());
-                if(null != connectionsFragment){
-                    connectionsFragment.reload();
-                    connectionsFragment.openConnectionRoot(mCloudConnection);
-                }
-            }
-        }
-    }
-
-    public static String getCloudStorageId(String type, int id){
-        return type+"_"+id;
+    public static String getCloudStorageId(String type, int id) {
+        return type + "_" + id;
     }
 }

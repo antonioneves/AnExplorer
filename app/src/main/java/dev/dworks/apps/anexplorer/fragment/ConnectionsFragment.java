@@ -6,6 +6,7 @@ import android.app.LoaderManager;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.Loader;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -29,11 +30,11 @@ import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.adapter.ConnectionsAdapter;
 import dev.dworks.apps.anexplorer.cloud.CloudConnection;
+import dev.dworks.apps.anexplorer.cloud.CloudSignInActivity;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment;
 import dev.dworks.apps.anexplorer.directory.DividerItemDecoration;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
-import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
@@ -50,6 +51,7 @@ import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_BOX;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_CLOUD;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_DROPBOX;
+import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_GDRIVE;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_ONEDRIVE;
 
 public class ConnectionsFragment extends RecyclerFragment
@@ -59,6 +61,8 @@ public class ConnectionsFragment extends RecyclerFragment
 
     private ConnectionsAdapter mAdapter;
     private LoaderManager.LoaderCallbacks<Cursor> mCallbacks;
+
+    private static final int REQUEST_CLOUD_SIGN_IN = 43;
 
     private final int mLoaderId = 42;
     private RootInfo mConnectionsRoot;
@@ -251,7 +255,17 @@ public class ConnectionsFragment extends RecyclerFragment
         NetworkConnection connection = NetworkConnection.fromConnectionsCursor(cursor);
         DocumentsActivity activity = ((DocumentsActivity)getActivity());
         if (connection.type.startsWith(TYPE_CLOUD)){
-            activity.onRootPicked(activity.getRoots().getRootInfo(CloudConnection.fromCursor(getActivity(), cursor)), mConnectionsRoot);
+            final CloudConnection cloudConnection = CloudConnection.fromCursor(getActivity(), cursor);
+            final RootInfo root = cloudConnection != null
+                    ? activity.getRoots().getRootInfo(cloudConnection) : null;
+            if (root != null) {
+                activity.onRootPicked(root, mConnectionsRoot);
+            } else {
+                // Saved by an older version of the app, which signed in another way
+                Utils.showSnackBar(activity, getString(R.string.cloud_sign_in_title,
+                        CloudConnection.getTypeName(activity, connection.type)));
+                addCloudConnection(connection.type);
+            }
         } else {
             activity.onRootPicked(activity.getRoots().getRootInfo(connection), mConnectionsRoot);
         }
@@ -262,17 +276,29 @@ public class ConnectionsFragment extends RecyclerFragment
         activity.onRootPicked(activity.getRoots().getRootInfo(connection), mConnectionsRoot);
     }
 
-    public void openConnectionRoot(CloudConnection connection) {
-        DocumentsActivity activity = ((DocumentsActivity)getActivity());
-        activity.onRootPicked(activity.getRoots().getRootInfo(connection), mConnectionsRoot);
+    public void addCloudConnection(String cloudType){
+        startActivityForResult(CloudSignInActivity.createIntent(getActivity(), cloudType),
+                REQUEST_CLOUD_SIGN_IN);
+        AnalyticsManager.logEvent("add_cloud");
     }
 
-    public void addCloudConnection(String cloudType){
-        final BaseActivity activity = (BaseActivity) getActivity();
-        CloudConnection cloudStorage = CloudConnection.createCloudConnections(getActivity(), cloudType);
-        new CloudConnection.CreateConnectionTask(activity, cloudStorage).executeOnExecutor(
-                ProviderExecutor.forAuthority(CloudStorageProvider.AUTHORITY+cloudType));
-        AnalyticsManager.logEvent("add_cloud");
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode != REQUEST_CLOUD_SIGN_IN) {
+            super.onActivityResult(requestCode, resultCode, data);
+            return;
+        }
+        if (resultCode != android.app.Activity.RESULT_OK || data == null) {
+            return;
+        }
+        reload();
+        // Straight into the new drive
+        final String rootId = data.getStringExtra(CloudSignInActivity.EXTRA_ROOT_ID);
+        final DocumentsActivity activity = (DocumentsActivity) getActivity();
+        final RootInfo root = activity.getRoots().getRootOneshot(CloudStorageProvider.AUTHORITY, rootId);
+        if (root != null) {
+            activity.onRootPicked(root, mConnectionsRoot);
+        }
     }
 
     public void menuItemAction(MenuItem menuItem) {
@@ -282,7 +308,9 @@ public class ConnectionsFragment extends RecyclerFragment
             return;
         }
         final int itemId = menuItem.getItemId();
-        if (itemId == R.id.cloud_dropbox){
+        if (itemId == R.id.cloud_gdrive){
+            addCloudConnection(TYPE_GDRIVE);
+        } else if (itemId == R.id.cloud_dropbox){
             addCloudConnection(TYPE_DROPBOX);
         } else if (itemId == R.id.cloud_onedrive){
             addCloudConnection(TYPE_ONEDRIVE);

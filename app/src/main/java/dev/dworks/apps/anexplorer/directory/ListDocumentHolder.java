@@ -29,6 +29,7 @@ import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.RootInfo;
+import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.directory.DocumentsAdapter.Environment;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
@@ -177,7 +178,9 @@ public class ListDocumentHolder extends DocumentHolder {
             // Folders show how many items they hold (and their size when that is turned on)
             size.setText(null);
             size.setVisibility(hidden);
-            if (!TextUtils.isEmpty(mDoc.path)) {
+            // Counting means reading the folder, which only local storage can do quickly
+            if (!TextUtils.isEmpty(mDoc.path)
+                    && ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)) {
                 size.setVisibility(View.VISIBLE);
                 final boolean withSize = state.showSize && state.showFolderSize;
                 final ArrayMap<Integer, Integer> counts = DocumentsApplication.getFolderCounts();

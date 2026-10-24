@@ -288,19 +288,10 @@
         </provider>
 
         <activity
-            android:name=".common.WebviewActivity"
+            android:name=".cloud.CloudSignInActivity"
             android:theme="@style/DocumentsTheme.Document"
-            android:exported="true"
-            android:enabled="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https"
-                    android:host="integrations.cloudrail.com" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="@string/app_name" />
 
     </application>
 

@@ -81,8 +81,6 @@
     public <init>();
 }
 
-# Required for CloudRail
--keep class com.cloudrail.** { *; }
 
 # Required for Retrofit/OkHttp
 -dontwarn javax.annotation.**

@@ -49,6 +49,36 @@ App Links
 [<img alt="Get it on Samsung Galaxy Store" height="80" src="https://d3unf4s5rp9dfh.cloudfront.net/SDP/GalaxyStore_English.png">](https://www.samsungapps.com/appquery/appDetail.as?appId=dev.dworks.apps.anexplorer&referrer=github)
 [<img alt="Get it on Aptoide" height="80" src="https://cdn6.aptoide.com/includes/themes/2014/images/aptoide_badge.svg">](https://d-works-file-manager.en.aptoide.com/app&referrer=github)
 
+Cloud Storage Setup
+===================
+Each cloud service needs the app registered with it once. Keys go in `keystore.properties`
+(or `-P` on the Gradle command line); a build without a key says so when you try to add that service.
+
+* **Google Drive** signs in with the Google account already on the TV. In the
+  [Google Cloud console](https://console.cloud.google.com/), turn on the Google Drive API, set up the
+  OAuth consent screen (add your account as a test user while it is in testing) and create an
+  **Android** OAuth client for `dev.dworks.apps.anexplorer` with the SHA-1 of the signing certificate
+  (`./gradlew signingReport`). No key is needed in the app.
+* **OneDrive** signs in with a code entered on a phone or computer. Register an app in
+  [Microsoft Entra](https://entra.microsoft.com/) → App registrations for accounts in any organization
+  and personal Microsoft accounts, turn on *Allow public client flows*, add the delegated Graph
+  permissions `Files.ReadWrite` and `User.Read`, and set `ONEDRIVE_CLIENT_ID` to its application id.
+* **Dropbox** signs in on its web page inside the app. Create a *Scoped access, Full Dropbox* app in the
+  [Dropbox App Console](https://www.dropbox.com/developers/apps), allow `files.metadata.read`,
+  `files.content.read`, `files.content.write` and `account_info.read`, add the redirect URI
+  `http://localhost`, and set `DROPBOX_CLIENT_ID` to its app key.
+* **Box** signs in on its web page inside the app. Create a *Custom App* with *User Authentication
+  (OAuth 2.0)* in the [Box Developer Console](https://app.box.com/developers/console), tick *Read
+  and write all files and folders*, add the redirect URI `http://localhost`, and set `BOX_CLIENT_ID`
+  and `BOX_CLIENT_KEY` to its client id and secret.
+
+```
+DROPBOX_CLIENT_ID=...
+ONEDRIVE_CLIENT_ID=...
+BOX_CLIENT_ID=...
+BOX_CLIENT_KEY=...
+```
+
 Developed By
 ============
 

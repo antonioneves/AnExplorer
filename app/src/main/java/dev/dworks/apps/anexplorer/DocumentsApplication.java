@@ -31,7 +31,6 @@ import androidx.collection.ArrayMap;
 import androidx.appcompat.app.AppCompatDelegate;
 import android.text.format.DateUtils;
 
-import com.cloudrail.si.CloudRail;
 
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
@@ -101,7 +100,6 @@ public class DocumentsApplication extends AppFlavour {
         sInstance = this;
         final ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         final int memoryClassBytes = am.getMemoryClass() * 1024 * 1024;
-        CloudRail.setAppKey(BuildConfig.LICENSE_KEY);
         CrashReportingManager.enable(getApplicationContext(), true);
 
         mRoots = new RootsCache(this);
