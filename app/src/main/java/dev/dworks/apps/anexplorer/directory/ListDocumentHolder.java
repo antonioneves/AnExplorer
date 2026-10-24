@@ -154,10 +154,17 @@ public class ListDocumentHolder extends DocumentHolder {
             }
         }
 
+        // The list keeps its details in a column on the right; empty ones collapse there, while
+        // grid cards keep their space so every card in a row is the same height
+        final View details = itemView.findViewById(R.id.details);
+        final int hidden = details != null ? View.GONE : View.INVISIBLE;
+
         if (mDoc.lastModified == -1) {
             date.setText(null);
+            date.setVisibility(hidden);
         } else {
             date.setText(Utils.formatTime(context, mDoc.lastModified));
+            date.setVisibility(View.VISIBLE);
             hasLine2 = true;
         }
 
@@ -168,9 +175,10 @@ public class ListDocumentHolder extends DocumentHolder {
         }
         if (Utils.isDir(mDoc.mimeType)) {
             // Folders show how many items they hold (and their size when that is turned on)
-            size.setVisibility(View.VISIBLE);
             size.setText(null);
+            size.setVisibility(hidden);
             if (!TextUtils.isEmpty(mDoc.path)) {
+                size.setVisibility(View.VISIBLE);
                 final boolean withSize = state.showSize && state.showFolderSize;
                 final ArrayMap<Integer, Integer> counts = DocumentsApplication.getFolderCounts();
                 final ArrayMap<Integer, Long> sizes = DocumentsApplication.getFolderSizes();
@@ -187,19 +195,25 @@ public class ListDocumentHolder extends DocumentHolder {
                 hasLine2 = true;
             }
         } else if (state.showSize) {
-            size.setVisibility(View.VISIBLE);
             if (mDoc.size == -1) {
                 size.setText(null);
+                size.setVisibility(hidden);
             } else {
                 size.setText(Formatter.formatFileSize(context, mDoc.size));
+                size.setVisibility(View.VISIBLE);
                 hasLine2 = true;
             }
         } else {
-            size.setVisibility(View.GONE);
+            size.setText(null);
+            size.setVisibility(hidden);
         }
 
         if (line1 != null) {
             line1.setVisibility(hasLine1 ? View.VISIBLE : View.GONE);
+        }
+        if (details != null) {
+            // In the list the second line only holds the summary
+            hasLine2 = summary != null && summary.getVisibility() == View.VISIBLE;
         }
         if (line2 != null) {
             line2.setVisibility(hasLine2 ? View.VISIBLE : View.GONE);

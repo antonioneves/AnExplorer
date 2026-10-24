@@ -104,48 +104,52 @@
 
             </LinearLayout>
 
+            <!-- The date, then the size (or a folder's item count) on a line of its own -->
             <LinearLayout
                 android:id="@+id/line2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:baselineAligned="false"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/date"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="start"
-                    android:layout_weight="1"
                     android:ellipsize="end"
                     android:singleLine="true"
                     android:textAlignment="viewStart"
                     android:textAppearance="@style/TextAppearance.AppCompat.Caption"
                     android:textColor="@color/primary_text_default_material_dark" />
 
-                <TextView
-                    android:id="@+id/size"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="start"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginStart="8dp"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:textAlignment="viewStart"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Caption"
-                    android:textColor="@color/primary_text_default_material_dark" />
+                    android:baselineAligned="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <ImageView
-                    android:id="@android:id/icon2"
-                    android:layout_width="@dimen/root_icon_size"
-                    android:layout_height="@dimen/root_icon_size"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginStart="8dp"
-                    android:contentDescription="@null"
-                    android:scaleType="centerInside"
-                    android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/size"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:singleLine="true"
+                        android:textAlignment="viewStart"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+                        android:textColor="@color/primary_text_default_material_dark" />
+
+                    <ImageView
+                        android:id="@android:id/icon2"
+                        android:layout_width="@dimen/root_icon_size"
+                        android:layout_height="@dimen/root_icon_size"
+                        android:layout_marginLeft="8dp"
+                        android:layout_marginStart="8dp"
+                        android:contentDescription="@null"
+                        android:scaleType="centerInside"
+                        android:visibility="gone" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
