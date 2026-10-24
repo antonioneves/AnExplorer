@@ -11,7 +11,7 @@ public class MarginDecoration extends RecyclerView.ItemDecoration {
     private final int margin;
 
     public MarginDecoration(Context context) {
-        margin = context.getResources().getDimensionPixelSize(R.dimen.grid_item_padding)/2;
+        margin = context.getResources().getDimensionPixelSize(R.dimen.doc_card_spacing)/2;
     }
 
     @Override

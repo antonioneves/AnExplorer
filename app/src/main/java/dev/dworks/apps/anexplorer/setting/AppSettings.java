@@ -24,6 +24,7 @@ import android.preference.PreferenceManager;
 import androidx.core.content.ContextCompat;
 import android.text.TextUtils;
 
+import dev.dworks.apps.anexplorer.BaseActivity.State;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
@@ -47,6 +48,7 @@ public class AppSettings {
     public static final String KEY_THEME_STYLE = "themeStyle";
     public static final String KEY_FOLDER_ANIMATIONS = "folderAnimations";
     public static final String KEY_RECENT_MEDIA = "recentMedia";
+    public static final String KEY_VIEW_MODE = "viewMode";
 
     private AppSettings() {
     }
@@ -78,6 +80,15 @@ public class AppSettings {
     public static boolean getDisplayRecentMedia() {
         return prefs(DocumentsApplication.getInstance().getBaseContext())
                 .getBoolean(KEY_RECENT_MEDIA, true);
+    }
+
+    /** Grid or list, the same in every folder */
+    public static int getViewMode(Context context) {
+        return prefs(context).getInt(KEY_VIEW_MODE, State.MODE_GRID);
+    }
+
+    public static void setViewMode(Context context, int mode) {
+        prefs(context).edit().putInt(KEY_VIEW_MODE, mode).apply();
     }
 
     public static int getPrimaryColor(Context context) {

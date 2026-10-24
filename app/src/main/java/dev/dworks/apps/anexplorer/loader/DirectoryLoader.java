@@ -38,6 +38,7 @@ import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AsyncTaskLoader;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.model.DirectoryResult;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
@@ -92,7 +93,6 @@ public class DirectoryLoader extends AsyncTaskLoader<DirectoryResult> {
 
         final DirectoryResult result = new DirectoryResult();
 
-        int userMode = State.MODE_UNKNOWN;
         int userSortOrder = State.SORT_ORDER_UNKNOWN;
 
         // Use default document when searching
@@ -109,29 +109,20 @@ public class DirectoryLoader extends AsyncTaskLoader<DirectoryResult> {
             }
         }
 
-        // Pick up any custom modes requested by user
+        // Pick up any custom sort order requested by user; the view mode is the same everywhere
         Cursor cursor = null;
         try {
             final Uri stateUri = RecentsProvider.buildState(
                     mRoot.authority, mRoot.rootId, mDoc.documentId);
             cursor = resolver.query(stateUri, null, null, null, null);
             if (null != cursor && cursor.moveToFirst()) {
-                userMode = getCursorInt(cursor, StateColumns.MODE);
                 userSortOrder = getCursorInt(cursor, StateColumns.SORT_ORDER);
             }
         } finally {
             IoUtils.closeQuietly(cursor);
         }
 
-        if (userMode != State.MODE_UNKNOWN) {
-            result.mode = userMode;
-        } else {
-            if ((mDoc.flags & Document.FLAG_DIR_PREFERS_GRID) != 0) {
-                result.mode = State.MODE_GRID;
-            } else {
-                result.mode = State.MODE_LIST;
-            }
-        }
+        result.mode = AppSettings.getViewMode(getContext());
 
         if (userSortOrder != State.SORT_ORDER_UNKNOWN) {
             result.sortOrder = userSortOrder;
@@ -148,7 +139,7 @@ public class DirectoryLoader extends AsyncTaskLoader<DirectoryResult> {
             //result.sortOrder = State.SORT_ORDER_UNKNOWN;
         }
 
-        Log.d(TAG, "userMode=" + userMode + ", userSortOrder=" + userSortOrder + " --> mode="
+        Log.d(TAG, "userSortOrder=" + userSortOrder + " --> mode="
                 + result.mode + ", sortOrder=" + result.sortOrder);
 
         ContentProviderClient client = null;

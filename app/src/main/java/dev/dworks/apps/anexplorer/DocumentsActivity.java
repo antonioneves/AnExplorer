@@ -461,6 +461,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         mState.forceAdvanced = intent.getBooleanExtra(DocumentsContract.EXTRA_SHOW_ADVANCED	, false);
         mState.showAdvanced = mState.forceAdvanced
                 | AppSettings.getDisplayAdvancedDevices(this);
+        mState.derivedMode = AppSettings.getViewMode(this);
     }
 
     @Override
@@ -1619,11 +1620,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                     ServerFragment.show(fm, root);
                 } else {
                     DirectoryFragment.showRecentsOpen(fm, anim, root);
-
-                    // Start recents in grid when requesting visual things
-                    final boolean visualMimes = true;//MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, mState.acceptMimes);
-                    mState.userMode = visualMimes ? MODE_GRID : MODE_LIST;
-                    mState.derivedMode = mState.userMode;
+                    mState.derivedMode = AppSettings.getViewMode(this);
                 }
             }
         } else {

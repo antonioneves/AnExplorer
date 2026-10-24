@@ -425,17 +425,19 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
         final ContentResolver resolver = getActivity().getContentResolver();
         final State state = getDisplayState(this);
 
+        if(column.startsWith(StateColumns.MODE)) {
+            AppSettings.setViewMode(getActivity(), state.userMode);
+            state.derivedMode = state.userMode;
+            return;
+        }
+
         final RootInfo root = getArguments().getParcelable(EXTRA_ROOT);
         final DocumentInfo doc = getArguments().getParcelable(EXTRA_DOC);
 
         if (root != null && doc != null) {
             final Uri stateUri = RecentsProvider.buildState(root.authority, root.rootId, doc.documentId);
             final ContentValues values = new ContentValues();
-            if(column.startsWith(StateColumns.MODE)) {
-                values.put(StateColumns.MODE, state.userMode);
-            } else {
-                values.put(StateColumns.SORT_ORDER, state.userSortOrder);
-            }
+            values.put(StateColumns.SORT_ORDER, state.userSortOrder);
 
             new AsyncTask<Void, Void, Void>() {
                 @Override
@@ -445,11 +447,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
                 }
             }.execute();
         }
-        if(column.startsWith(StateColumns.MODE)) {
-            state.derivedMode = state.userMode;
-        } else {
-            state.derivedSortOrder = state.userSortOrder;
-        }
+        state.derivedSortOrder = state.userSortOrder;
     }
 
 	private void updateDisplayState() {
@@ -495,23 +493,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		if(getListView().getItemDecorationCount() != 0){
 			getListView().removeItemDecorationAt(0);
 		}
-		final Resources res = mActivity.getResources();
-		RecyclerView.ItemDecoration itemDecoration = null;
-		if (mLastMode == MODE_GRID) {
-			itemDecoration = new MarginDecoration(mActivity);
-		} else {
-			// Indent our list divider to align with text
-			final boolean insetLeft = res.getBoolean(R.bool.list_divider_inset_left);
-			final int insetSize = res.getDimensionPixelSize(R.dimen.list_divider_inset);
-			DividerItemDecoration decoration = new DividerItemDecoration(mActivity, VERTICAL);
-			if (insetLeft) {
-				decoration.setInset(insetSize, 0);
-			} else {
-				decoration.setInset(0, insetSize);
-			}
-			itemDecoration = decoration;
-		}
-		getListView().addItemDecoration(itemDecoration);
+		// Grid tiles and list rows are both separate rounded cards
+		getListView().addItemDecoration(new MarginDecoration(mActivity));
 	}
 
 	private RecyclerItemClickListener.OnItemClickListener mItemListener

@@ -13,12 +13,18 @@
      limitations under the License.
 -->
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- A rounded card, like the Home cards -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Material3.CardView.Filled"
     android:layout_width="match_parent"
     android:layout_height="@dimen/grid_item_height"
     android:focusable="true"
     android:foreground="?selectableItemBackground"
-    android:background="@color/item_doc_grid_background">
+    app:cardBackgroundColor="@color/item_doc_grid_background"
+    app:cardCornerRadius="@dimen/card_corner_radius"
+    app:strokeColor="@color/doc_card_stroke"
+    app:strokeWidth="3dp">
 
     <ImageView
         android:id="@+id/icon_thumb"
@@ -173,4 +179,4 @@
         android:drawableBottom="@drawable/ic_menu_moreoverflow_light"
         android:paddingBottom="5dp" />
 
-</FrameLayout>
+</com.google.android.material.card.MaterialCardView>

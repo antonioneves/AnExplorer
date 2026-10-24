@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A file card's border: the D-pad focus gets the same ring as the sidebar and the settings -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true" android:color="?attr/colorSecondary" />
+    <item android:color="@android:color/transparent" />
+</selector>
