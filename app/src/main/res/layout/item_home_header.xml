@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A Home section title; selecting it collapses or expands the section below.
-     More sits beside it rather than inside so the remote can reach it. -->
+<!-- A Home section title; selecting it collapses or expands the section below -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -46,14 +45,5 @@
             android:src="@drawable/expander_close" />
 
     </LinearLayout>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/recents"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/home_section_more"
-        android:visibility="gone" />
 
 </LinearLayout>

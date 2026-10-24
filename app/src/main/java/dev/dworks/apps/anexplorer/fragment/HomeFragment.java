@@ -44,7 +44,6 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.adapter.CommonInfo;
 import dev.dworks.apps.anexplorer.adapter.HomeAdapter;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment;
-import dev.dworks.apps.anexplorer.cursor.LimitCursorWrapper;
 import dev.dworks.apps.anexplorer.loader.RecentLoader;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
@@ -68,7 +67,6 @@ import static dev.dworks.apps.anexplorer.misc.AnalyticsManager.FILE_TYPE;
  */
 public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItemClickListener {
     public static final String TAG = "HomeFragment";
-    private static final int MAX_RECENT_COUNT = 20;
 
     private final int mLoaderId = 42;
     private RootsCache roots;
@@ -169,7 +167,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                 if (!isAdded())
                     return;
                 if(null != result.cursor && result.cursor.getCount() != 0) {
-                    mAdapter.setRecentData(new LimitCursorWrapper(result.cursor, MAX_RECENT_COUNT));
+                    mAdapter.setRecentData(result.cursor);
                 }
             }
 
@@ -221,9 +219,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
 
     @Override
     public void onItemViewClick(HomeAdapter.ViewHolder item, View view, int position) {
-        if (view.getId() == R.id.recents){
-            openRoot(roots.getRecentsRoot());
-        } else if (view.getId() == R.id.action){
+        if (view.getId() == R.id.action){
             Bundle params = new Bundle();
             Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
             if(Utils.isIntentAvailable(getActivity(), intent)) {

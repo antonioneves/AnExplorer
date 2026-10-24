@@ -304,11 +304,10 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
 
     public class HeaderViewHolder extends ViewHolder {
         private final ImageView expander;
-        private final View recents;
 
         public HeaderViewHolder(View v) {
             super(v);
-            // Only the title part is selectable, so the remote can also reach More beside it
+            // Only the title part is selectable
             v.setOnClickListener(null);
             v.setOnLongClickListener(null);
             v.setClickable(false);
@@ -326,22 +325,12 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
                 }
             });
             expander = v.findViewById(R.id.expander);
-            recents = v.findViewById(R.id.recents);
-            recents.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if(null != onItemClickListener) {
-                        onItemClickListener.onItemViewClick(HeaderViewHolder.this, recents, getLayoutPosition());
-                    }
-                }
-            });
         }
 
         @Override
         public void setData(int position){
             commonInfo = getItem(position);
             title.setText(SECTION_TITLES[commonInfo.section]);
-            recents.setVisibility(commonInfo.section == SECTION_RECENT ? View.VISIBLE : View.GONE);
             updateExpander();
         }
 
