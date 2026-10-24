@@ -75,5 +75,6 @@
     <integer name="home_shortcut_span">3</integer>
     <dimen name="home_shortcut_spacing">10dp</dimen>
     <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="roots_title_icon_size">48dp</dimen>
 </resources>
 
