@@ -49,7 +49,7 @@ import dev.dworks.apps.anexplorer.model.DocumentStack;
 import dev.dworks.apps.anexplorer.model.DurableUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 public abstract class BaseActivity extends ActionBarActivity {
     public static final String TAG = "Documents";

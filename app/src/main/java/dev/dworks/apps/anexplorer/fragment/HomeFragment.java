@@ -54,7 +54,7 @@ import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DirectoryResult;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_HEADER;
@@ -178,7 +178,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                 mAdapter.setRecentData(null);
             }
         };
-        if(SettingsActivity.getDisplayRecentMedia()) {
+        if(AppSettings.getDisplayRecentMedia()) {
             getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
         }
     }

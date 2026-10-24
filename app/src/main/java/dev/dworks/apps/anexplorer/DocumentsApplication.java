@@ -40,7 +40,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.misc.ThumbnailCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 public class DocumentsApplication extends AppFlavour {
 	private static final long PROVIDER_ANR_TIMEOUT = 20 * DateUtils.SECOND_IN_MILLIS;
@@ -119,8 +119,8 @@ public class DocumentsApplication extends AppFlavour {
         registerReceiver(mCacheReceiver, localeFilter);
 
         // TV apps are dark
-        if(Integer.valueOf(SettingsActivity.getThemeStyle()) != AppCompatDelegate.MODE_NIGHT_YES){
-            SettingsActivity.setThemeStyle(AppCompatDelegate.MODE_NIGHT_YES);
+        if(Integer.valueOf(AppSettings.getThemeStyle()) != AppCompatDelegate.MODE_NIGHT_YES){
+            AppSettings.setThemeStyle(AppCompatDelegate.MODE_NIGHT_YES);
         }
     }
 

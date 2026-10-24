@@ -65,7 +65,7 @@ import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static com.google.android.material.snackbar.Snackbar.LENGTH_SHORT;
 
@@ -439,7 +439,7 @@ public class Utils extends UtilsFlavour{
     }
 
     public static void changeThemeStyle(AppCompatDelegate delegate) {
-        int nightMode = Integer.valueOf(SettingsActivity.getThemeStyle());
+        int nightMode = Integer.valueOf(AppSettings.getThemeStyle());
         if (nightMode != AppCompatDelegate.MODE_NIGHT_NO) {
             try {
                 new WebView(DocumentsApplication.getInstance().getBaseContext());

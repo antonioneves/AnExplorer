@@ -87,7 +87,7 @@ import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.StateColumns;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.CompatTextView;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
@@ -364,7 +364,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	 * loaded; skip the fade when folder animations are off (the default on TV).
 	 */
 	private void showList(boolean shown) {
-		if (SettingsActivity.getFolderAnimation(getActivity())) {
+		if (AppSettings.getFolderAnimation(getActivity())) {
 			setListShown(shown);
 		} else {
 			setListShownNoAnimation(shown);
@@ -457,7 +457,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		final State state = getDisplayState(this);
 
         mDefaultColor = ThemeColors.getPrimaryColor(getActivity());
-        int accentColor = SettingsActivity.getAccentColor();
+        int accentColor = AppSettings.getAccentColor();
         if (mLastMode == state.derivedMode &&  mLastSortOrder == state.derivedSortOrder
                 && mLastShowSize == state.showSize
                 && mLastShowFolderSize == state.showFolderSize

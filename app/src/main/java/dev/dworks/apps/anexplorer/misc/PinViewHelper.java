@@ -28,7 +28,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 public class PinViewHelper {
     private TextView passwordInstruction;

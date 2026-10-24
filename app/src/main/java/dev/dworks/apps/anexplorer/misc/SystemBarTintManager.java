@@ -38,7 +38,7 @@ import android.widget.RelativeLayout;
 
 import java.lang.reflect.Method;
 
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 /**
  * Class to manage status and navigation bar tint effects when using KitKat 
@@ -571,7 +571,7 @@ public class SystemBarTintManager {
         if (Utils.hasKitKat()) {
             SystemBarTintManager tintManager = new SystemBarTintManager(context);
             tintManager.setStatusBarTintEnabled(true);
-            tintManager.setStatusBarTintColor(SettingsActivity.getPrimaryColor(context));
+            tintManager.setStatusBarTintColor(AppSettings.getPrimaryColor(context));
         }
     }
 

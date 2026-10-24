@@ -14,7 +14,7 @@ import android.widget.TextView;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 

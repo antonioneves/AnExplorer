@@ -31,7 +31,7 @@ import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.CircleImage;
 import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;

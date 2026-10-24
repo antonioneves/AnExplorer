@@ -34,7 +34,7 @@ import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 

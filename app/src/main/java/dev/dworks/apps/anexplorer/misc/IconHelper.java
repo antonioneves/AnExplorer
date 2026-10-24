@@ -37,7 +37,7 @@ import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.BaseActivity.State.ViewMode;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_LIST;

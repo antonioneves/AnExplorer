@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A settings section: its title above a rounded card holding the rows -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="16dp"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@android:id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
+        android:textColor="?attr/colorPrimary" />
+
+    <LinearLayout
+        android:id="@+id/settings_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/settings_section_background"
+        android:orientation="vertical"
+        android:padding="6dp" />
+
+</LinearLayout>

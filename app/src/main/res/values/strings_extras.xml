@@ -44,9 +44,9 @@
     <string name="root_apk">APKs</string>
 
     <!-- Title for setting that will show all advanced storage devices [CHAR LIMIT=32] -->
-    <string name="pref_advanced_devices">Display advanced</string>
+    <string name="pref_advanced_devices">Advanced storage</string>
     <!-- Title for setting that will show file sizes for all documents [CHAR LIMIT=32] -->
-    <string name="pref_file_size">Display file size</string>
+    <string name="pref_file_size">File size</string>
 
     <!--
          Status indicating that the download has been queued to start in the future.  Appears for an
@@ -69,20 +69,20 @@
     <string name="name">AnExplorer</string>
     <string name="app_name">AnExplorer</string>
     <string name="app_ver">Another Explorer</string>
-    <string name="pref_folder_size">Display folder size</string>
-    <string name="pref_thumbnail">Display file thumbnails</string>
-    <string name="pref_hidden">Show hidden files</string>
-    <string name="pref_root_mode">Display Root Mode</string>
-    <string name="pref_folder_animations">Enable folder animations</string>
-    <string name="pref_recent_media">Show recent media</string>
+    <string name="pref_folder_size">Folder size</string>
+    <string name="pref_thumbnail">Thumbnails</string>
+    <string name="pref_hidden">Hidden files</string>
+    <string name="pref_root_mode">Root mode</string>
+    <string name="pref_folder_animations">Folder animations</string>
+    <string name="pref_recent_media">Recent media on Home</string>
 
     <!-- Example General settings -->
     <string name="pref_header_general">General</string>
     <string name="pref_header_security">Security</string>
-    <string name="pref_header_theme">Theme</string>
+    <string name="pref_header_theme">Appearance</string>
     <string name="pref_header_advanced">Advanced</string>
-    <string name="pref_title_pin_enable">Enable PIN Protection</string>
-    <string name="pref_description_pin_enable">Gives security to your files</string>
+    <string name="pref_title_pin_enable">PIN protection</string>
+    <string name="pref_description_pin_enable">Ask for a PIN when the app opens</string>
     <string name="pref_title_pin_set">Set PIN</string>
     <string name="pref_default_pin_set">PIN protection disabled</string>
     <string name="enter_pin">Enter PIN</string>
@@ -92,9 +92,9 @@
     <string name="pin_set">PIN protection enabled</string>
     <string name="pin_disabled">PIN protection disabled</string>
     <string name="loading">Loading...</string>
-    <string name="pref_foreground_color_title">Primary Color</string>
+    <string name="pref_foreground_color_title">Primary color</string>
     <string name="pref_foreground_color_description">The main color of actionbar</string>
-    <string name="pref_accent_color_title">Accent Color</string>
+    <string name="pref_accent_color_title">Accent color</string>
     <string name="pref_accent_color_description">The secondary color</string>
 
     <string name="pref_theme_style_title">Theme Style</string>
@@ -185,5 +185,16 @@
     <string name="restored_previous_purchase_please_restart">Restored previous purchase.</string>
     <string name="home_section_recent">Recent media</string>
     <string name="home_section_more">More</string>
+
+    <string name="settings_file_size_summary">Show how big each file is in folder lists</string>
+    <string name="settings_folder_size_summary">Work out how much space each folder takes</string>
+    <string name="settings_thumbnail_summary">Preview images and videos instead of showing icons</string>
+    <string name="settings_hidden_summary">Include files and folders whose names start with a dot</string>
+    <string name="settings_recent_media_summary">List your newest photos, videos and music on Home</string>
+    <string name="settings_primary_color_summary">Sets the colors of the whole app</string>
+    <string name="settings_accent_color_summary">Highlights selections and progress</string>
+    <string name="settings_advanced_devices_summary">List every storage location, including the internal storage</string>
+    <string name="settings_root_mode_summary">Browse system folders with root access</string>
+    <string name="settings_folder_animations_summary">Slide between folders as you open and close them</string>
 
 </resources>

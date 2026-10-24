@@ -151,7 +151,8 @@ import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.RecentColumns;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.ResumeColumns;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
+import dev.dworks.apps.anexplorer.setting.SettingsFragment;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.ui.DirectoryContainerView;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -181,11 +182,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private static final String EXTRA_AUTHENTICATED = "authenticated";
     private static final String EXTRA_ACTIONMODE = "actionmode";
     private static final String EXTRA_SEARCH_STATE = "searchsate";
+    private static final String EXTRA_SETTINGS = "settings";
     private static final String BROWSABLE = "android.intent.category.BROWSABLE";
     private static final int UPLOAD_FILE = 99;
 
     private static final int CODE_FORWARD = 42;
-    private static final int CODE_SETTINGS = 92;
 
 
     private SearchView mSearchView;
@@ -205,6 +206,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     private boolean mSearchExpanded;
     private boolean mSearchResultShown;
+    /** Settings are shown in place of the current root, which stays as it was underneath */
+    private boolean mShowingSettings;
 
     private RootsCache mRoots;
     private State mState;
@@ -249,6 +252,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mState = icicle.getParcelable(EXTRA_STATE);
             mAuthenticated = icicle.getBoolean(EXTRA_AUTHENTICATED);
             mActionMode = icicle.getBoolean(EXTRA_ACTIONMODE);
+            mShowingSettings = icicle.getBoolean(EXTRA_SETTINGS);
         } else {
             buildDefaultState();
         }
@@ -389,14 +393,14 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     private void initProtection() {
 
-		if(mAuthenticated || !SettingsActivity.isPinEnabled(this)){
+		if(mAuthenticated || !AppSettings.isPinEnabled(this)){
 			return;
 		}
         final Dialog d = new Dialog(this, R.style.DocumentsTheme_DailogPIN);
         d.setContentView(new PinViewHelper((LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE), null, null) {
             public void onEnter(String password) {
                 super.onEnter(password);
-                if (SettingsActivity.checkPin(DocumentsActivity.this, password)) {
+                if (AppSettings.checkPin(DocumentsActivity.this, password)) {
                 	mAuthenticated = true;
                 	d.dismiss();
                 }
@@ -456,9 +460,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         mState.localOnly = intent.getBooleanExtra(IntentUtils.EXTRA_LOCAL_ONLY, true);
         mState.forceAdvanced = intent.getBooleanExtra(DocumentsContract.EXTRA_SHOW_ADVANCED	, false);
         mState.showAdvanced = mState.forceAdvanced
-                | SettingsActivity.getDisplayAdvancedDevices(this);
+                | AppSettings.getDisplayAdvancedDevices(this);
         
-        mState.rootMode = SettingsActivity.getRootMode(this);
+        mState.rootMode = AppSettings.getRootMode(this);
     }
 
     @Override
@@ -572,15 +576,20 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public void onResume() {
         super.onResume();
+        loadDisplaySettings();
+    }
+
+    /** Applies the display settings (file size, thumbnails, hidden files...) to the current state. */
+    public void loadDisplaySettings() {
         if (mState.action == ACTION_MANAGE) {
             mState.showSize = true;
             mState.showFolderSize = false;
             mState.showThumbnail = true;
         } else {
-            mState.showSize = SettingsActivity.getDisplayFileSize(this);
-            mState.showFolderSize = SettingsActivity.getDisplayFolderSize(this);
-            mState.showThumbnail = SettingsActivity.getDisplayFileThumbnail(this);
-            mState.showHiddenFiles = SettingsActivity.getDisplayFileHidden(this);
+            mState.showSize = AppSettings.getDisplayFileSize(this);
+            mState.showFolderSize = AppSettings.getDisplayFolderSize(this);
+            mState.showThumbnail = AppSettings.getDisplayFileThumbnail(this);
+            mState.showHiddenFiles = AppSettings.getDisplayFileHidden(this);
             invalidateMenu();
         }
     }
@@ -604,7 +613,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final RootInfo root = getCurrentRoot();
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
-        if (mSearchExpanded) {
+        if (mShowingSettings) {
+            setTitle(getString(R.string.menu_settings));
+            mToolbarStack.setVisibility(View.GONE);
+            mToolbarStack.setAdapter(null);
+        } else if (mSearchExpanded) {
             setTitle(null);
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
@@ -815,6 +828,16 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         search.setVisible(searchVisible);
 
         settings.setVisible(false);
+
+        // Settings have nothing to create, search, sort or lay out
+        if (mShowingSettings) {
+            menu.findItem(R.id.menu_create_dir).setVisible(false);
+            menu.findItem(R.id.menu_create_file).setVisible(false);
+            search.setVisible(false);
+            sort.setVisible(false);
+            grid.setVisible(false);
+            list.setVisible(false);
+        }
     }
 
     @Override
@@ -828,9 +851,25 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return super.onOptionsItemSelected(item);
     }
 
+    /** Settings open as a tab: in place of the file list, with the sidebar still beside them. */
     public void openSettings() {
-        startActivityForResult(new Intent(this, SettingsActivity.class), CODE_SETTINGS);
+        if (mShowingSettings) {
+            return;
+        }
+        mShowingSettings = true;
+        onCurrentDirectoryChanged(ANIM_NONE);
         AnalyticsManager.logEvent("setting_open");
+    }
+
+    public boolean isShowingSettings() {
+        return mShowingSettings;
+    }
+
+    /** Back from Settings to the section that was open before. */
+    private void closeSettings() {
+        mShowingSettings = false;
+        loadDisplaySettings();
+        onCurrentDirectoryChanged(ANIM_NONE);
     }
 
     public void openAbout() {
@@ -1348,6 +1387,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 return;
             }
         }
+        if (mShowingSettings) {
+            closeSettings();
+            return;
+        }
         if (!mState.stackTouched) {
             super.onBackPressed();
             return;
@@ -1382,6 +1425,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         state.putBoolean(EXTRA_AUTHENTICATED, mAuthenticated);
         state.putBoolean(EXTRA_ACTIONMODE, mActionMode);
         state.putBoolean(EXTRA_SEARCH_STATE, mSearchResultShown);
+        state.putBoolean(EXTRA_SETTINGS, mShowingSettings);
     }
 
     @Override
@@ -1529,6 +1573,16 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return;
         }
         final FragmentManager fm = getFragmentManager();
+        if (mShowingSettings) {
+            SettingsFragment.show(fm);
+            final RootsCommonFragment roots = RootsCommonFragment.get(fm);
+            if (roots != null) {
+                roots.onCurrentRootChanged();
+            }
+            updateActionBar();
+            invalidateMenu();
+            return;
+        }
         final RootInfo root = getCurrentRoot();
         DocumentInfo cwd = getCurrentDirectory();
 
@@ -1548,7 +1602,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 CrashReportingManager.logException(e);
 			}
         }
-        if(!SettingsActivity.getFolderAnimation(this)){
+        if(!AppSettings.getFolderAnimation(this)){
             anim = 0;
         }
 
@@ -1641,6 +1695,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if(null == root){
             return;
         }
+        mShowingSettings = false;
         // Connections to LAN servers need local network access on Android 17+
         if (root.isNetworkStorage() && !root.isServerStorage()
                 && !PermissionUtil.hasLocalNetworkPermission(this)) {
@@ -1775,11 +1830,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             // Pass back result to original caller
             setResult(resultCode, data);
             finish();
-        } else if(requestCode == CODE_SETTINGS){
-        	if(resultCode == RESULT_FIRST_USER){
-        		recreate();
-        	}
-        }  else if(requestCode == ADD_STORAGE_REQUEST_CODE){
+        } else if(requestCode == ADD_STORAGE_REQUEST_CODE){
             SAFManager.onActivityResult(this, requestCode, resultCode, data);
         } else if(requestCode == UPLOAD_FILE) {
             if(resultCode == Activity.RESULT_OK) {

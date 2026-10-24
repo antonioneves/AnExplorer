@@ -26,7 +26,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;

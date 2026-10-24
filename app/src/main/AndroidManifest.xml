@@ -107,12 +107,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".setting.SettingsActivity"
-            android:exported="false"
-            android:label="@string/menu_settings"
-            android:theme="@style/DocumentsTheme.Setting" >
-        </activity>
-        <activity
             android:name=".AboutActivity"
             android:label="About"
             android:theme="@style/DocumentsTheme.Document" >

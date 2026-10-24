@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A settings row: the D-pad focus gets the same ring as the sidebar (item_root) -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="@color/item_root_pressed" />
+            <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+        </shape>
+    </item>
+
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="@color/item_root_pressed" />
+        </shape>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

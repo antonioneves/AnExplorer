@@ -75,7 +75,7 @@ import dev.dworks.apps.anexplorer.model.GroupInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
@@ -218,12 +218,7 @@ public class RootsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         changeThemeColor();
-        final Context context = getActivity();
-        final State state = ((BaseActivity) context).getDisplayState();
-        state.showAdvanced = state.forceAdvanced
-                | SettingsActivity.getDisplayAdvancedDevices(context);
-        state.rootMode = SettingsActivity.getRootMode(getActivity());
-        
+        final State state = ((BaseActivity) getActivity()).getDisplayState();
         if (state.action == ACTION_BROWSE) {
             mList.setOnItemLongClickListener(mItemLongClickListener);
         } else {
@@ -233,6 +228,16 @@ public class RootsFragment extends Fragment {
         if(null != proWrapper) {
             proWrapper.setVisibility(DocumentsApplication.isPurchased() ? View.GONE : View.VISIBLE);
         }
+        reloadRoots();
+    }
+
+    /** Lists the roots again, picking up the storage settings (advanced storage, root mode). */
+    public void reloadRoots() {
+        final Context context = getActivity();
+        final State state = ((BaseActivity) context).getDisplayState();
+        state.showAdvanced = state.forceAdvanced
+                | AppSettings.getDisplayAdvancedDevices(context);
+        state.rootMode = AppSettings.getRootMode(context);
         getLoaderManager().restartLoader(2, null, mCallbacks);
     }
 
@@ -249,10 +254,19 @@ public class RootsFragment extends Fragment {
         if (mAdapter == null || mList == null) return;
 
         final RootInfo root = ((BaseActivity) getActivity()).getCurrentRoot();
+        // Settings take the place of the current root while open, so their entry is the selected one
+        final boolean settings = getActivity() instanceof DocumentsActivity
+                && ((DocumentsActivity) getActivity()).isShowingSettings();
         for (int i = 0; i < mAdapter.getGroupCount(); i++) {
             for (int j = 0; j < mAdapter.getChildrenCount(i); j++) {
                 final Object item = mAdapter.getChild(i,j);
-                if (item instanceof RootItem) {
+                if (settings) {
+                    if (item instanceof ActionItem && ((ActionItem) item).id == R.id.menu_settings) {
+                        mList.setItemChecked(mList.getFlatListPosition(
+                                ExpandableListView.getPackedPositionForChild(i, j)), true);
+                        return;
+                    }
+                } else if (item instanceof RootItem) {
                     final RootInfo testRoot = ((RootItem) item).root;
                     if (Objects.equal(testRoot, root)) {
                         try {
@@ -432,7 +446,7 @@ public class RootsFragment extends Fragment {
         public RootItem(RootInfo root) {
             super(R.layout.item_root);
             this.root = root;
-            this.color = SettingsActivity.getPrimaryColor();
+            this.color = AppSettings.getPrimaryColor();
         }
 
         public RootItem(RootInfo root, int color) {

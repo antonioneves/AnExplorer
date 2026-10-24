@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_STOP_FTPSERVER;
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_ROOT;
@@ -58,7 +58,7 @@ public class NotificationUtils {
                 .setTicker(tickerText)
                 .setWhen(when)
                 .setOngoing(true)
-                .setColor(SettingsActivity.getPrimaryColor())
+                .setColor(AppSettings.getPrimaryColor())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setPriority(Notification.PRIORITY_MAX)

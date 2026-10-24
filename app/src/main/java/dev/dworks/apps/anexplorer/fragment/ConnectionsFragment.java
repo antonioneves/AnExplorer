@@ -41,7 +41,7 @@ import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;

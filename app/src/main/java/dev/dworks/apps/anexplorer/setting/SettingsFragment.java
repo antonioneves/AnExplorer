@@ -1,0 +1,335 @@
+package dev.dworks.apps.anexplorer.setting;
+
+import android.app.Dialog;
+import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.snackbar.Snackbar;
+
+import dev.dworks.apps.anexplorer.DocumentsActivity;
+import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.common.RootsCommonFragment;
+import dev.dworks.apps.anexplorer.misc.PinViewHelper;
+import dev.dworks.apps.anexplorer.misc.Utils;
+
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_ADVANCED_DEVICES;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_HIDDEN;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_SIZE;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_THUMBNAIL;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_ANIMATIONS;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_SIZE;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_ENABLED;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_SET;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECENT_MEDIA;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_ROOT_MODE;
+
+/**
+ * Settings, shown in place of the file list (a tab of the main screen rather than a screen of its own):
+ * one card per section, each row a D-pad target that flips its switch or opens a picker.
+ */
+public class SettingsFragment extends Fragment {
+    public static final String TAG = "SettingsFragment";
+
+    private ViewGroup mList;
+    private View mPinSetRow;
+
+    public static void show(FragmentManager fm) {
+        // Kept when already there, so a recreated activity keeps its scroll position and focus
+        if (get(fm) != null) {
+            return;
+        }
+        final FragmentTransaction ft = fm.beginTransaction();
+        ft.replace(R.id.container_directory, new SettingsFragment(), TAG);
+        ft.commitAllowingStateLoss();
+    }
+
+    public static SettingsFragment get(FragmentManager fm) {
+        return (SettingsFragment) fm.findFragmentByTag(TAG);
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        final View view = inflater.inflate(R.layout.fragment_settings, container, false);
+        mList = (ViewGroup) view.findViewById(R.id.settings_list);
+        buildRows(inflater);
+        return view;
+    }
+
+    private void buildRows(LayoutInflater inflater) {
+        final Context context = getActivity();
+        mList.removeAllViews();
+
+        ViewGroup section = addSection(inflater, R.string.pref_header_general);
+        addSwitch(inflater, section, KEY_FILE_SIZE, R.drawable.ic_settings_file, R.string.pref_file_size,
+                R.string.settings_file_size_summary, AppSettings.getDisplayFileSize(context));
+        addSwitch(inflater, section, KEY_FOLDER_SIZE, R.drawable.ic_root_folder, R.string.pref_folder_size,
+                R.string.settings_folder_size_summary, AppSettings.getDisplayFolderSize(context));
+        addSwitch(inflater, section, KEY_FILE_THUMBNAIL, R.drawable.ic_root_image, R.string.pref_thumbnail,
+                R.string.settings_thumbnail_summary, AppSettings.getDisplayFileThumbnail(context));
+        addSwitch(inflater, section, KEY_FILE_HIDDEN, R.drawable.ic_settings_visibility, R.string.pref_hidden,
+                R.string.settings_hidden_summary, AppSettings.getDisplayFileHidden(context));
+        addSwitch(inflater, section, KEY_RECENT_MEDIA, R.drawable.ic_root_recent, R.string.pref_recent_media,
+                R.string.settings_recent_media_summary, AppSettings.getDisplayRecentMedia());
+
+        section = addSection(inflater, R.string.pref_header_theme);
+        addColor(inflater, section, ColorPickerDialog.TYPE_PRIMARY, R.string.pref_foreground_color_title,
+                R.string.settings_primary_color_summary, AppSettings.getPrimaryColor(context));
+        addColor(inflater, section, ColorPickerDialog.TYPE_ACCENT, R.string.pref_accent_color_title,
+                R.string.settings_accent_color_summary, AppSettings.getAccentColor());
+
+        section = addSection(inflater, R.string.pref_header_security);
+        addSwitch(inflater, section, KEY_PIN_ENABLED, R.drawable.ic_settings_lock, R.string.pref_title_pin_enable,
+                R.string.pref_description_pin_enable,
+                prefs().getBoolean(KEY_PIN_ENABLED, false));
+        mPinSetRow = addRow(inflater, section, R.drawable.ic_settings_pin, R.string.pref_title_pin_set, 0);
+        mPinSetRow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AppSettings.logSettingEvent(KEY_PIN_SET);
+                checkPin();
+            }
+        });
+        updatePinSetRow();
+
+        section = addSection(inflater, R.string.pref_header_advanced);
+        addSwitch(inflater, section, KEY_ADVANCED_DEVICES, R.drawable.ic_root_hdd, R.string.pref_advanced_devices,
+                R.string.settings_advanced_devices_summary, AppSettings.getDisplayAdvancedDevices(context));
+        // Root access only exists on rooted devices
+        if (Utils.isRooted()) {
+            addSwitch(inflater, section, KEY_ROOT_MODE, R.drawable.ic_root_root, R.string.pref_root_mode,
+                    R.string.settings_root_mode_summary, AppSettings.getRootMode(context));
+        }
+        addSwitch(inflater, section, KEY_FOLDER_ANIMATIONS, R.drawable.ic_settings_animation,
+                R.string.pref_folder_animations, R.string.settings_folder_animations_summary,
+                AppSettings.getFolderAnimation(context));
+
+        // The D-pad stops at the ends of the list instead of jumping into the sidebar
+        final ViewGroup first = (ViewGroup) mList.getChildAt(0).findViewById(R.id.settings_rows);
+        final View firstRow = first.getChildAt(0);
+        stopFocus(firstRow, View.FOCUS_UP);
+        // Back at the first row, show the top of the page too, with the first section's title
+        firstRow.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    ((View) mList.getParent()).scrollTo(0, 0);
+                }
+            }
+        });
+        stopFocus(section.getChildAt(section.getChildCount() - 1), View.FOCUS_DOWN);
+    }
+
+    private static void stopFocus(View row, int direction) {
+        row.setId(View.generateViewId());
+        if (direction == View.FOCUS_UP) {
+            row.setNextFocusUpId(row.getId());
+        } else {
+            row.setNextFocusDownId(row.getId());
+        }
+    }
+
+    private ViewGroup addSection(LayoutInflater inflater, int titleId) {
+        final View section = inflater.inflate(R.layout.item_settings_section, mList, false);
+        ((TextView) section.findViewById(android.R.id.title)).setText(titleId);
+        mList.addView(section);
+        return (ViewGroup) section.findViewById(R.id.settings_rows);
+    }
+
+    private View addRow(LayoutInflater inflater, ViewGroup section, int iconId, int titleId, int summaryId) {
+        final View row = inflater.inflate(R.layout.item_setting, section, false);
+        ((ImageView) row.findViewById(android.R.id.icon)).setImageResource(iconId);
+        ((TextView) row.findViewById(android.R.id.title)).setText(titleId);
+        if (summaryId != 0) {
+            ((TextView) row.findViewById(android.R.id.summary)).setText(summaryId);
+        }
+        section.addView(row);
+        return row;
+    }
+
+    private void addSwitch(LayoutInflater inflater, ViewGroup section, final String key, int iconId,
+                           int titleId, int summaryId, boolean checked) {
+        final View row = addRow(inflater, section, iconId, titleId, summaryId);
+        final MaterialSwitch toggle = (MaterialSwitch) row.findViewById(R.id.toggle);
+        toggle.setVisibility(View.VISIBLE);
+        toggle.setChecked(checked);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final boolean value = !toggle.isChecked();
+                toggle.setChecked(value);
+                prefs().edit().putBoolean(key, value).apply();
+                AppSettings.logSettingEvent(key);
+                onSwitchChanged(key, value);
+            }
+        });
+    }
+
+    private void addColor(LayoutInflater inflater, ViewGroup section, final int colorType, int titleId,
+                          int summaryId, int color) {
+        final View row = addRow(inflater, section, R.drawable.ic_settings_palette, titleId, summaryId);
+        final ImageView swatch = (ImageView) row.findViewById(R.id.swatch);
+        final GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(color);
+        circle.setStroke(Utils.dpToPx(2), MaterialColors.getColor(swatch, R.attr.colorOutline));
+        swatch.setImageDrawable(circle);
+        swatch.setVisibility(View.VISIBLE);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AppSettings.logSettingEvent(colorType == ColorPickerDialog.TYPE_PRIMARY
+                        ? AppSettings.KEY_PRIMARY_COLOR : AppSettings.KEY_ACCENT_COLOR);
+                ColorPickerDialog.show(getFragmentManager(), colorType);
+            }
+        });
+    }
+
+    private void onSwitchChanged(String key, boolean value) {
+        final DocumentsActivity activity = (DocumentsActivity) getActivity();
+        switch (key) {
+            case KEY_FILE_SIZE:
+            case KEY_FOLDER_SIZE:
+            case KEY_FILE_THUMBNAIL:
+            case KEY_FILE_HIDDEN:
+                activity.loadDisplaySettings();
+                break;
+            case KEY_ADVANCED_DEVICES:
+            case KEY_ROOT_MODE:
+                // Both change which storage the sidebar lists
+                final RootsCommonFragment roots = RootsCommonFragment.get(getFragmentManager());
+                if (roots != null) {
+                    roots.reloadRoots();
+                }
+                break;
+            case KEY_PIN_ENABLED:
+                updatePinSetRow();
+                // Turning protection on without a PIN would protect nothing; ask for one right away
+                if (value && !AppSettings.isPinProtected(activity)) {
+                    setPin();
+                }
+                break;
+        }
+    }
+
+    /** The colors theme the whole app, so the activity is rebuilt; it reopens on this tab. */
+    void onColorPicked(int colorType) {
+        getActivity().recreate();
+    }
+
+    private SharedPreferences prefs() {
+        return PreferenceManager.getDefaultSharedPreferences(getActivity());
+    }
+
+    private void updatePinSetRow() {
+        final boolean enabled = prefs().getBoolean(KEY_PIN_ENABLED, false);
+        mPinSetRow.setEnabled(enabled);
+        mPinSetRow.setFocusable(enabled);
+        mPinSetRow.setAlpha(enabled ? 1f : 0.38f);
+        ((TextView) mPinSetRow.findViewById(android.R.id.summary)).setText(
+                AppSettings.isPinProtected(getActivity()) ? R.string.pin_set : R.string.pin_disabled);
+    }
+
+    private void confirmPin(final String pin) {
+        final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
+        d.getWindow().setWindowAnimations(R.style.DialogEnterNoAnimation);
+        PinViewHelper pinViewHelper = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
+            public void onEnter(String password) {
+                super.onEnter(password);
+                if (pin.equals(password)) {
+                    AppSettings.setPin(getActivity(), password);
+                    updatePinSetRow();
+                    if (password != null && password.length() > 0) {
+                        showSnackbar(R.string.pin_set);
+                        setInstruction(R.string.pin_set);
+                    }
+                    d.dismiss();
+                    return;
+                }
+                showSnackbar(R.string.pin_mismatch);
+                setInstruction(R.string.pin_mismatch);
+            }
+
+            public void onCancel() {
+                super.onCancel();
+                d.dismiss();
+            }
+        };
+        View view = pinViewHelper.getView();
+        view.findViewById(R.id.logo).setVisibility(View.GONE);
+        pinViewHelper.setInstruction(R.string.confirm_pin);
+        d.setContentView(view);
+        d.show();
+    }
+
+    private void setPin() {
+        final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
+        d.getWindow().setWindowAnimations(R.style.DialogExitNoAnimation);
+        View view = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
+            public void onEnter(String password) {
+                super.onEnter(password);
+                confirmPin(password);
+                d.dismiss();
+            }
+
+            public void onCancel() {
+                super.onCancel();
+                d.dismiss();
+            }
+        }.getView();
+        view.findViewById(R.id.logo).setVisibility(View.GONE);
+        d.setContentView(view);
+        d.show();
+    }
+
+    /** With a PIN set, entering it removes it; without one, sets a new one. */
+    private void checkPin() {
+        if (AppSettings.isPinProtected(getActivity())) {
+            final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
+            View view = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
+                public void onEnter(String password) {
+                    super.onEnter(password);
+                    if (AppSettings.checkPin(getActivity(), password)) {
+                        AppSettings.setPin(getActivity(), "");
+                        updatePinSetRow();
+                        showSnackbar(R.string.pin_disabled);
+                        setInstruction(R.string.pin_disabled);
+                        d.dismiss();
+                        return;
+                    }
+                    showSnackbar(R.string.incorrect_pin);
+                    setInstruction(R.string.incorrect_pin);
+                }
+
+                public void onCancel() {
+                    super.onCancel();
+                    d.dismiss();
+                }
+            }.getView();
+            view.findViewById(R.id.logo).setVisibility(View.GONE);
+            d.setContentView(view);
+            d.show();
+        } else {
+            setPin();
+        }
+    }
+
+    private void showSnackbar(int msg) {
+        if (!Utils.isActivityAlive(getActivity())) {
+            return;
+        }
+        Snackbar.make(getActivity().findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
+    }
+}

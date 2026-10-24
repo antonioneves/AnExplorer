@@ -18,7 +18,7 @@ import dev.dworks.apps.anexplorer.fragment.RootsFragment.RootComparator;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.RootItem;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.SpacerItem;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 public class RootsAdapter extends ArrayAdapter<Item> {

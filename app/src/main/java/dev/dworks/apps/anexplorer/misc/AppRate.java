@@ -14,7 +14,7 @@ import android.widget.ImageView;
 
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.R.id.action_close;
 import static dev.dworks.apps.anexplorer.R.id.action_feedback;

@@ -62,7 +62,7 @@ import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.usb.UsbUtils;
 
 import static dev.dworks.apps.anexplorer.misc.FileUtils.getTypeForName;
@@ -610,7 +610,7 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     public void updateSettings(){
-        showFilesHidden = SettingsActivity.getDisplayFileHidden(getContext());
+        showFilesHidden = AppSettings.getDisplayFileHidden(getContext());
     }
 
     private boolean requestPermission() {

@@ -36,7 +36,7 @@ import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 /**

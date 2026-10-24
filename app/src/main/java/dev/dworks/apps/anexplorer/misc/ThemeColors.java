@@ -12,7 +12,7 @@ import com.google.android.material.color.DynamicColorsOptions;
 import com.google.android.material.color.MaterialColors;
 
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 /**
  * Resolves the colors the app paints from code.
@@ -40,17 +40,17 @@ public final class ThemeColors {
             return;
         }
         DynamicColors.applyToActivityIfAvailable(activity, new DynamicColorsOptions.Builder()
-                .setContentBasedSource(SettingsActivity.getPrimaryColor(activity))
+                .setContentBasedSource(AppSettings.getPrimaryColor(activity))
                 .build());
     }
 
     /** Background of the toolbar, drawer header and other branded bars. */
     public static int getAppBarColor(Context context) {
         if (!isDynamic()) {
-            return SettingsActivity.getPrimaryColor(context);
+            return AppSettings.getPrimaryColor(context);
         }
         return MaterialColors.getColor(context, R.attr.colorPrimaryContainer,
-                SettingsActivity.getPrimaryColor(context));
+                AppSettings.getPrimaryColor(context));
     }
 
     /** App bar color the given candidate primary color would produce, for live previews. */
@@ -78,9 +78,9 @@ public final class ThemeColors {
 
     public static int getPrimaryColor(Context context) {
         if (!isDynamic()) {
-            return SettingsActivity.getPrimaryColor(context);
+            return AppSettings.getPrimaryColor(context);
         }
-        final int seed = SettingsActivity.getPrimaryColor(context);
+        final int seed = AppSettings.getPrimaryColor(context);
         synchronized (ThemeColors.class) {
             if (!sPrimaryCached || seed != sPrimarySeed) {
                 // Tone 40 of the user's color: the light scheme's colorPrimary, and dark enough
@@ -96,15 +96,15 @@ public final class ThemeColors {
     /** Lines and text drawn directly on a surface, e.g. storage progress bars. */
     public static int getOnSurfacePrimaryColor(Context context) {
         if (!isDynamic()) {
-            return SettingsActivity.getPrimaryColor(context);
+            return AppSettings.getPrimaryColor(context);
         }
         return MaterialColors.getColor(context, R.attr.colorPrimary,
-                SettingsActivity.getPrimaryColor(context));
+                AppSettings.getPrimaryColor(context));
     }
 
     /** The user's accent, harmonized with the generated palette on Android 12+. */
     public static int getAccentColor(Context context) {
-        int accent = SettingsActivity.getAccentColor();
+        int accent = AppSettings.getAccentColor();
         if (!isDynamic()) {
             return accent;
         }
@@ -115,7 +115,7 @@ public final class ThemeColors {
     public static void setUpStatusBar(Activity activity) {
         int color = isDynamic()
                 ? getAppBarColor(activity)
-                : Utils.getStatusBarColor(SettingsActivity.getPrimaryColor(activity));
+                : Utils.getStatusBarColor(AppSettings.getPrimaryColor(activity));
         Window window = activity.getWindow();
         window.setStatusBarColor(color);
         WindowCompat.getInsetsController(window, window.getDecorView())

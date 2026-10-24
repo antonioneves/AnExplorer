@@ -8,7 +8,7 @@ import android.text.TextUtils;
 import android.view.View;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressDialog;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
