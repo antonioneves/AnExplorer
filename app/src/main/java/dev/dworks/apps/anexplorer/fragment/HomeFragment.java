@@ -17,61 +17,43 @@
 
 package dev.dworks.apps.anexplorer.fragment;
 
-import android.app.ActivityManager;
-import android.app.Dialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.LoaderManager;
-import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.storage.StorageManager;
 import android.provider.Settings;
 
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
-import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.adapter.CommonInfo;
-import dev.dworks.apps.anexplorer.adapter.ConnectionsAdapter;
 import dev.dworks.apps.anexplorer.adapter.HomeAdapter;
-import dev.dworks.apps.anexplorer.adapter.RecentsAdapter;
-import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment;
 import dev.dworks.apps.anexplorer.cursor.LimitCursorWrapper;
 import dev.dworks.apps.anexplorer.loader.RecentLoader;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
-import dev.dworks.apps.anexplorer.misc.AsyncTask;
-import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DirectoryResult;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
-import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.RootInfo;
-import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
@@ -79,7 +61,6 @@ import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_MAIN;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_RECENT;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_SHORTCUT;
 import static dev.dworks.apps.anexplorer.misc.AnalyticsManager.FILE_TYPE;
-import static dev.dworks.apps.anexplorer.provider.AppsProvider.getRunningAppProcessInfo;
 
 /**
  * Display home.
@@ -97,7 +78,6 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     private ArrayList<CommonInfo> mainData;
     private ArrayList<CommonInfo> shortcutsData;
     private HomeAdapter mAdapter;
-    private RootInfo processRoot;
     private int totalSpanSize;
     private int shortcutSpanSize;
 
@@ -159,7 +139,6 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         final RootInfo primaryRoot = roots.getPrimaryRoot();
         final RootInfo secondaryRoot = roots.getSecondaryRoot();
         final RootInfo usbRoot = roots.getUSBRoot();
-        processRoot = roots.getProcessRoot();
         int type = TYPE_MAIN;
         if(null != primaryRoot){
             mainData.add(CommonInfo.from(primaryRoot, type));
@@ -169,9 +148,6 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         }
         if(null != usbRoot){
             mainData.add(CommonInfo.from(usbRoot, type));
-        }
-        if(null != processRoot){
-            mainData.add(CommonInfo.from(processRoot, type));
         }
     }
 
@@ -259,80 +235,15 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
             openRoot(roots.getRecentsRoot());
         } else if (view.getId() == R.id.action){
             Bundle params = new Bundle();
-            if(item.commonInfo.rootInfo.isAppProcess()) {
-                cleanRAM();
-            } else {
-                Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
-                if(Utils.isIntentAvailable(getActivity(), intent)) {
-                    getActivity().startActivity(intent);
-                } else  {
-                    Utils.showSnackBar(getActivity(), "Coming Soon!");
-                }
-                AnalyticsManager.logEvent("storage_analyze", params);
+            Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+            if(Utils.isIntentAvailable(getActivity(), intent)) {
+                getActivity().startActivity(intent);
+            } else  {
+                Utils.showSnackBar(getActivity(), "Coming Soon!");
             }
+            AnalyticsManager.logEvent("storage_analyze", params);
         }
 
-    }
-
-    private void cleanRAM(){
-        Bundle params = new Bundle();
-        new OperationTask(processRoot).execute();
-        AnalyticsManager.logEvent("process_clean", params);
-    }
-
-    private class OperationTask extends AsyncTask<Void, Void, Boolean> {
-
-        private Dialog progressDialog;
-        private RootInfo root;
-        private long currentAvailableBytes;
-
-        public OperationTask(RootInfo root) {
-            DialogBuilder builder = new DialogBuilder(getActivity());
-            builder.setMessage("Cleaning up RAM...");
-            builder.setIndeterminate(true);
-            progressDialog = builder.create();
-            this.root = root;
-            currentAvailableBytes = root.availableBytes;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            progressDialog.show();
-            super.onPreExecute();
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            boolean result = false;
-            cleanupMemory(getActivity());
-            return result;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            super.onPostExecute(result);
-            if (!Utils.isActivityAlive(getActivity())) {
-                return;
-            }
-            AppsProvider.notifyDocumentsChanged(getActivity(), root.rootId);
-            AppsProvider.notifyRootsChanged(getActivity());
-            RootsCache.updateRoots(getActivity(), AppsProvider.AUTHORITY);
-            roots = DocumentsApplication.getRootsCache(getActivity());
-            final Handler handler = new Handler();
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if(currentAvailableBytes != 0) {
-                        long availableBytes = processRoot.availableBytes - currentAvailableBytes;
-                        String summaryText = availableBytes <= 0 ? "Already cleaned up!" :
-                                getActivity().getString(R.string.root_available_bytes,
-                                        Formatter.formatFileSize(getActivity(), availableBytes));
-                        Utils.showSnackBar(getActivity(), summaryText);
-                    }
-                    progressDialog.dismiss();
-                }
-            }, 500);
-        }
     }
 
     private static BaseActivity.State getDisplayState(Fragment fragment) {
@@ -343,14 +254,6 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         DocumentsActivity activity = ((DocumentsActivity)getActivity());
         activity.onRootPicked(rootInfo, mHomeRoot);
         AnalyticsManager.logEvent("open_shortcuts", rootInfo ,new Bundle());
-    }
-
-    public void cleanupMemory(Context context){
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> runningProcessesList = getRunningAppProcessInfo(context);
-        for (ActivityManager.RunningAppProcessInfo processInfo : runningProcessesList) {
-            activityManager.killBackgroundProcesses(processInfo.processName);
-        }
     }
 
     private void openDocument(DocumentInfo doc) {

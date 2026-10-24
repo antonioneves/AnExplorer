@@ -23,8 +23,6 @@
     <string name="menu_rename">Rename</string>
     <string name="menu_paste">Paste</string>
     <string name="menu_create_file">Create file</string>
-    <string name="menu_uninstall">Uninstall</string>
-    <string name="menu_stop">Stop</string>
     <string name="menu_properties">Properties</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_add">Add</string>
@@ -38,11 +36,7 @@
     <string name="root_root_storage">Root</string>
     <string name="root_bluetooth">Bluetooth</string>
     <string name="root_downloads">Downloads</string>
-    <string name="root_app_backup">App Backup</string>
-    <string name="root_apps">User Apps</string>
-    <string name="root_system_apps">System Apps</string>
     <string name="root_heat_map">Heat map</string>
-    <string name="root_processes">Processes</string>
     <string name="root_home">Home</string>
     <string name="root_connections">Connections</string>
     <string name="root_document">Documents</string>
@@ -116,7 +110,6 @@
     <string name="save">Save</string>
     <string name="unsaved_changes">Unsaved Changes</string>
     <string name="unsaved_changes_desc">You have unsaved changes, Save them?</string>
-    <string name="unable_to_open_app">Unable to open app</string>
     <string name="saf_issue">Your System doesnt allow this operation on Secondary storage on Kitkat. Upgrade to Lollipop to solve this issue..</string>
     <string name="rename_error">Failed to rename</string>
     <string name="compress_error">Failed to compress</string>

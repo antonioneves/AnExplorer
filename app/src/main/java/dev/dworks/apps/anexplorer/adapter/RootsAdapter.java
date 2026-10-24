@@ -43,7 +43,7 @@ public class RootsAdapter extends ArrayAdapter<Item> {
         for (RootInfo root : roots) {
             if (root.isRecents()) {
                 recents = new RootItem(root, defaultColor);
-            } else if (root.isBluetoothFolder() || root.isDownloadsFolder() || root.isAppBackupFolder()) {
+            } else if (root.isBluetoothFolder() || root.isDownloadsFolder()) {
                 extras.add(root);
             } else if (root.isBookmarkFolder()) {
                 bookmarks.add(root);

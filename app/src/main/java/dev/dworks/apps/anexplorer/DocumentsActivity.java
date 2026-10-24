@@ -135,7 +135,6 @@ import dev.dworks.apps.anexplorer.misc.PermissionUtil;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper.PINDialogFragment;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
-import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.misc.SystemBarTintManager;
@@ -1484,10 +1483,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     
     public RootInfo getDownloadRoot() {
     	return mRoots.getDownloadRoot();
-    }
-
-    public RootInfo getAppsBackupRoot() {
-        return mRoots.getAppsBackupRoot();
     }
 
     public RootsCache getRoots(){

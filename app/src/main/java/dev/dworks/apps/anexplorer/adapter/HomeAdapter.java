@@ -199,9 +199,7 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             icon.setImageDrawable(commonInfo.rootInfo.loadDrawerIcon(mContext));
             title.setText(commonInfo.rootInfo.title);
             int drawableId = -1;
-            if (commonInfo.rootInfo.isAppProcess()){
-                drawableId = R.drawable.ic_clean;
-            } else if (commonInfo.rootInfo.isStorage() && !commonInfo.rootInfo.isSecondaryStorage()) {
+            if (commonInfo.rootInfo.isStorage() && !commonInfo.rootInfo.isSecondaryStorage()) {
                 drawableId = R.drawable.ic_analyze;
             }
             if(drawableId != -1) {

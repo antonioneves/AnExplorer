@@ -49,16 +49,8 @@ public class ListDocumentHolder extends DocumentHolder {
     public ListDocumentHolder(Context context, ViewGroup parent, OnItemClickListener onItemClickListener,
                               Environment environment) {
         this(context, parent,
-                getLayoutId(environment),
+                R.layout.item_doc_list,
                 onItemClickListener, environment);
-    }
-
-    public static int getLayoutId(Environment environment){
-        int layoutId = R.layout.item_doc_list;
-        if(environment.isApp()){
-            layoutId = environment.getRoot().isAppProcess() ? R.layout.item_doc_process_list : R.layout.item_doc_app_list;
-        }
-        return layoutId;
     }
 
     @Override

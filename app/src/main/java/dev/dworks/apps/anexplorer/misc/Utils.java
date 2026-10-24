@@ -19,13 +19,11 @@ package dev.dworks.apps.anexplorer.misc;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -33,9 +31,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.os.ParcelFileDescriptor;
-import com.google.android.material.snackbar.Snackbar;
 
 import androidx.annotation.IntDef;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
@@ -47,7 +43,6 @@ import androidx.appcompat.app.AppCompatDelegate;
 import android.text.Html;
 import android.text.Spanned;
 import android.text.format.DateUtils;
-import android.text.format.Time;
 import android.util.DisplayMetrics;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
@@ -70,7 +65,6 @@ import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
-import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
 import static com.google.android.material.snackbar.Snackbar.LENGTH_SHORT;
@@ -80,7 +74,6 @@ public class Utils extends UtilsFlavour{
     public static final long KB_IN_BYTES = 1024;
     public static final String INTERSTITIAL_APP_UNIT_ID = "ca-app-pub-6407484780907805/9134520474";
 
-    public static final String DIRECTORY_APPBACKUP = "AppBackup";
 
     public static final String EXTRA_TYPE = "type";
     public static final String EXTRA_ROOT = "root";
@@ -474,12 +467,6 @@ public class Utils extends UtilsFlavour{
     public static boolean isRTL() {
         return TextUtilsCompat.getLayoutDirectionFromLocale(Locale.getDefault())
                 == androidx.core.view.ViewCompat.LAYOUT_DIRECTION_RTL;
-    }
-
-    public static File getAppsBackupFile(Context context){
-        final RootInfo root = DocumentsApplication.getRootsCache(context).getPrimaryRoot();
-        File rootFile = (null != root) ? new File(root.path) : Environment.getExternalStorageDirectory();
-        return new File(rootFile, DIRECTORY_APPBACKUP);
     }
 
     public static float dp2px(Resources resources, float dp) {

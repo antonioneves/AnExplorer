@@ -35,7 +35,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> recent = new ArrayList<>();
         final List<Item> connection = new ArrayList<>();
         final List<Item> rooted = new ArrayList<>();
-        final List<Item> appbackup = new ArrayList<>();
         final List<Item> usb = new ArrayList<>();
 
         final List<Item> storage = new ArrayList<>();
@@ -43,7 +42,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> network = new ArrayList<>();
         final List<Item> quickShare = new ArrayList<>();
         final List<Item> cloud = new ArrayList<>();
-        final List<Item> apps = new ArrayList<>();
         final List<Item> libraryMedia = new ArrayList<>();
         final List<Item> libraryNonMedia = new ArrayList<>();
         final List<Item> folders = new ArrayList<>();
@@ -62,8 +60,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
                 rooted.add(new RootItem(root));
             } else if (root.isPhoneStorage()) {
                 phone.add(new RootItem(root));
-            } else if (root.isAppBackupFolder()) {
-                appbackup.add(new RootItem(root));
             } else if (root.isUsbStorage()) {
                 usb.add(new RootItem(root));
             } else if (RootInfo.isLibraryMedia(root)) {
@@ -80,8 +76,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
                 } else {
                     storage.add(new RootItem(root));
                 }
-            } else if (RootInfo.isApps(root)) {
-                apps.add(new RootItem(root));
             } else if (RootInfo.isNetwork(root)) {
                 network.add(new RootItem(root));
             } else if (RootInfo.isCloud(root)) {
@@ -104,13 +98,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Network & Cloud", network));
         } else if(!connection.isEmpty()){
             groupRoots.add(new GroupInfo("Network & Cloud", connection));
-        }
-
-        if(!apps.isEmpty()){
-            if(!appbackup.isEmpty()) {
-                apps.addAll(appbackup);
-            }
-            groupRoots.add(new GroupInfo("Apps", apps));
         }
 
         if(!libraryMedia.isEmpty() || !libraryNonMedia.isEmpty()){

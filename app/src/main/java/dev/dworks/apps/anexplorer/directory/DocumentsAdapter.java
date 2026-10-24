@@ -191,8 +191,6 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
 
         State getDisplayState();
 
-        boolean isApp();
-
         RootInfo getRoot();
 
         DocumentInfo getDocumentInfo();

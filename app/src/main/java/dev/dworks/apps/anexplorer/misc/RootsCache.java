@@ -53,7 +53,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
-import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.DocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
@@ -428,24 +427,6 @@ public class RootsCache {
         return null;
     }
 
-    public RootInfo getProcessRoot() {
-        for (RootInfo root : mRoots.get(AppsProvider.AUTHORITY)) {
-            if (root.isAppProcess()) {
-                return root;
-            }
-        }
-        return null;
-    }
-
-    public RootInfo getAppRoot() {
-        for (RootInfo root : mRoots.get(AppsProvider.AUTHORITY)) {
-            if (root.isAppPackage()) {
-                return root;
-            }
-        }
-        return null;
-    }
-
     public RootInfo getServerRoot() {
         for (RootInfo root : mRoots.get(NetworkStorageProvider.AUTHORITY)) {
             if (root.isServer()) {
@@ -453,15 +434,6 @@ public class RootsCache {
             }
         }
         return null;
-    }
-
-    public RootInfo getAppsBackupRoot() {
-        for (RootInfo root : mRoots.get(ExternalStorageProvider.AUTHORITY)) {
-            if (root.isAppBackupFolder()) {
-                return root;
-            }
-        }
-        return getPrimaryRoot();
     }
 
     public RootInfo getRootInfo(String rootId, String authority){
@@ -512,7 +484,6 @@ public class RootsCache {
         if(Utils.hasWiFi(mContext)) {
             list.add(getServerRoot());
         }
-        list.add(getAppRoot());
         for (RootInfo root : mRoots.get(MediaDocumentsProvider.AUTHORITY)) {
             if (RootInfo.isLibraryMedia(root)) {
                 list.add(root);

@@ -37,7 +37,6 @@ import dev.dworks.apps.anexplorer.libcore.util.Objects;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
-import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.DownloadStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
@@ -220,9 +219,6 @@ public class RootInfo implements Durable, Parcelable {
         } else if (isBluetoothFolder()) {
             derivedIcon = R.drawable.ic_root_bluetooth;
             derivedTag = "bluetooth";
-        } else if (isAppBackupFolder()) {
-            derivedIcon = R.drawable.ic_root_appbackup;
-            derivedTag = "appbackup";
         } else if (isBookmarkFolder()) {
             derivedIcon = R.drawable.ic_root_bookmark;
             derivedTag = "bookmark";
@@ -256,17 +252,6 @@ public class RootInfo implements Durable, Parcelable {
             derivedIcon = R.drawable.ic_root_apk;
             derivedColor = R.color.item_doc_apk;
             derivedTag = "apk";
-        } else if (isUserApp()) {
-            derivedIcon = R.drawable.ic_root_apps;
-            derivedColor = R.color.item_doc_apps;
-            derivedTag = "user_apps";
-        } else if (isSystemApp()) {
-            derivedIcon = R.drawable.ic_root_system_apps;
-            derivedColor = R.color.item_doc_apps;
-            derivedTag = "system_apps";
-        } else if (isAppProcess()) {
-            derivedIcon = R.drawable.ic_root_process;
-            derivedTag = "process";
         } else if (isRecents()) {
             derivedIcon = R.drawable.ic_root_recent;
             derivedColor = R.color.item_root_recent;
@@ -373,11 +358,6 @@ public class RootInfo implements Durable, Parcelable {
                 && ExternalStorageProvider.ROOT_ID_DOWNLOAD.equals(rootId);
     }
 
-    public boolean isAppBackupFolder() {
-        return ExternalStorageProvider.AUTHORITY.equals(authority)
-                && ExternalStorageProvider.ROOT_ID_APP_BACKUP.equals(rootId);
-    }
-
     public boolean isBluetoothFolder() {
         return ExternalStorageProvider.AUTHORITY.equals(authority)
                 && ExternalStorageProvider.ROOT_ID_BLUETOOTH.equals(rootId);
@@ -425,31 +405,6 @@ public class RootInfo implements Durable, Parcelable {
     public boolean isApk() {
         return NonMediaDocumentsProvider.AUTHORITY.equals(authority)
                 && NonMediaDocumentsProvider.TYPE_APK_ROOT.equals(rootId);
-    }
-
-    public boolean isApp() {
-        return AppsProvider.AUTHORITY.equals(authority);
-    }
-    
-    public boolean isAppPackage() {
-        return AppsProvider.AUTHORITY.equals(authority)
-                && (AppsProvider.ROOT_ID_USER_APP.equals(rootId)
-                || AppsProvider.ROOT_ID_SYSTEM_APP.equals(rootId));
-    }
-
-    public boolean isUserApp() {
-        return AppsProvider.AUTHORITY.equals(authority)
-                && AppsProvider.ROOT_ID_USER_APP.equals(rootId);
-    }
-
-    public boolean isSystemApp() {
-        return AppsProvider.AUTHORITY.equals(authority)
-                && AppsProvider.ROOT_ID_SYSTEM_APP.equals(rootId);
-    }
-    
-    public boolean isAppProcess() {
-        return AppsProvider.AUTHORITY.equals(authority)
-                && AppsProvider.ROOT_ID_PROCESS.equals(rootId);
     }
 
     public boolean isNetworkStorage() {
@@ -662,8 +617,7 @@ public class RootInfo implements Durable, Parcelable {
     }
 
     public static boolean isTools(RootInfo root){
-        return root.isConnections() || root.isRootedStorage() || root.isAppPackage()
-                || root.isAppProcess();
+        return root.isConnections() || root.isRootedStorage();
     }
 
     public static boolean isNetwork(RootInfo root){
@@ -672,10 +626,6 @@ public class RootInfo implements Durable, Parcelable {
 
     public static boolean isCloud(RootInfo root){
         return root.isCloudStorage();
-    }
-
-    public static boolean isApps(RootInfo root){
-        return root.isAppPackage() || root.isAppProcess();
     }
 
     public static boolean isOtherRoot(RootInfo root){
