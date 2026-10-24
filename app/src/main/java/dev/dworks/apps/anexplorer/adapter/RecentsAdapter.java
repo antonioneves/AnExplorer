@@ -26,6 +26,8 @@ import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorLong;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 
 public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.ViewHolder> {
+    private static final int TYPE_RECENT = 0;
+    private static final int TYPE_MORE = 1;
 
     private final IconHelper mIconHelper;
     private final int mDefaultColor;
@@ -45,7 +47,31 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
     }
 
     @Override
+    public void onBindViewHolder(ViewHolder viewHolder, int position) {
+        if (getItemViewType(position) == TYPE_RECENT) {
+            super.onBindViewHolder(viewHolder, position);
+        }
+    }
+
+    /** The recent files, then a card that opens all of them */
+    @Override
+    public int getItemCount() {
+        final int count = super.getItemCount();
+        return count == 0 ? 0 : count + 1;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return position == super.getItemCount() ? TYPE_MORE : TYPE_RECENT;
+    }
+
+    @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        if (viewType == TYPE_MORE) {
+            View itemView = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_recent_more, parent, false);
+            return new MoreViewHolder(itemView);
+        }
         View itemView = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_recent, parent, false);
         return new ViewHolder(itemView);
@@ -61,6 +87,19 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
 
     public interface OnItemClickListener{
         void onItemClick(ViewHolder item, int position);
+        void onMoreClick(View view);
+    }
+
+    public class MoreViewHolder extends ViewHolder {
+        public MoreViewHolder(View v) {
+            super(v);
+            v.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    onItemClickListener.onMoreClick(v);
+                }
+            });
+        }
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

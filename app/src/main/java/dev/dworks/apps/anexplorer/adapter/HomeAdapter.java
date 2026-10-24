@@ -391,6 +391,13 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
                         onItemClickListener.onItemClick(GalleryViewHolder.this, recyclerview, position);
                     }
                 }
+
+                @Override
+                public void onMoreClick(View view) {
+                    if(null != onItemClickListener) {
+                        onItemClickListener.onItemViewClick(GalleryViewHolder.this, view, getLayoutPosition());
+                    }
+                }
             });
             recyclerview.setAdapter(adapter);
         }

@@ -184,5 +184,6 @@
     <string name="support_app">Support AnExplorer</string>
     <string name="restored_previous_purchase_please_restart">Restored previous purchase.</string>
     <string name="home_section_recent">Recent media</string>
+    <string name="home_section_more">More</string>
 
 </resources>
