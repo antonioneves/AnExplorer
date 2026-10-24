@@ -461,8 +461,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         mState.forceAdvanced = intent.getBooleanExtra(DocumentsContract.EXTRA_SHOW_ADVANCED	, false);
         mState.showAdvanced = mState.forceAdvanced
                 | AppSettings.getDisplayAdvancedDevices(this);
-        
-        mState.rootMode = AppSettings.getRootMode(this);
     }
 
     @Override
@@ -1098,7 +1096,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
 
         final RootInfo root = getCurrentRoot();
-        if(root != null && (root.isRootedStorage() || root.isUsbStorage())){
+        if(root != null && root.isUsbStorage()){
             refreshData();
         }
     }
@@ -2457,7 +2455,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final RootInfo root = getCurrentRoot();
         return !RootInfo.isOtherRoot(root) &&
                 isCreateSupported() &&
-                (null != root && (!root.isRootedStorage() || Utils.isRooted()))
+                null != root
                 && mState.currentSearch == null;
     }
 

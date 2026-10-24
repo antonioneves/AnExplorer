@@ -34,7 +34,6 @@ import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_SIZE;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_ENABLED;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_SET;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECENT_MEDIA;
-import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_ROOT_MODE;
 
 /**
  * Settings, shown in place of the file list (a tab of the main screen rather than a screen of its own):
@@ -107,11 +106,6 @@ public class SettingsFragment extends Fragment {
         section = addSection(inflater, R.string.pref_header_advanced);
         addSwitch(inflater, section, KEY_ADVANCED_DEVICES, R.drawable.ic_root_hdd, R.string.pref_advanced_devices,
                 R.string.settings_advanced_devices_summary, AppSettings.getDisplayAdvancedDevices(context));
-        // Root access only exists on rooted devices
-        if (Utils.isRooted()) {
-            addSwitch(inflater, section, KEY_ROOT_MODE, R.drawable.ic_root_root, R.string.pref_root_mode,
-                    R.string.settings_root_mode_summary, AppSettings.getRootMode(context));
-        }
         addSwitch(inflater, section, KEY_FOLDER_ANIMATIONS, R.drawable.ic_settings_animation,
                 R.string.pref_folder_animations, R.string.settings_folder_animations_summary,
                 AppSettings.getFolderAnimation(context));
@@ -207,8 +201,7 @@ public class SettingsFragment extends Fragment {
                 activity.loadDisplaySettings();
                 break;
             case KEY_ADVANCED_DEVICES:
-            case KEY_ROOT_MODE:
-                // Both change which storage the sidebar lists
+                // Changes which storage the sidebar lists
                 final RootsCommonFragment roots = RootsCommonFragment.get(getFragmentManager());
                 if (roots != null) {
                     roots.reloadRoots();

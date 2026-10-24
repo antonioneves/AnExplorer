@@ -56,9 +56,7 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
-import dev.dworks.apps.anexplorer.provider.RootedStorageProvider;
 import dev.dworks.apps.anexplorer.provider.UsbStorageProvider;
-import dev.dworks.apps.anexplorer.root.RootCommands;
 
 public class NoteActivity extends ActionBarActivity implements TextWatcher {
 
@@ -279,13 +277,7 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
         @Override
         protected Void doInBackground(Void... params) {
             String authority = uri.getAuthority();
-            if(authority.equalsIgnoreCase(RootedStorageProvider.AUTHORITY)){
-                InputStream is = RootCommands.putFile(getPath(uri), mInput.getText().toString());
-                if(null == is){
-                    errorMsg = "Unable to save file";
-                }
-                return null;
-            } else if(authority.equalsIgnoreCase(UsbStorageProvider.AUTHORITY)){
+            if(authority.equalsIgnoreCase(UsbStorageProvider.AUTHORITY)){
                 final ContentProviderClient usbclient = ContentProviderClientCompat
                         .acquireUnstableContentProviderClient(
                                 NoteActivity.this.getContentResolver(),
@@ -353,10 +345,6 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
 
     private InputStream getInputStream(Uri uri){
         String scheme = uri.getScheme();
-        String authority = uri.getAuthority();
-        if(authority.equalsIgnoreCase(RootedStorageProvider.AUTHORITY)){
-            return RootCommands.getFile(getPath(uri));
-        }
         if (scheme.startsWith(ContentResolver.SCHEME_CONTENT)) {
             try {
                 return getContentResolver().openInputStream(uri);

@@ -34,7 +34,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> home = new ArrayList<>();
         final List<Item> phone = new ArrayList<>();
         final List<Item> connection = new ArrayList<>();
-        final List<Item> rooted = new ArrayList<>();
         final List<Item> usb = new ArrayList<>();
 
         final List<Item> storage = new ArrayList<>();
@@ -55,8 +54,6 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
                 connection.add(new RootItem(root));
             } else if (root.isQuickShare()) {
                 quickShare.add(new RootItem(root));
-            } else if (root.isRootedStorage()) {
-                rooted.add(new RootItem(root));
             } else if (root.isPhoneStorage()) {
                 phone.add(new RootItem(root));
             } else if (root.isUsbStorage()) {
@@ -81,12 +78,11 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             }
         }
 
-        if(!home.isEmpty() || !storage.isEmpty() || !phone.isEmpty() || !rooted.isEmpty()){
+        if(!home.isEmpty() || !storage.isEmpty() || !phone.isEmpty()){
             home.addAll(storage);
             home.addAll(secondaryStorage);
             home.addAll(usb);
             home.addAll(phone);
-            home.addAll(rooted);
             groupRoots.add(new GroupInfo("Storage", home));
         }
 

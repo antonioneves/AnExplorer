@@ -45,7 +45,6 @@ import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
-import dev.dworks.apps.anexplorer.provider.RootedStorageProvider;
 import dev.dworks.apps.anexplorer.provider.UsbStorageProvider;
 
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
@@ -197,9 +196,6 @@ public class RootInfo implements Durable, Parcelable {
         } else if (isExternalStorage()) {
             derivedIcon = R.drawable.ic_root_sdcard;
             derivedTag = "external_storage";
-        } else if (isRootedStorage()) {
-            derivedIcon = R.drawable.ic_root_root;
-            derivedTag = "root";
         } else if (isPhoneStorage()) {
             derivedIcon = R.drawable.ic_root_phone;
             derivedTag = "phone";
@@ -317,10 +313,6 @@ public class RootInfo implements Durable, Parcelable {
 
     public boolean isStorage() {
         return isInternalStorage() || isExternalStorage() || isSecondaryStorage();
-    }
-
-    public boolean isRootedStorage() {
-        return RootedStorageProvider.AUTHORITY.equals(authority);
     }
 
     public boolean isExternalStorage() {
@@ -638,7 +630,7 @@ public class RootInfo implements Durable, Parcelable {
     }
 
     public static boolean isTools(RootInfo root){
-        return root.isConnections() || root.isRootedStorage();
+        return root.isConnections();
     }
 
     public static boolean isNetwork(RootInfo root){
@@ -659,7 +651,7 @@ public class RootInfo implements Durable, Parcelable {
     }
 
     public static boolean isProFeature(RootInfo root){
-        return root.isUsbStorage() || root.isRootedStorage();
+        return root.isUsbStorage();
     }
 
 }

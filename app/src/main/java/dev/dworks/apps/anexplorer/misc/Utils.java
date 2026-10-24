@@ -83,9 +83,6 @@ public class Utils extends UtilsFlavour{
     public static final String EXTRA_IGNORE_STATE = "ignoreState";
 
 
-    static final String[] BinaryPlaces = { "/data/bin/", "/system/bin/", "/system/xbin/", "/sbin/",
-        "/data/local/xbin/", "/data/local/bin/", "/system/sd/xbin/", "/system/bin/failsafe/",
-        "/data/local/" };
 	private static final StringBuilder sBuilder = new StringBuilder(50);
 	private static final java.util.Formatter sFormatter = new java.util.Formatter(
 	            sBuilder, Locale.getDefault());
@@ -199,16 +196,6 @@ public class Utils extends UtilsFlavour{
                 
             }
         }
-    }
-    
-    public static boolean isRooted(){
-        for (String p : Utils.BinaryPlaces) {
-            File su = new File(p + "su");
-            if (su.exists()) {
-                return true;
-            }
-        }
-        return false;//RootTools.isRootAvailable();
     }
     
     private static Locale sTimeLocale;

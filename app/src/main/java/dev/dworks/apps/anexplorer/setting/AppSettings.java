@@ -42,7 +42,6 @@ public class AppSettings {
     private static final String KEY_PIN = "pin";
     public static final String KEY_PIN_ENABLED = "pin_enable";
     public static final String KEY_PIN_SET = "pin_set";
-    public static final String KEY_ROOT_MODE = "rootMode";
     public static final String KEY_PRIMARY_COLOR = "primaryColor";
     public static final String KEY_ACCENT_COLOR = "accentColor";
     public static final String KEY_THEME_STYLE = "themeStyle";
@@ -79,10 +78,6 @@ public class AppSettings {
     public static boolean getDisplayRecentMedia() {
         return prefs(DocumentsApplication.getInstance().getBaseContext())
                 .getBoolean(KEY_RECENT_MEDIA, true);
-    }
-
-    public static boolean getRootMode(Context context) {
-        return prefs(context).getBoolean(KEY_ROOT_MODE, true);
     }
 
     public static int getPrimaryColor(Context context) {

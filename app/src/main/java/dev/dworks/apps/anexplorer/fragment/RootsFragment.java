@@ -237,7 +237,6 @@ public class RootsFragment extends Fragment {
         final State state = ((BaseActivity) context).getDisplayState();
         state.showAdvanced = state.forceAdvanced
                 | AppSettings.getDisplayAdvancedDevices(context);
-        state.rootMode = AppSettings.getRootMode(context);
         getLoaderManager().restartLoader(2, null, mCallbacks);
     }
 

@@ -110,7 +110,6 @@ import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_IGNORE_STATE;
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_QUERY;
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_ROOT;
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_TYPE;
-import static dev.dworks.apps.anexplorer.misc.Utils.isRooted;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 import static dev.dworks.apps.anexplorer.ui.RecyclerViewPlus.TYPE_GRID;
@@ -260,7 +259,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				SAFManager.takeCardUriPermission(getActivity(), root, doc);
 			}
 		}
-        isOperationSupported = root != null && (root.isRootedStorage() || root.isUsbStorage());
+        isOperationSupported = root != null && root.isUsbStorage();
 
 		mIconHelper = new IconHelper(mActivity, MODE_GRID);
 		mAdapter = new DocumentsAdapter(mItemListener, mAdapterEnv);
@@ -947,9 +946,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			if(null == root){
 				return;
 			}
-			if(root.isRootedStorage() && !isRooted()){
-				mEmptyView.setText("Your phone is not rooted!");
-			} else if(root.isNetworkStorage()){
+			if(root.isNetworkStorage()){
 				mEmptyView.setText("Couldnt connect to the server!");
 			} else  {
 				mEmptyView.setText(R.string.empty);

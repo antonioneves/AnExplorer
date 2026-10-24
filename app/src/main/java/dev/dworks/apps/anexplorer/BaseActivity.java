@@ -122,7 +122,6 @@ public abstract class BaseActivity extends ActionBarActivity {
         public boolean localOnly = false;
         public boolean forceAdvanced = false;
         public boolean showAdvanced = false;
-        public boolean rootMode = false;
         public boolean stackTouched = false;
         public boolean restored = false;
 
@@ -172,7 +171,6 @@ public abstract class BaseActivity extends ActionBarActivity {
             out.writeInt(localOnly ? 1 : 0);
             out.writeInt(forceAdvanced ? 1 : 0);
             out.writeInt(showAdvanced ? 1 : 0);
-            out.writeInt(rootMode ? 1 : 0);
             out.writeInt(stackTouched ? 1 : 0);
             out.writeInt(restored ? 1 : 0);
             DurableUtils.writeToParcel(out, stack);
@@ -202,7 +200,6 @@ public abstract class BaseActivity extends ActionBarActivity {
                 state.localOnly = in.readInt() != 0;
                 state.forceAdvanced = in.readInt() != 0;
                 state.showAdvanced = in.readInt() != 0;
-                state.rootMode = in.readInt() != 0;
                 state.stackTouched = in.readInt() != 0;
                 state.restored = in.readInt() != 0;
                 DurableUtils.readFromParcel(in, state.stack);

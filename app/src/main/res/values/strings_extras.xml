@@ -72,7 +72,6 @@
     <string name="pref_folder_size">Folder size</string>
     <string name="pref_thumbnail">Thumbnails</string>
     <string name="pref_hidden">Hidden files</string>
-    <string name="pref_root_mode">Root mode</string>
     <string name="pref_folder_animations">Folder animations</string>
     <string name="pref_recent_media">Recent media on Home</string>
 
@@ -194,7 +193,6 @@
     <string name="settings_primary_color_summary">Sets the colors of the whole app</string>
     <string name="settings_accent_color_summary">Highlights selections and progress</string>
     <string name="settings_advanced_devices_summary">List every storage location, including the internal storage</string>
-    <string name="settings_root_mode_summary">Browse system folders with root access</string>
     <string name="settings_folder_animations_summary">Slide between folders as you open and close them</string>
 
 </resources>
