@@ -31,7 +31,7 @@ import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
 import android.preference.Preference;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
-import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -205,7 +205,7 @@ public class MaterialColorPreference extends Preference {
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             final Context context = getActivity();
 
-            final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
             final LayoutInflater dialogInflater = LayoutInflater.from(builder.getContext());
 
             final View rootView = dialogInflater.inflate(R.layout.layout_color_preference, null, false);

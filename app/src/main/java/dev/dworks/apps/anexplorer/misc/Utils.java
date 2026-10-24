@@ -56,7 +56,11 @@ import android.view.ViewConfiguration;
 import android.webkit.WebView;
 import android.widget.Button;
 
+import androidx.core.os.CancellationSignal;
+
 import java.io.File;
+import java.util.Date;
+import java.util.Calendar;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
@@ -219,37 +223,70 @@ public class Utils extends UtilsFlavour{
         return false;//RootTools.isRootAvailable();
     }
     
-    public static String formatTime(Context context, long when) {
-		// TODO: DateUtils should make this easier
-		Time then = new Time();
-		then.set(when);
-		Time now = new Time();
-		now.setToNow();
+    private static Locale sTimeLocale;
+    private static java.text.DateFormat sDateWithYear;
+    private static java.text.DateFormat sDate;
+    private static final Calendar sThen = Calendar.getInstance();
+    private static final Calendar sNow = Calendar.getInstance();
 
-		int flags = DateUtils.FORMAT_NO_NOON | DateUtils.FORMAT_NO_MIDNIGHT | DateUtils.FORMAT_ABBREV_ALL;
+    /**
+     * Short date for a file: the time when it is today, the day and month this year, otherwise
+     * with the year too. The formatters are cached; building one per call (DateUtils) cost ~9ms per
+     * row on a TV.
+     */
+    public static synchronized String formatTime(Context context, long when) {
+        final Locale locale = Locale.getDefault();
+        if (!locale.equals(sTimeLocale)) {
+            sTimeLocale = locale;
+            sDateWithYear = new java.text.SimpleDateFormat(
+                    android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMyyyy"), locale);
+            sDate = new java.text.SimpleDateFormat(
+                    android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMM"), locale);
+        }
 
-		if (then.year != now.year) {
-			flags |= DateUtils.FORMAT_SHOW_YEAR | DateUtils.FORMAT_SHOW_DATE;
-		} else if (then.yearDay != now.yearDay) {
-			flags |= DateUtils.FORMAT_SHOW_DATE;
-		} else {
-			flags |= DateUtils.FORMAT_SHOW_TIME;
-		}
+        final Calendar then = sThen;
+        then.setTimeZone(java.util.TimeZone.getDefault());
+        then.setTimeInMillis(when);
+        final Calendar now = sNow;
+        now.setTimeZone(then.getTimeZone());
+        now.setTimeInMillis(System.currentTimeMillis());
 
-		return DateUtils.formatDateTime(context, when, flags);
-	}
+        final Date date = new Date(when);
+        if (then.get(Calendar.YEAR) != now.get(Calendar.YEAR)) {
+            return sDateWithYear.format(date);
+        } else if (then.get(Calendar.DAY_OF_YEAR) != now.get(Calendar.DAY_OF_YEAR)) {
+            return sDate.format(date);
+        } else {
+            // Follows the system 12/24-hour setting
+            return android.text.format.DateFormat.getTimeFormat(context).format(date);
+        }
+    }
 
     public static long getDirectorySize(File dir) {
-		long result = 0L;
-		if (dir.listFiles() != null && dir.listFiles().length > 0) {
-			for (File eachFile : dir.listFiles()) {
-				result += eachFile.isDirectory() && eachFile.canRead() ? getDirectorySize(eachFile) : eachFile.length();
-			}
-		} else if (!dir.isDirectory()) {
-			result = dir.length();
-		}
-		return result;
-	}
+        return getDirectorySize(dir, null);
+    }
+
+    /**
+     * Total size of a directory tree. Checks the signal on every entry, so a scan that is no
+     * longer wanted stops (with an OperationCanceledException) instead of holding up the
+     * provider thread that the next directory load is waiting for.
+     */
+    public static long getDirectorySize(File dir, CancellationSignal signal) {
+        long result = 0L;
+        final File[] files = dir.listFiles();
+        if (files != null) {
+            for (File eachFile : files) {
+                if (signal != null) {
+                    signal.throwIfCanceled();
+                }
+                result += eachFile.isDirectory() && eachFile.canRead()
+                        ? getDirectorySize(eachFile, signal) : eachFile.length();
+            }
+        } else if (!dir.isDirectory()) {
+            result = dir.length();
+        }
+        return result;
+    }
 
     public static boolean hasSoftNavBar(Context context){
         boolean hasMenuKey = ViewConfiguration.get(context).hasPermanentMenuKey();
@@ -327,19 +364,19 @@ public class Utils extends UtilsFlavour{
     }
 
     public static boolean isProVersion(){
-        return BuildConfig.FLAVOR.contains("Pro") || BuildConfig.FLAVOR.contains("Underground");
+        return true;
     }
 
     public static boolean isOtherBuild(){
-        return BuildConfig.FLAVOR.contains("other");
+        return false;
     }
 
     public static boolean isGoogleBuild(){
-        return BuildConfig.FLAVOR.contains("google");
+        return true;
     }
 
     public static boolean isAmazonBuild(){
-        return BuildConfig.FLAVOR.contains("amazon");
+        return false;
     }
 
     public static Uri getAppUri(){
@@ -441,11 +478,11 @@ public class Utils extends UtilsFlavour{
     }
 
     public static void tintWidget(View view) {
-        tintWidget(view, SettingsActivity.getAccentColor());
+        tintWidget(view, ThemeColors.getAccentColor(view.getContext()));
     }
 
     public static void tintButton(Button view) {
-        view.setTextColor(SettingsActivity.getAccentColor());
+        view.setTextColor(ThemeColors.getAccentColor(view.getContext()));
     }
 
     public static void tintWidget(View view, int color) {

@@ -80,6 +80,7 @@ public class RootsCache {
 
     private final RootInfo mHomeRoot = new RootInfo();
     private final RootInfo mConnectionsRoot = new RootInfo();
+    private final RootInfo mQuickShareRoot = new RootInfo();
     private final RootInfo mRecentsRoot = new RootInfo();
 
     private final Object mLock = new Object();
@@ -135,6 +136,15 @@ public class RootsCache {
         mConnectionsRoot.title = mContext.getString(R.string.root_connections);
         mConnectionsRoot.availableBytes = -1;
         mConnectionsRoot.deriveFields();
+
+        // Special root for receiving with Quick Share, in the drawer on TV
+        mQuickShareRoot.authority = null;
+        mQuickShareRoot.rootId = "quickshare";
+        mQuickShareRoot.icon = R.drawable.ic_root_bluetooth;
+        mQuickShareRoot.flags = Root.FLAG_LOCAL_ONLY;
+        mQuickShareRoot.title = mContext.getString(R.string.home_quickshare);
+        mQuickShareRoot.availableBytes = -1;
+        mQuickShareRoot.deriveFields();
 
         // Special root for recents
         mRecentsRoot.authority = RecentsProvider.AUTHORITY;
@@ -215,6 +225,10 @@ public class RootsCache {
 
             mTaskRoots.put(mHomeRoot.authority, mHomeRoot);
             mTaskRoots.put(mConnectionsRoot.authority, mConnectionsRoot);
+            // The application's TV flag isn't set yet on the first load
+            if (Utils.isTelevision(mContext)) {
+                mTaskRoots.put(mQuickShareRoot.authority, mQuickShareRoot);
+            }
             mTaskRoots.put(mRecentsRoot.authority, mRecentsRoot);
 
             final ContentResolver resolver = mContext.getContentResolver();
@@ -522,6 +536,10 @@ public class RootsCache {
         return mConnectionsRoot;
     }
 
+    public RootInfo getQuickShareRoot() {
+        return mQuickShareRoot;
+    }
+
     public boolean isHomeRoot(RootInfo root) {
         return mHomeRoot == root;
     }
@@ -558,7 +576,7 @@ public class RootsCache {
 
             if(null != root.authority
             		&& root.authority.equals(RootedStorageProvider.AUTHORITY)){
-            	if(state.action != State.ACTION_BROWSE || !state.rootMode){
+            	if(state.action != State.ACTION_BROWSE || !state.rootMode || !Utils.isRooted()){
             		continue;
             	}
             }

@@ -5,12 +5,13 @@
     android:layout_height="wrap_content"
     android:background="@color/item_doc_grid_protect_background_light">
 
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/background"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
-        app:cardCornerRadius="4dp"
+        style="@style/Widget.Material3.CardView.Filled"
+        app:cardCornerRadius="@dimen/card_corner_radius"
         app:cardUseCompatPadding="true"
         app:contentPadding="16dp"
         app:contentPaddingBottom="5dp">
@@ -105,7 +106,7 @@
                     android:orientation="horizontal"
                     android:paddingTop="4dp">
 
-                    <androidx.legacy.widget.Space
+                    <Space
                         android:id="@+id/spacer"
                         android:layout_width="0dp"
                         android:layout_height="0dp"
@@ -141,5 +142,5 @@
         </LinearLayout>
 
 
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 </FrameLayout>

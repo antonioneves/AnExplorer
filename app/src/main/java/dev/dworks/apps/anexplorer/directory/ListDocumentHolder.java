@@ -132,7 +132,8 @@ public class ListDocumentHolder extends DocumentHolder {
         } else {
             // Directories showing thumbnails in grid mode get a little icon
             // hint to remind user they're a directory.
-            if (Utils.isDir(mDoc.mimeType) && state.derivedMode == MODE_GRID) {
+            // Only drawn when there is no title line (see below)
+            if (!hasLine1 && Utils.isDir(mDoc.mimeType) && state.derivedMode == MODE_GRID) {
                 iconDrawable = IconUtils.applyTintAttr(context, R.drawable.ic_root_folder,
                         android.R.attr.textColorPrimaryInverse);
             }

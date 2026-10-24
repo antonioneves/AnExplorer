@@ -16,6 +16,12 @@
 package dev.dworks.apps.anexplorer;
 
 import android.Manifest;
+import dev.dworks.apps.anexplorer.common.DialogBuilder;
+import android.provider.Settings;
+import android.net.Uri;
+import android.content.Intent;
+import android.content.DialogInterface;
+import android.content.ActivityNotFoundException;
 import android.app.Fragment;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -35,6 +41,7 @@ import android.widget.AbsListView;
 import java.util.List;
 
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
+import dev.dworks.apps.anexplorer.directory.DocumentsAdapter;
 import dev.dworks.apps.anexplorer.misc.PermissionUtil;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
@@ -48,8 +55,26 @@ public abstract class BaseActivity extends ActionBarActivity {
     public static final String TAG = "Documents";
 
     public abstract State getDisplayState();
+
+    private RecyclerView.RecycledViewPool mDirectoryViewPool;
+
+    /** Rows shared by all the folder lists of this activity; see DirectoryFragment. */
+    public RecyclerView.RecycledViewPool getDirectoryViewPool() {
+        if (null == mDirectoryViewPool) {
+            mDirectoryViewPool = new RecyclerView.RecycledViewPool();
+            // Enough for a full screen of rows or cards
+            mDirectoryViewPool.setMaxRecycledViews(DocumentsAdapter.ITEM_TYPE_LIST, 30);
+            mDirectoryViewPool.setMaxRecycledViews(DocumentsAdapter.ITEM_TYPE_GRID, 30);
+        }
+        return mDirectoryViewPool;
+    }
     public abstract RootInfo getCurrentRoot();
     public abstract void onStateChanged();
+
+    /** A folder finished loading; by default the same as any other state change. */
+    public void onDirectoryLoaded() {
+        onStateChanged();
+    }
     public abstract void setRootsDrawerOpen(boolean open);
     public abstract void onDocumentPicked(DocumentInfo doc);
     public abstract void onDocumentsPicked(List<DocumentInfo> docs);
@@ -213,6 +238,8 @@ public abstract class BaseActivity extends ActionBarActivity {
     protected void requestStoragePermissions() {
         if(PermissionUtil.hasStoragePermission(this)) {
             again();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            requestAllFilesAccess();
         } else {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 Utils.showRetrySnackBar(this, "Storage permissions are needed for Exploring.", new View.OnClickListener() {
@@ -225,6 +252,53 @@ public abstract class BaseActivity extends ActionBarActivity {
                 ActivityCompat.requestPermissions(this, storagePermissions, REQUEST_STORAGE);
             }
         }
+    }
+
+    private boolean mAllFilesAccessAsked;
+
+    /** All-files access is granted on a system Settings screen, not through a runtime dialog. */
+    private void requestAllFilesAccess() {
+        if (mAllFilesAccessAsked || isFinishing()) {
+            return;
+        }
+        mAllFilesAccessAsked = true;
+        final DialogBuilder builder = new DialogBuilder(this);
+        builder.setTitle(R.string.storage_access_title)
+                .setMessage(R.string.storage_access_message)
+                .setPositiveButton(R.string.storage_access_grant, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                Uri.fromParts("package", getPackageName(), null));
+                        if (!Utils.isIntentAvailable(BaseActivity.this, intent)) {
+                            intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        }
+                        try {
+                            startActivityForResult(intent, REQUEST_STORAGE);
+                        } catch (ActivityNotFoundException e) {
+                            Utils.showError(BaseActivity.this, R.string.storage_access_unavailable);
+                        }
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        mAllFilesAccessAsked = false;
+                    }
+                });
+        builder.showDialog();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_STORAGE) {
+            mAllFilesAccessAsked = false;
+            if (PermissionUtil.hasStoragePermission(this)) {
+                again();
+            }
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override

@@ -45,6 +45,7 @@ import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.FloatingActionsMenu;
 import dev.dworks.apps.anexplorer.ui.fabs.FabSpeedDial;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
 import static dev.dworks.apps.anexplorer.DocumentsApplication.isSpecialDevice;
@@ -123,8 +124,8 @@ public class ConnectionsFragment extends RecyclerFragment
         int accentColor = SettingsActivity.getAccentColor();
         if ((mLastShowAccentColor != 0 && mLastShowAccentColor == accentColor))
             return;
-        int defaultColor = SettingsActivity.getPrimaryColor(getActivity());
-        mActionMenu.setBackgroundTintList(SettingsActivity.getAccentColor());
+        int defaultColor = ThemeColors.getPrimaryColor(getActivity());
+        mActionMenu.setBackgroundTintList(ThemeColors.getAccentColor(getActivity()));
         mActionMenu.setSecondaryBackgroundTintList(Utils.getActionButtonColor(defaultColor));
     }
 
@@ -164,7 +165,8 @@ public class ConnectionsFragment extends RecyclerFragment
 
                 String selection = null;
                 String[] selectionArgs = null;
-                if(!Utils.hasWiFi(getActivity())){
+                // TV has the server in the drawer and edits it on its screen
+                if(!Utils.hasWiFi(getActivity()) || Utils.isTelevision(getActivity())){
                     selection = ExplorerProvider.ConnectionColumns.TYPE + "!=? " ;
                     selectionArgs = new String[]{SERVER};
                 }
@@ -217,10 +219,8 @@ public class ConnectionsFragment extends RecyclerFragment
 
     @Override
     public void onClick(final View view) {
-        switch (view.getId()){
-            case R.id.fab:
-                addConnection();
-                break;
+        if (view.getId() == R.id.fab){
+            addConnection();
         }
     }
 
@@ -242,24 +242,22 @@ public class ConnectionsFragment extends RecyclerFragment
         int connection_id = getCursorInt(cursor, BaseColumns._ID);
         NetworkConnection networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
         final int id = item.getItemId();
-        switch (id) {
-            case R.id.menu_edit:
-                if(!networkConnection.type.startsWith(TYPE_CLOUD)) {
-                    editConnection(connection_id);
-                } else {
-                    Utils.showSnackBar(getActivity(), "Cloud storage connection can't be edited");
-                }
-                return true;
-            case R.id.menu_delete:
-                if(!networkConnection.type.equals(SERVER)) {
-                    deleteConnection(connection_id);
-                } else {
-                    Utils.showSnackBar(getActivity(), "Default server connection can't be deleted");
-                }
-                return true;
-            default:
-                return false;
+        if (id == R.id.menu_edit) {
+            if(!networkConnection.type.startsWith(TYPE_CLOUD)) {
+                editConnection(connection_id);
+            } else {
+                Utils.showSnackBar(getActivity(), "Cloud storage connection can't be edited");
+            }
+            return true;
+        } else if (id == R.id.menu_delete) {
+            if(!networkConnection.type.equals(SERVER)) {
+                deleteConnection(connection_id);
+            } else {
+                Utils.showSnackBar(getActivity(), "Default server connection can't be deleted");
+            }
+            return true;
         }
+        return false;
     }
 
     private void addConnection() {
@@ -338,27 +336,18 @@ public class ConnectionsFragment extends RecyclerFragment
             DocumentsApplication.openPurchaseActivity(activity);
             return;
         }
-        switch (menuItem.getItemId()){
-            case R.id.cloud_gridve:
-                addCloudConnection(TYPE_GDRIVE);
-                break;
-
-            case R.id.cloud_dropbox:
-                addCloudConnection(TYPE_DROPBOX);
-                break;
-
-            case R.id.cloud_onedrive:
-                addCloudConnection(TYPE_ONEDRIVE);
-                break;
-
-            case R.id.cloud_box:
-                addCloudConnection(TYPE_BOX);
-                break;
-
-            case R.id.network_ftp:
-                addConnection();
-                AnalyticsManager.logEvent("add_ftp");
-                break;
+        final int itemId = menuItem.getItemId();
+        if (itemId == R.id.cloud_gridve){
+            addCloudConnection(TYPE_GDRIVE);
+        } else if (itemId == R.id.cloud_dropbox){
+            addCloudConnection(TYPE_DROPBOX);
+        } else if (itemId == R.id.cloud_onedrive){
+            addCloudConnection(TYPE_ONEDRIVE);
+        } else if (itemId == R.id.cloud_box){
+            addCloudConnection(TYPE_BOX);
+        } else if (itemId == R.id.network_ftp){
+            addConnection();
+            AnalyticsManager.logEvent("add_ftp");
         }
     }
 }

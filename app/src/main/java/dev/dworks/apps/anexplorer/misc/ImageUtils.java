@@ -141,25 +141,22 @@ public class ImageUtils {
 
             bitmap = getVideoFrame(bitmapFile.getAbsolutePath());
         } else {
-            // If we have to resize this image, first get the natural bounds.
-            decodeOptions.inJustDecodeBounds = true;
-            //BitmapFactory.decodeFile(bitmapFile.getAbsolutePath(), decodeOptions);
-            int actualWidth = decodeOptions.outWidth;
-            int actualHeight = decodeOptions.outHeight;
+            // A video can't be probed with BitmapFactory, so size it from the decoded frame;
+            // without its real bounds the frame was squeezed into the full max rectangle
+            Bitmap tempBitmap = getVideoFrame(bitmapFile.getAbsolutePath());
+            if (tempBitmap == null) {
+                return null;
+            }
+            int actualWidth = tempBitmap.getWidth();
+            int actualHeight = tempBitmap.getHeight();
 
             // Then compute the dimensions we would ideally like to decode to.
             int desiredWidth = getResizedDimension(mMaxWidth, mMaxHeight,
                     actualWidth, actualHeight, mScaleType);
             int desiredHeight = getResizedDimension(mMaxHeight, mMaxWidth,
                     actualHeight, actualWidth, mScaleType);
-
-            // Decode to the nearest power of two scaling factor.
-            decodeOptions.inJustDecodeBounds = false;
-            decodeOptions.inSampleSize = ImageUtils.findBestSampleSize(actualWidth, actualHeight, desiredWidth, desiredHeight);
-            Bitmap tempBitmap = getVideoFrame(bitmapFile.getAbsolutePath());
             // If necessary, scale down to the maximal acceptable size.
-            if (tempBitmap != null
-                    && (tempBitmap.getWidth() > desiredWidth || tempBitmap.getHeight() > desiredHeight)) {
+            if (actualWidth > desiredWidth || actualHeight > desiredHeight) {
                 bitmap = Bitmap.createScaledBitmap(tempBitmap, desiredWidth,
                         desiredHeight, true);
                 tempBitmap.recycle();

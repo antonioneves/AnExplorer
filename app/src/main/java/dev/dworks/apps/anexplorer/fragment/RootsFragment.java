@@ -53,9 +53,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 
+import com.google.android.material.color.MaterialColors;
+
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.BaseActivity.State;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
+import dev.dworks.apps.anexplorer.DocumentsActivity;
+import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.adapter.RootsExpandableAdapter;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
@@ -72,6 +76,7 @@ import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
 import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
@@ -124,6 +129,10 @@ public class RootsFragment extends Fragment {
         mList = (ExpandableListView) view.findViewById(android.R.id.list);
         mList.setOnChildClickListener(mItemListener);
         mList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        if(isTelevision()){
+            // Items draw their own selected and focused states (drawable-television/item_root)
+            mList.setSelector(android.R.color.transparent);
+        }
 
         DisplayMetrics metrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -192,6 +201,8 @@ public class RootsFragment extends Fragment {
                     mList.setOnGroupExpandListener(mOnGroupExpandListener);
                     mList.setOnGroupCollapseListener(mOnGroupCollapseListener);
                 }
+                // The current root may have been picked before the list was loaded
+                onCurrentRootChanged();
             }
 
             @Override
@@ -227,7 +238,9 @@ public class RootsFragment extends Fragment {
     private void changeThemeColor() {
 
         if(isTelevision()){
-            int color = SettingsActivity.getPrimaryColor(getActivity());
+            // A calm surface lets the selected section and the D-pad focus stand out
+            int color = MaterialColors.getColor(getActivity(), R.attr.colorSurfaceContainer,
+                    ThemeColors.getPrimaryColor(getActivity()));
             Drawable colorDrawable = new ColorDrawable(color);
             getView().setBackground(colorDrawable);
         }
@@ -288,6 +301,15 @@ public class RootsFragment extends Fragment {
                 AnalyticsManager.logEvent("navigate", rootInfo, params);
             } else if (item instanceof AppItem) {
                 activity.onAppPicked(((AppItem) item).info);
+            } else if (item instanceof ActionItem) {
+                if (activity instanceof DocumentsActivity) {
+                    final int actionId = ((ActionItem) item).id;
+                    if (actionId == R.id.menu_settings) {
+                        ((DocumentsActivity) activity).openSettings();
+                    } else if (actionId == R.id.menu_about) {
+                        ((DocumentsActivity) activity).openAbout();
+                    }
+                }
             } else {
                 throw new IllegalStateException("Unknown root: " + item);
             }
@@ -476,6 +498,32 @@ public class RootsFragment extends Fragment {
             title.setText(info.loadLabel(pm));
 
             // TODO: match existing summary behavior from disambig dialog
+            summary.setVisibility(View.GONE);
+        }
+    }
+
+    /** Drawer entry that runs an app action (Settings, About) instead of opening a root. */
+    public static class ActionItem extends Item {
+        public final int id;
+        private final int iconId;
+        private final int titleId;
+
+        public ActionItem(int id, int iconId, int titleId) {
+            super(R.layout.item_root);
+            this.id = id;
+            this.iconId = iconId;
+            this.titleId = titleId;
+        }
+
+        @Override
+        public void bindView(View convertView) {
+            final ImageView icon = (ImageView) convertView.findViewById(android.R.id.icon);
+            final TextView title = (TextView) convertView.findViewById(android.R.id.title);
+            final TextView summary = (TextView) convertView.findViewById(android.R.id.summary);
+
+            icon.setImageDrawable(IconUtils.applyTintAttr(convertView.getContext(), iconId,
+                    android.R.attr.textColorPrimary));
+            title.setText(titleId);
             summary.setVisibility(View.GONE);
         }
     }

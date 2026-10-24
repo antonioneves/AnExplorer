@@ -30,4 +30,6 @@
 
     <integer name="recycler_type">1</integer>
     <dimen name="card_padding">50dp</dimen>
+    <!-- 3 shortcut cards per row -->
+    <integer name="home_shortcut_span">4</integer>
 </resources>

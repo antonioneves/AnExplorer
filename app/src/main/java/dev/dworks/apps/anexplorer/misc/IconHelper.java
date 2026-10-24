@@ -23,6 +23,7 @@ import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import androidx.annotation.Nullable;
+import androidx.collection.ArrayMap;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
@@ -35,6 +36,7 @@ import dev.dworks.apps.anexplorer.libcore.util.BiConsumer;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.BaseActivity.State.ViewMode;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
+import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
@@ -241,13 +243,28 @@ public class IconHelper {
         view.setBackgroundColor(color);
     }
 
+    // Mime icons by type and mode; inflating the vector for every row cost ~5ms each on a TV
+    private final ArrayMap<String, Drawable.ConstantState> mMimeIcons = new ArrayMap<>();
+
     private Drawable getDocumentIcon(
         Context context, String authority, String id, String mimeType, int icon) {
         if (icon != 0) {
             return IconUtils.loadPackageIcon(context, authority, icon);
-        } else {
+        }
+        // Folders from the media provider pick their icon from the document id
+        if (MediaDocumentsProvider.AUTHORITY.equals(authority)) {
             return IconUtils.loadMimeIcon(context, mimeType, authority, id, mMode);
         }
+        final String key = mimeType + ';' + mMode;
+        final Drawable.ConstantState cached = mMimeIcons.get(key);
+        if (null != cached) {
+            return cached.newDrawable(context.getResources(), context.getTheme());
+        }
+        final Drawable drawable = IconUtils.loadMimeIcon(context, mimeType, authority, id, mMode);
+        if (null != drawable && null != drawable.getConstantState()) {
+            mMimeIcons.put(key, drawable.getConstantState());
+        }
+        return drawable;
     }
 
     /**
@@ -260,7 +277,7 @@ public class IconHelper {
 
     private int getDocumentColor(
             Context context, String authority, String id, String mimeType) {
-        int defaultColor = SettingsActivity.getPrimaryColor();
+        int defaultColor = ThemeColors.getPrimaryColor(context);
 
         return IconColorUtils.loadMimeColor(context, mimeType, authority, id, defaultColor);
     }

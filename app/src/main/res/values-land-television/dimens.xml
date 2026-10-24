@@ -25,6 +25,8 @@
 
     <dimen name="list_divider_inset">72dp</dimen>
     <dimen name="side_navigation_width">256dp</dimen>
-    <integer name="recycler_type">1</integer>
+    <integer name="recycler_type">2</integer>
     <dimen name="card_padding">200dp</dimen>
+    <!-- 4 shortcut cards per row -->
+    <integer name="home_shortcut_span">3</integer>
 </resources>

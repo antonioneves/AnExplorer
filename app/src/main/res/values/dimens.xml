@@ -42,6 +42,8 @@
 
     <dimen name="list_item_height">72dp</dimen>
     <dimen name="list_item_padding">16dp</dimen>
+    <dimen name="root_item_padding">16dp</dimen>
+    <dimen name="grid_mime_icon_size">40dp</dimen>
 
     <dimen name="list_divider_inset">72dp</dimen>
     <bool name="list_divider_inset_left">true</bool>
@@ -74,6 +76,10 @@
     <dimen name="home_padding">0dp</dimen>
     <dimen name="home_item_height">60dp</dimen>
     <dimen name="home_item_padding">10dp</dimen>
-    <integer name="home_span">10</integer>
+    <integer name="home_span">12</integer>
+    <!-- Columns of home_span each shortcut card takes: 2 cards per row -->
+    <integer name="home_shortcut_span">6</integer>
+    <dimen name="home_shortcut_spacing">10dp</dimen>
+    <dimen name="card_corner_radius">16dp</dimen>
 </resources>
 

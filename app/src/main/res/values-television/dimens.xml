@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Drawer rows on TV: the 12dp pill inset (drawable-television/item_root) plus 16dp inside it. -->
+    <dimen name="root_item_padding">28dp</dimen>
+</resources>

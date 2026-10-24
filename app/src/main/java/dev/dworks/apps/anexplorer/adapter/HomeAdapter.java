@@ -30,6 +30,7 @@ import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.CircleImage;
 import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     public static final int TYPE_MAIN = 1;
@@ -46,7 +47,7 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     public HomeAdapter(Activity context, ArrayList<CommonInfo> data, IconHelper iconHelper){
         mContext = context;
         mData = data;
-        mDefaultColor = SettingsActivity.getPrimaryColor();
+        mDefaultColor = ThemeColors.getPrimaryColor(context);
         mIconHelper = iconHelper;
     }
 
@@ -187,8 +188,8 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
                     }
                 }
             });
-            accentColor = SettingsActivity.getAccentColor();
-            color = SettingsActivity.getPrimaryColor();
+            accentColor = ThemeColors.getAccentColor(mContext);
+            color = ThemeColors.getOnSurfacePrimaryColor(mContext);
         }
 
         @Override
@@ -265,6 +266,13 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         public GalleryViewHolder(View v) {
             super(v);
 
+            // The row itself does nothing; left clickable it takes the remote's focus ahead of
+            // the media items inside it
+            v.setOnClickListener(null);
+            v.setOnLongClickListener(null);
+            v.setClickable(false);
+            v.setLongClickable(false);
+            v.setFocusable(false);
             recyclerview = (RecyclerView) v.findViewById(R.id.recyclerview);
             recents = v.findViewById(R.id.recents);
             recents.setOnClickListener(new View.OnClickListener() {

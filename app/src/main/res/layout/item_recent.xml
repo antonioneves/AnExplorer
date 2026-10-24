@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
-    android:background="@drawable/item_root"
     android:focusable="true"
     android:foreground="?selectableItemBackground"
-    app:cardCornerRadius="4dp"
-    app:cardUseCompatPadding="true"
-    app:elevation="8dp">
+    style="@style/Widget.Material3.CardView.Filled"
+    app:cardCornerRadius="@dimen/card_corner_radius"
+    app:cardUseCompatPadding="true">
 
     <FrameLayout
         android:layout_width="@dimen/grid_item_height"
@@ -40,4 +39,4 @@
 
     </FrameLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

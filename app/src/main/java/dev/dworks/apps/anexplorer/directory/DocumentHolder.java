@@ -47,11 +47,18 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
                               DocumentsAdapter.Environment environment) {
         this(context, inflateLayout(context, parent, layout));
 
+        mDoc = new DocumentInfo();
+        attach(environment, onItemClickListener);
+    }
+
+    /**
+     * Points the holder at the list showing it. Holders move between folders through a shared
+     * view pool, so the folder that binds one may not be the one that created it.
+     */
+    public void attach(DocumentsAdapter.Environment environment, OnItemClickListener onItemClickListener) {
         mEnv = environment;
         mIconHelper = mEnv.getIconHelper();
         multiChoiceHelper = mEnv.getMultiChoiceHelper();
-        mDoc = new DocumentInfo();
-
         clickListener = onItemClickListener;
     }
 

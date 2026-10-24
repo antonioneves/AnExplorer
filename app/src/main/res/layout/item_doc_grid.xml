@@ -38,20 +38,20 @@
             android:layout_weight="1"
             android:background="@color/item_doc_grid_protect_background_light">
 
-            <dev.dworks.apps.anexplorer.ui.CircleImage
+            <!-- The file type color fills the whole preview, icon on top -->
+            <View
                 android:id="@+id/icon_mime_background"
-                android:layout_width="@dimen/grid_icon_size"
-                android:layout_height="@dimen/grid_icon_size"
-                android:layout_gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:visibility="visible" />
 
             <ImageView
                 android:id="@+id/icon_mime"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="@dimen/grid_mime_icon_size"
+                android:layout_height="@dimen/grid_mime_icon_size"
                 android:layout_gravity="center"
                 android:contentDescription="@null"
-                android:scaleType="centerInside" />
+                android:scaleType="fitCenter" />
 
         </FrameLayout>
 

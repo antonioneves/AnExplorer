@@ -44,6 +44,7 @@ import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.PreferenceUtils;
 import dev.dworks.apps.anexplorer.misc.SystemBarTintManager;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 import dev.dworks.apps.anexplorer.misc.Utils;
 
 import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
@@ -145,7 +146,8 @@ public class SettingsActivity extends SettingsCommonActivity {
     
     public static boolean getFolderAnimation(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context)
-                .getBoolean(KEY_FOLDER_ANIMATIONS, true);
+                .getBoolean(KEY_FOLDER_ANIMATIONS,
+                        context.getResources().getBoolean(R.bool.folder_animations_default));
     }
     
     @Override
@@ -273,7 +275,8 @@ public class SettingsActivity extends SettingsCommonActivity {
 
     public void changeActionBarColor(int newColor) {
 
-		int color = newColor != 0 ? newColor : SettingsActivity.getPrimaryColor(this);
+		int color = newColor != 0
+				? ThemeColors.getAppBarPreviewColor(this, newColor) : ThemeColors.getAppBarColor(this);
 		Drawable colorDrawable = new ColorDrawable(color);
 
 		if (oldBackground == null) {
@@ -290,15 +293,7 @@ public class SettingsActivity extends SettingsCommonActivity {
 	}
 
     public void setUpStatusBar() {
-        int color = Utils.getStatusBarColor(SettingsActivity.getPrimaryColor(this));
-        if(Utils.hasLollipop()){
-            getWindow().setStatusBarColor(color);
-        }
-        else if(Utils.hasKitKat()){
-            SystemBarTintManager systemBarTintManager = new SystemBarTintManager(this);
-            systemBarTintManager.setTintColor(color);
-            systemBarTintManager.setStatusBarTintEnabled(true);
-        }
+        ThemeColors.setUpStatusBar(this);
     }
 
 	public static void logSettingEvent(String key){

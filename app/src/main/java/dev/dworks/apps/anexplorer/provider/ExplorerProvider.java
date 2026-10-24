@@ -213,7 +213,10 @@ public class ExplorerProvider extends ContentProvider {
         final SQLiteDatabase db = mHelper.getWritableDatabase();
         switch (sMatcher.match(uri)) {
             case URI_CONNECTION:
-                return db.update(TABLE_CONNECTION, values, selection, selectionArgs);
+                final int count = db.update(TABLE_CONNECTION, values, selection, selectionArgs);
+                // Lets an open screen, like the FTP server's, show the new settings
+                getContext().getContentResolver().notifyChange(uri, null, false);
+                return count;
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);
         }

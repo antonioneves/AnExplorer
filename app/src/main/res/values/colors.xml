@@ -5,6 +5,23 @@
     <color name="primaryDarkColor">#025f91</color>
     <color name="accentColor">#EF3A0F</color>
 
+    <!-- Material 3 container roles derived from the brand colors -->
+    <color name="primaryContainerColor">#CDE5FF</color>
+    <color name="onPrimaryContainerColor">#001D32</color>
+    <color name="accentContainerColor">#FFDBD1</color>
+    <color name="onAccentContainerColor">#3B0900</color>
+    <color name="surfaceColor">#F7F9FF</color>
+    <color name="onSurfaceColor">#181C20</color>
+    <color name="surfaceVariantColor">#DEE3EB</color>
+    <color name="onSurfaceVariantColor">#42474E</color>
+    <color name="outlineColor">#72787E</color>
+    <color name="outlineVariantColor">#C2C7CE</color>
+    <color name="surfaceContainerLowestColor">#FFFFFF</color>
+    <color name="surfaceContainerLowColor">#F1F4F9</color>
+    <color name="surfaceContainerColor">#EBEEF3</color>
+    <color name="surfaceContainerHighColor">#E6E8EE</color>
+    <color name="surfaceContainerHighestColor">#E0E2E8</color>
+
     <color name="item_root_pressed">#33cccccc</color>
     <color name="item_root_focused">#66cccccc</color>
     <color name="statusBarColor">#28000000</color>
@@ -88,6 +105,9 @@
     <color name="item_connection_onedrive">#FFFF7537</color>
     <color name="item_connection_box">#03A9F4</color>
     <color name="item_connection_cloud">#455A64</color>
+    <color name="item_root_recent">#7E57C2</color>
 
     <color name="material_black_protected">#88000000</color>
+    <!-- Delete action in the TV selection bar; strong enough to read on colorPrimaryContainer -->
+    <color name="action_delete">#E53935</color>
 </resources>

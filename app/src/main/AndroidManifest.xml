@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="dev.dworks.apps.anexplorer"
     android:installLocation="auto">
 
     <permission
@@ -11,13 +10,19 @@
     <uses-permission android:name="android.permission.MANAGE_DOCUMENT" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- A file manager needs to browse and change all of shared storage on Android 11+ -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
     <uses-permission android:name="android.permission.ACCESS_SUPERUSER" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -55,7 +60,8 @@
         <activity
             android:name=".DocumentsActivity"
             android:theme="@style/DocumentsTheme.Splash"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.OPEN_DOCUMENT" />
 
@@ -148,7 +154,16 @@
                 android:value="true" />
         </activity>
 
-        <receiver android:name=".receiver.PackageReceiver">
+        <activity
+            android:name=".QuickShareReceiveActivity"
+            android:theme="@style/DocumentsTheme.Document" >
+            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
+                android:value="true" />
+        </activity>
+
+        <receiver
+            android:name=".receiver.PackageReceiver"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
                 <action android:name="android.intent.action.PACKAGE_DATA_CLEARED" />
@@ -156,7 +171,9 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".receiver.MountReceiver">
+        <receiver
+            android:name=".receiver.MountReceiver"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_MOUNTED" />
                 <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
@@ -172,7 +189,8 @@
             android:name=".NoteActivity"
             android:configChanges="keyboardHidden|orientation"
             android:screenOrientation="sensor"
-            android:theme="@style/DocumentsTheme.Note">
+            android:theme="@style/DocumentsTheme.Note"
+            android:exported="true">
             <intent-filter android:label="Text Viewer"
                 tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
@@ -205,11 +223,17 @@
             android:name=".service.ServerService"
             android:icon="@drawable/ic_root_server"
             android:label="@string/toggle_messages"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        <service
+            android:name=".service.QuickShareReceiveService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <provider
             android:name="dev.dworks.apps.anexplorer.provider.ContentProvider"

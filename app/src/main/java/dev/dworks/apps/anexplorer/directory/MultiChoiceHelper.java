@@ -22,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Checkable;
 
+import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 /**
@@ -65,6 +66,11 @@ public class MultiChoiceHelper {
 				public boolean onLongClick(View view) {
 					if ((multiChoiceHelper == null) || isMultiChoiceActive()) {
 						return false;
+					}
+					// On TV a long press opens the item's menu; selection starts from there
+					if (isTelevision() && clickListener != null) {
+						clickListener.onItemLongClick(view, getLayoutPosition());
+						return true;
 					}
 					int position = getAdapterPosition();
 					if (position != RecyclerView.NO_POSITION) {
@@ -448,6 +454,13 @@ public class MultiChoiceHelper {
 
 		@Override
 		public void onChanged() {
+			// Without stable ids a check is only a position; once the whole list is replaced
+			// (e.g. after deleting some of the selected files) other files sit at those positions,
+			// so end the selection rather than leave them checked
+			if (checkedIdStates == null) {
+				clearChoices();
+				return;
+			}
 			confirmCheckedPositions();
 		}
 

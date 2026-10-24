@@ -20,6 +20,7 @@ package dev.dworks.apps.anexplorer.fragment;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
@@ -39,6 +40,10 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.shape.MaterialShapeDrawable;
+import com.google.android.material.shape.ShapeAppearanceModel;
+
 import java.io.File;
 
 import dev.dworks.apps.anexplorer.common.DialogFragment;
@@ -47,6 +52,7 @@ import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.IconColorUtils;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
@@ -56,6 +62,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.CircleImage;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 /**
  * Display document title editor and save button.
@@ -152,11 +159,23 @@ public class DetailFragment extends DialogFragment {
 		if(isDialog){
             setShowsDialog(isDialog);
 			getDialog().setTitle("Details");
+			if (Utils.isTelevision(getActivity())) {
+				// Rounded M3 card instead of the default square dialog window
+				final MaterialShapeDrawable background = new MaterialShapeDrawable(
+						ShapeAppearanceModel.builder()
+								.setAllCornerSizes(getResources().getDimension(R.dimen.card_corner_radius))
+								.build());
+				background.setFillColor(ColorStateList.valueOf(MaterialColors.getColor(getView(),
+						com.google.android.material.R.attr.colorSurfaceContainerHigh)));
+				getDialog().getWindow().setBackgroundDrawable(background);
+			}
 		}
 		
 		name.setText(doc.displayName);
-        name.setTextColor(Utils.getLightColor(SettingsActivity.getPrimaryColor(getActivity())));
-        iconMimeBackground.setBackgroundColor(IconColorUtils.loadMimeColor(getActivity(), doc.mimeType, doc.authority, doc.documentId, SettingsActivity.getPrimaryColor(getActivity())));
+        if (!Utils.isTelevision(getActivity())) {
+            name.setTextColor(Utils.getLightColor(ThemeColors.getPrimaryColor(getActivity())));
+        }
+        iconMimeBackground.setBackgroundColor(IconColorUtils.loadMimeColor(getActivity(), doc.mimeType, doc.authority, doc.documentId, ThemeColors.getPrimaryColor(getActivity())));
 		path.setText(doc.path);
         if(!TextUtils.isEmpty(doc.path)){
             path.setText(doc.path);
@@ -189,6 +208,7 @@ public class DetailFragment extends DialogFragment {
 		private Bitmap result;
 		String sizeString = "";
 		String filePath = "";
+		String contentsString;
 		
 		@Override
 		protected Void doInBackground(Void... params) {
@@ -224,6 +244,11 @@ public class DetailFragment extends DialogFragment {
 			else{
 				if(!TextUtils.isEmpty(filePath)){
 					File dir = new File(filePath);
+					// The listing no longer carries the file count, so count it here
+					final String[] children = dir.list();
+					if (TextUtils.isEmpty(doc.summary) && null != children) {
+						contentsString = FileUtils.formatFileCount(children.length);
+					}
 					sizeString = Formatter.formatFileSize(getActivity(), Utils.getDirectorySize(dir));
 				}				
 			}
@@ -237,6 +262,10 @@ public class DetailFragment extends DialogFragment {
 			if(!TextUtils.isEmpty(sizeString)) {
                 size.setText(sizeString);
             }
+			if (!TextUtils.isEmpty(contentsString)) {
+				contents.setText(contentsString);
+				contents_layout.setVisibility(View.VISIBLE);
+			}
 
 			if(null != result){
                 ImageView.ScaleType scaleType = doc.mimeType.equals(Document.MIME_TYPE_APK) ? ImageView.ScaleType.FIT_CENTER : ImageView.ScaleType.CENTER_CROP;

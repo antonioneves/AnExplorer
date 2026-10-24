@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Heading of ui/SideMenuPopup, e.g. "Sort by" -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="@dimen/root_item_padding"
+    android:paddingLeft="@dimen/root_item_padding"
+    android:paddingTop="12dp"
+    android:paddingEnd="@dimen/root_item_padding"
+    android:paddingRight="@dimen/root_item_padding"
+    android:paddingBottom="8dp"
+    android:singleLine="true"
+    android:textAppearance="?attr/textAppearanceTitleSmall"
+    android:textColor="?attr/colorOnSurfaceVariant" />

@@ -49,6 +49,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -96,6 +97,8 @@ import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.CompatTextView;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
+import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
@@ -238,6 +241,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mProgressBar = (MaterialProgressBar) view.findViewById(R.id.progressBar);
 		mEmptyView = (CompatTextView)view.findViewById(android.R.id.empty);
 		getListView().setRecyclerListener(mRecycleListener);
+		// Reuse the previous folder's rows: inflating a card costs ~20ms on a TV
+		getListView().setRecycledViewPool(mActivity.getDirectoryViewPool());
 	}
 
 	@Override
@@ -298,7 +303,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			@Override
 			public Loader<DirectoryResult> onCreateLoader(int id, Bundle args) {
 				final String query = getArguments().getString(EXTRA_QUERY);
-				setListShown(false);
+				showList(false);
 				Uri contentsUri;
 				switch (mType) {
 				case TYPE_NORMAL:
@@ -308,7 +313,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					}
 					return new DirectoryLoader(context, mType, root, doc, contentsUri, state.userSortOrder);
 				case TYPE_SEARCH:
-					contentsUri = DocumentsContract.buildSearchDocumentsUri(root.authority, root.rootId, query);
+					// On TV, search the folder being shown rather than the whole storage; the
+					// provider accepts a folder's document id in place of a root id
+					final boolean searchFolder = isTelevision() && null != doc
+							&& ExternalStorageProvider.AUTHORITY.equals(root.authority);
+					contentsUri = DocumentsContract.buildSearchDocumentsUri(root.authority,
+							searchFolder ? doc.documentId : root.rootId, query);
 					if (state.action == ACTION_MANAGE) {
 						contentsUri = DocumentsContract.setManageMode(contentsUri);
 					}
@@ -337,7 +347,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
                 if (result.sortOrder != SORT_ORDER_UNKNOWN) {
                     state.derivedSortOrder = result.sortOrder;
                 }
-				((BaseActivity) context).onStateChanged();
+				((BaseActivity) context).onDirectoryLoaded();
 
 				updateDisplayState();
 
@@ -346,13 +356,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					((BaseActivity) context).setRootsDrawerOpen(true);
 				}
 				if (isResumed()) {
-					setListShown(true);
+					showList(true);
 				} else {
 					setListShownNoAnimation(true);
 				}
 
 				mLastSortOrder = state.derivedSortOrder;
-				if(isTelevision()){
+				// Don't take focus from the search field while the user is typing
+				if(isTelevision() && !(getActivity().getCurrentFocus() instanceof EditText)){
 					getListView().requestFocus();
 				}
 			}
@@ -363,11 +374,23 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		};
 		setListAdapter(mAdapter);
-		setListShown(false);
+		showList(false);
 		// Kick off loader at least once
 		getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
 
 		updateDisplayState();
+	}
+
+	/**
+	 * The list fades in over ~500ms after every load, which is most of the wait once a folder has
+	 * loaded; skip the fade when folder animations are off (the default on TV).
+	 */
+	private void showList(boolean shown) {
+		if (SettingsActivity.getFolderAnimation(getActivity())) {
+			setListShown(shown);
+		} else {
+			setListShownNoAnimation(shown);
+		}
 	}
 
 	public void saveDisplayState(){
@@ -456,7 +479,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private void updateDisplayState() {
 		final State state = getDisplayState(this);
 
-        mDefaultColor = SettingsActivity.getPrimaryColor(getActivity());
+        mDefaultColor = ThemeColors.getPrimaryColor(getActivity());
         int accentColor = SettingsActivity.getAccentColor();
         if (mLastMode == state.derivedMode &&  mLastSortOrder == state.derivedSortOrder
                 && mLastShowSize == state.showSize
@@ -475,7 +498,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mLastShowHiddenFiles = state.showHiddenFiles;
 
         mLastShowColor = mDefaultColor;
-        mProgressBar.setColor(SettingsActivity.getAccentColor());
+        mProgressBar.setColor(ThemeColors.getAccentColor(getActivity()));
 		mIconHelper.setThumbnailsEnabled(state.showThumbnail);
 
 		if (state.derivedMode == MODE_GRID) {
@@ -546,8 +569,17 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		}
 
 		@Override
-		public void onItemLongClick(View view, int position) {
-
+		public void onItemLongClick(final View view, final int position) {
+			final int viewType = mAdapter.getItemViewType(position);
+			if (viewType != DocumentsAdapter.ITEM_TYPE_LIST && viewType != DocumentsAdapter.ITEM_TYPE_GRID) {
+				return;
+			}
+			view.post(new Runnable() {
+				@Override
+				public void run() {
+					showPopupMenu(view, position);
+				}
+			});
 		}
 
 		@Override
@@ -555,25 +587,21 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			//final int position = mCurrentView.getPositionForView(v);
 			if (position != ListView.INVALID_POSITION) {
 				int count = mAdapter.getCheckedItemCount();
-				switch (view.getId()) {
-					case android.R.id.icon:
-						if (count == 0) {
-							mMultiChoiceHelper.startSupportActionModeIfNeeded();
-							mMultiChoiceHelper.setItemChecked(position,true, true);
-						} else {
-							mMultiChoiceHelper.setItemChecked(position,
-									!mAdapter.isItemChecked(position), true);
+				if (view.getId() == android.R.id.icon) {
+					if (count == 0) {
+						mMultiChoiceHelper.startSupportActionModeIfNeeded();
+						mMultiChoiceHelper.setItemChecked(position,true, true);
+					} else {
+						mMultiChoiceHelper.setItemChecked(position,
+								!mAdapter.isItemChecked(position), true);
+					}
+				} else if (view.getId() == R.id.button_popup) {
+					view.post(new Runnable() {
+						@Override
+						public void run() {
+							showPopupMenu(view, position);
 						}
-						break;
-
-					case R.id.button_popup:
-						view.post(new Runnable() {
-							@Override
-							public void run() {
-								showPopupMenu(view, position);
-							}
-						});
-						break;
+					});
 				}
 			}
 		}
@@ -831,6 +859,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		Intent intent = new Intent(ACTION_FORCE_STOP_REQUEST);
 		intent.putExtra(EXTRA_PACKAGE_NAMES, packageList);
+		intent.setPackage(getActivity().getPackageName());
 		getActivity().sendBroadcast(intent);
 	}
 
@@ -869,30 +898,18 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			builder.setCancelable(false);
 			builder.setIndeterminate(true);
 
-			switch (id) {
-			case R.id.menu_delete:
-			case R.id.menu_stop:
+			if (id == R.id.menu_delete || id == R.id.menu_stop) {
 				if (null != root && root.isApp()) {
 					builder.setMessage("Stopping processes...");
 				} else {
 					builder.setMessage("Deleting files...");
 				}
-				break;
-
-			case R.id.menu_save:
+			} else if (id == R.id.menu_save) {
 				builder.setMessage("Saving apps...");
-				break;
-
-            case R.id.menu_uncompress:
+			} else if (id == R.id.menu_uncompress) {
 				builder.setMessage("Uncompressing files...");
-                break;
-
-            case R.id.menu_compress:
+			} else if (id == R.id.menu_compress) {
 				builder.setMessage("Compressing files...");
-                break;
-
-			default:
-				break;
 			}
 			progressDialog = builder.create();
 		}
@@ -907,30 +924,22 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		protected Boolean doInBackground(Void... params) {
 			Bundle params2 = new Bundle();
 			boolean result = false;
-			switch (id) {
-			case R.id.menu_delete:
-			case R.id.menu_stop:
+			if (id == R.id.menu_delete || id == R.id.menu_stop) {
 				result = onDeleteDocuments(docs);
-				break;
-
-			case R.id.menu_save:
+			} else if (id == R.id.menu_save) {
 				result = onSaveDocuments(docs);
 				params2 = new Bundle();
 				params2.putInt(FILE_COUNT, docs.size());
 				AnalyticsManager.logEvent("backup", params2);
-				break;
-
-            case R.id.menu_uncompress:
+			} else if (id == R.id.menu_uncompress) {
                 result = onUncompressDocuments(docs);
 				params2 = new Bundle();
 				AnalyticsManager.logEvent("uncompress", params2);
-                break;
-            case R.id.menu_compress:
+			} else if (id == R.id.menu_compress) {
                 result = onCompressDocuments(doc, docs);
 				params2 = new Bundle();
 				params2.putInt(FILE_COUNT, docs.size());
 				AnalyticsManager.logEvent("compress", params2);
-                break;
 			}
 
 			return result;
@@ -944,30 +953,22 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
             }
 			progressDialog.dismiss();
 			if (result) {
-				switch (id) {
-				case R.id.menu_delete:
+				if (id == R.id.menu_delete) {
                     if(!((BaseActivity) getActivity()).isSAFIssue(docs.get(0).documentId)) {
 						Utils.showError(getActivity(), R.string.toast_failed_delete);
                     }
-					break;
-
-				case R.id.menu_save:
+				} else if (id == R.id.menu_save) {
                     if(!((BaseActivity) getActivity()).isSAFIssue(docs.get(0).documentId)) {
 						Utils.showError(getActivity(), R.string.save_error);
                     }
-					break;
-
-                case R.id.menu_compress:
+				} else if (id == R.id.menu_compress) {
                     if(!((BaseActivity) getActivity()).isSAFIssue(docs.get(0).documentId)) {
 						Utils.showError(getActivity(), R.string.compress_error);
                     }
-
-                    break;
-                case R.id.menu_uncompress:
+				} else if (id == R.id.menu_uncompress) {
                     if(!((BaseActivity) getActivity()).isSAFIssue(doc.documentId)) {
                         Utils.showError(getActivity(), R.string.uncompress_error);
                     }
-                    break;
 				}
 			} else{
 				if(id == R.id.menu_save) {
@@ -1158,6 +1159,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		}
 
 		popup.getMenuInflater().inflate(menuId, popup.getMenu());
+		// TV reaches multi-select through this menu, since long press opens it
+		popup.getMenu().findItem(R.id.menu_select_item).setVisible(isTelevision());
 		popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
 			@Override
 			public boolean onMenuItemClick(MenuItem menuItem) {
@@ -1204,7 +1207,17 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		}
 
-		popup.show();
+		if (isTelevision()) {
+			// Beside the item, so every option fits on screen without scrolling
+			SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
+				@Override
+				public boolean onMenuItemClick(MenuItem menuItem) {
+					return onPopupMenuItemClick(menuItem, position);
+				}
+			});
+		} else {
+			popup.show();
+		}
 	}
 
 	@Override
@@ -1218,6 +1231,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	public boolean onPopupMenuItemClick(MenuItem item, int position) {
+		if (item.getItemId() == R.id.menu_select_item) {
+			mMultiChoiceHelper.startSupportActionModeIfNeeded();
+			mMultiChoiceHelper.setItemChecked(position, true, true);
+			return true;
+		}
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();
 		final Cursor cursor = mAdapter.getItem(position);
 		final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
@@ -1248,70 +1266,58 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public boolean handleMenuAction(MenuItem item, ArrayList<DocumentInfo> docs) {
 		final int id = item.getItemId();
 		Bundle params = new Bundle();
-		switch (id) {
-			case R.id.menu_share:
-				onShareDocuments(docs);
-				return true;
-
-			case R.id.menu_copy:
-				moveDocument(docs, false);
-				return true;
-
-			case R.id.menu_cut:
-				moveDocument(docs, true);
-				return true;
-
-			case R.id.menu_delete:
-				deleteDocument(docs, id);
-				return true;
-
-			case R.id.menu_stop:
-				stopDocument(docs, id);
-				return true;
-
-			case R.id.menu_save:
-			case R.id.menu_uncompress:
-			case R.id.menu_compress:
-				new OperationTask(docs, id).execute();
-				return true;
-			case R.id.menu_open:
-				openDocument(docs.get(0));
-				//BaseActivity.get(DirectoryFragment.this).onDocumentsPicked(docs);
-				return true;
-			case R.id.menu_details:
-				Intent intent2 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"
-						+ AppsProvider.getPackageForDocId(docs.get(0).documentId)));
-				if(Utils.isIntentAvailable(getActivity(), intent2)) {
-					getActivity().startActivity(intent2);
-				}
-				String type = IconUtils.getTypeNameFromMimeType(docs.get(0).mimeType);
-				params.putString(FILE_TYPE, type);
-				AnalyticsManager.logEvent("details", params);
-				return true;
-			case R.id.menu_info:
-				infoDocument(docs.get(0));
-				return true;
-
-			case R.id.menu_rename:
-				renameDocument(docs.get(0));
-				return true;
-
-			case R.id.menu_bookmark:
-				bookmarkDocument(docs.get(0));
-				return true;
-			case R.id.menu_select_all:
-				int count = mAdapter.getItemCount();
-				for (int i = 0; i < count; i++) {
-					mAdapter.setSelected(i, selectAll);
-				}
-				selectAll = !selectAll;
-				params.putInt(FILE_COUNT, count);
-				AnalyticsManager.logEvent("select", params);
-				return false;
-
-			default:
-				return false;
+		if (id == R.id.menu_share) {
+			onShareDocuments(docs);
+			return true;
+		} else if (id == R.id.menu_copy) {
+			moveDocument(docs, false);
+			return true;
+		} else if (id == R.id.menu_cut) {
+			moveDocument(docs, true);
+			return true;
+		} else if (id == R.id.menu_delete) {
+			deleteDocument(docs, id);
+			return true;
+		} else if (id == R.id.menu_stop) {
+			stopDocument(docs, id);
+			return true;
+		} else if (id == R.id.menu_save || id == R.id.menu_uncompress || id == R.id.menu_compress) {
+			new OperationTask(docs, id).execute();
+			return true;
+		} else if (id == R.id.menu_open) {
+			openDocument(docs.get(0));
+			//BaseActivity.get(DirectoryFragment.this).onDocumentsPicked(docs);
+			return true;
+		} else if (id == R.id.menu_details) {
+			Intent intent2 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"
+					+ AppsProvider.getPackageForDocId(docs.get(0).documentId)));
+			if(Utils.isIntentAvailable(getActivity(), intent2)) {
+				getActivity().startActivity(intent2);
+			}
+			String type = IconUtils.getTypeNameFromMimeType(docs.get(0).mimeType);
+			params.putString(FILE_TYPE, type);
+			AnalyticsManager.logEvent("details", params);
+			return true;
+		} else if (id == R.id.menu_info) {
+			infoDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_rename) {
+			renameDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_bookmark) {
+			bookmarkDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_select_all) {
+			int count = mAdapter.getItemCount();
+			for (int i = 0; i < count; i++) {
+				mAdapter.setSelected(i, selectAll);
+			}
+			selectAll = !selectAll;
+			params.putInt(FILE_COUNT, count);
+			AnalyticsManager.logEvent("select", params);
+			return false;
 		}
+		return false;
 	}
 
 	private void bookmarkDocument(DocumentInfo doc) {

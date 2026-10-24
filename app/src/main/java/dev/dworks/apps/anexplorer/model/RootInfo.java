@@ -270,6 +270,7 @@ public class RootInfo implements Durable, Parcelable {
             derivedTag = "process";
         } else if (isRecents()) {
             derivedIcon = R.drawable.ic_root_recent;
+            derivedColor = R.color.item_root_recent;
             derivedTag = "recent";
         } else if (isHome()) {
             derivedIcon = R.drawable.ic_root_home;
@@ -277,6 +278,9 @@ public class RootInfo implements Durable, Parcelable {
         } else if (isConnections()) {
             derivedIcon = R.drawable.ic_root_connections;
             derivedTag = "connections";
+        } else if (isQuickShare()) {
+            derivedIcon = R.drawable.ic_root_bluetooth;
+            derivedTag = "quickshare";
         } else if (isServerStorage()) {
             derivedIcon = R.drawable.ic_root_server;
             derivedColor = R.color.item_connection_server;
@@ -315,6 +319,10 @@ public class RootInfo implements Durable, Parcelable {
 
     public boolean isConnections() {
         return authority == null && "connections".equals(rootId);
+    }
+
+    public boolean isQuickShare() {
+        return authority == null && "quickshare".equals(rootId);
     }
 
     public boolean isRecents() {
@@ -672,7 +680,8 @@ public class RootInfo implements Durable, Parcelable {
     }
 
     public static boolean isOtherRoot(RootInfo root){
-        return null != root && (root.isHome() || root.isConnections() || root.isNetworkStorage());
+        return null != root && (root.isHome() || root.isConnections() || root.isQuickShare()
+                || root.isNetworkStorage());
     }
 
     public static boolean isMedia(RootInfo root){

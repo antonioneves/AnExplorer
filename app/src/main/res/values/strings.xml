@@ -33,6 +33,12 @@
     <string name="menu_search">Search</string>
     <!-- Menu item that enters activity to change settings [CHAR LIMIT=24] -->
     <string name="menu_settings">Settings</string>
+    <string name="menu_about">About</string>
+    <string name="menu_select_item">Select</string>
+    <string name="storage_access_title">Allow access to all files</string>
+    <string name="storage_access_message">AnExplorer needs access to all files to browse and manage your storage. On the next screen, turn on access for AnExplorer.</string>
+    <string name="storage_access_grant">Continue</string>
+    <string name="storage_access_unavailable">All files access can\'t be granted on this device</string>
 
     <!-- Menu item title that opens the selected documents [CHAR LIMIT=24] -->
     <string name="menu_open">Open</string>
@@ -98,4 +104,50 @@
     <string name="cloud_onedrive">One Drive</string>
     <string name="cloud_box">Box</string>
     <string name="network_ftp">FTP</string>
+
+    <!-- Menu item that starts the in-process Quick Share receiver -->
+    <string name="menu_receive_quickshare">Receive via Quick Share</string>
+    <!-- Menu item that sends the selected files to a nearby phone via Quick Share -->
+    <!-- Home screen shortcut that opens the Quick Share receiver to discover nearby devices -->
+    <string name="home_quickshare">Quick Share</string>
+
+    <!-- In-process Quick Share receiver service -->
+    <string name="quickshare_receive_title">Quick Share receiver</string>
+    <string name="quickshare_receive_waiting">Starting…</string>
+    <string name="quickshare_receive_visible">Visible to nearby devices</string>
+    <string name="quickshare_receive_stop">Stop</string>
+    <string name="quickshare_receive_start">Start</string>
+    <string name="ftp_no_password">None</string>
+    <string name="ftp_edit">Edit</string>
+    <string name="ftp_settings_title">FTP server settings</string>
+    <string name="connection_new">New connection</string>
+    <string name="connection_edit">Edit connection</string>
+    <string name="connection_add">Add</string>
+    <string name="connection_save">Save</string>
+    <string name="connection_name">Name</string>
+    <string name="connection_host">Host</string>
+    <string name="connection_port">Port</string>
+    <string name="connection_shared_folder">Shared folder</string>
+    <string name="connection_anonymous">Allow anonymous access</string>
+    <string name="connection_username">Username</string>
+    <string name="connection_password">Password</string>
+    <string name="connection_required">Required</string>
+    <string name="ftp_restart_to_apply">Stop and start the server to use the new settings</string>
+    <string name="ftp_server_title">FTP server</string>
+    <string name="quickshare_receive_not_visible">Not visible to nearby devices</string>
+    <string name="quickshare_receive_device">Device name</string>
+    <string name="quickshare_receive_folder">Saves to</string>
+    <string name="quickshare_receive_folder_path">Download/Quick Share</string>
+    <string name="quickshare_receive_accept">Accept</string>
+    <string name="quickshare_receive_decline">Decline</string>
+    <string name="quickshare_receive_incoming">%1$s wants to send files</string>
+    <string name="quickshare_receive_nfiles">%1$d files</string>
+    <string name="quickshare_receive_channel">Quick Share</string>
+    <string name="quickshare_receive_channel_desc">Incoming Quick Share transfers</string>
+    <string name="quickshare_receive_from">From %1$s</string>
+    <string name="quickshare_receive_saved">%1$d file(s) saved to Download/Quick Share</string>
+    <string name="quickshare_receive_hint">On your phone, tap Share, then Quick Share, and pick %1$s. Keep this screen open.</string>
+    <string name="quickshare_receive_receiving">Receiving…</string>
+    <string name="quickshare_receive_failed">Transfer didn\'t complete</string>
+    <string name="local_network_permission_needed">Allow local network access to connect to devices on your network</string>
 </resources>

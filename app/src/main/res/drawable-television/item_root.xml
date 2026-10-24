@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Drawer item on TV: the current section gets an M3 active-indicator pill, the D-pad
+     focus gets a ring, so "where I am" and "where my cursor is" never look alike. A ListView marks its
+     D-pad position as selected rather than focused, so both states get the ring. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_selected="true" android:state_activated="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="?attr/colorSecondaryContainer" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_focused="true" android:state_activated="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="?attr/colorSecondaryContainer" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_selected="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_focused="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_activated="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="?attr/colorSecondaryContainer" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_pressed="true">
+        <inset android:insetLeft="12dp" android:insetRight="12dp"
+            android:insetTop="2dp" android:insetBottom="2dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

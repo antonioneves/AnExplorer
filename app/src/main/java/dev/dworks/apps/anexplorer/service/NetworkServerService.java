@@ -42,7 +42,7 @@ public abstract class NetworkServerService extends Service {
     protected void handleServerStartError(Exception e) {
         LogUtils.LOGD(TAG, "could not start server", e);
         CrashReportingManager.logException(e);
-        sendBroadcast(new Intent(ACTION_FTPSERVER_FAILEDTOSTART));
+        sendBroadcast(new Intent(ACTION_FTPSERVER_FAILEDTOSTART).setPackage(getPackageName()));
     }
 
     @Override
@@ -75,6 +75,10 @@ public abstract class NetworkServerService extends Service {
             networkConnection = NetworkConnection.getDefaultServer(getApplicationContext());
         } else {
             networkConnection = NetworkConnection.fromRootInfo(getApplicationContext(), root);
+            if (null == networkConnection) {
+                // The root predates an edit to the server's path
+                networkConnection = NetworkConnection.getDefaultServer(getApplicationContext());
+            }
         }
         // send start message (to handler)
         Message msg = serviceHandler.obtainMessage();

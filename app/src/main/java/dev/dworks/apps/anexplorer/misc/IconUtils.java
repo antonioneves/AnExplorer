@@ -386,35 +386,34 @@ public class IconUtils {
         }
 
 
-        switch (resource) {
-            case R.drawable.ic_doc_apk:
-                return "apk";
-            case R.drawable.ic_doc_audio:
-                return "audio";
-            case R.drawable.ic_doc_certificate:
-                return "certificate";
-            case R.drawable.ic_doc_codes:
-                return "source code";
-            case R.drawable.ic_doc_archive:
-                return "compressed";
-            case R.drawable.ic_doc_contact:
-                return "contact";
-            case R.drawable.ic_doc_event:
-                return "event";
-            case R.drawable.ic_doc_font:
-                return "font";
-            case R.drawable.ic_doc_image:
-                return "image";
-            case R.drawable.ic_doc_pdf:
-                return "pdf";
-            case R.drawable.ic_doc_presentation:
-                return "presentation";
-            case R.drawable.ic_doc_spreadsheet:
-                return "spreadsheet";
-            case R.drawable.ic_doc_text:
-                return "text";
-            case R.drawable.ic_doc_video:
-                return "video";
+        if (resource == R.drawable.ic_doc_apk) {
+            return "apk";
+        } else if (resource == R.drawable.ic_doc_audio) {
+            return "audio";
+        } else if (resource == R.drawable.ic_doc_certificate) {
+            return "certificate";
+        } else if (resource == R.drawable.ic_doc_codes) {
+            return "source code";
+        } else if (resource == R.drawable.ic_doc_archive) {
+            return "compressed";
+        } else if (resource == R.drawable.ic_doc_contact) {
+            return "contact";
+        } else if (resource == R.drawable.ic_doc_event) {
+            return "event";
+        } else if (resource == R.drawable.ic_doc_font) {
+            return "font";
+        } else if (resource == R.drawable.ic_doc_image) {
+            return "image";
+        } else if (resource == R.drawable.ic_doc_pdf) {
+            return "pdf";
+        } else if (resource == R.drawable.ic_doc_presentation) {
+            return "presentation";
+        } else if (resource == R.drawable.ic_doc_spreadsheet) {
+            return "spreadsheet";
+        } else if (resource == R.drawable.ic_doc_text) {
+            return "text";
+        } else if (resource == R.drawable.ic_doc_video) {
+            return "video";
         }
 
         if (mimeType == null) {

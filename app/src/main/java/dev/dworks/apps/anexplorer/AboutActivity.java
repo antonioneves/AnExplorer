@@ -30,6 +30,7 @@ import dev.dworks.apps.anexplorer.misc.ColorUtils;
 import dev.dworks.apps.anexplorer.misc.SystemBarTintManager;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.DocumentsActivity.getStatusBarHeight;
 import static dev.dworks.apps.anexplorer.misc.Utils.getSuffix;
@@ -48,7 +49,7 @@ public class AboutActivity extends AboutFlavour implements View.OnClickListener 
 		}
 		setContentView(R.layout.activity_about);
 
-		int color = SettingsActivity.getPrimaryColor();
+		int color = ThemeColors.getAppBarColor(this);
 		View view = findViewById(R.id.toolbar);
 		if(view instanceof Toolbar){
 			Toolbar mToolbar = (Toolbar) view;
@@ -75,7 +76,7 @@ public class AboutActivity extends AboutFlavour implements View.OnClickListener 
 
 	private void initControls() {
 
-		int accentColor = ColorUtils.getTextColorForBackground(SettingsActivity.getPrimaryColor());
+		int accentColor = ThemeColors.getOnAppBarColor(this);
 		TextView logo = (TextView)findViewById(R.id.logo);
 		logo.setTextColor(accentColor);
 		String header = logo.getText() + getSuffix() + " v" + BuildConfig.VERSION_NAME + (BuildConfig.DEBUG ? " Debug" : "");
@@ -125,52 +126,38 @@ public class AboutActivity extends AboutFlavour implements View.OnClickListener 
 
 	@Override
 	public void onClick(View view) {
-		switch (view.getId()) {
-			case R.id.action_feedback:
-				openFeedback(this);
-				break;
-			case R.id.action_rate:
-				openPlaystore(this);
-				AnalyticsManager.logEvent("app_rate");
-				break;
-			case R.id.action_sponsor:
-				showAd();
-				AnalyticsManager.logEvent("app_sponsor");
-				break;
-			case R.id.action_support:
-				if(Utils.isProVersion()){
-					Intent intentMarketAll = new Intent("android.intent.action.VIEW");
-					intentMarketAll.setData(Utils.getAppProStoreUri());
-					startActivity(intentMarketAll);
-				} else {
-					DocumentsApplication.openPurchaseActivity(this);
-				}
-				AnalyticsManager.logEvent("app_love");
-				break;
-			case R.id.action_share:
+		if (view.getId() == R.id.action_feedback){
+			openFeedback(this);
+		} else if (view.getId() == R.id.action_rate){
+			openPlaystore(this);
+			AnalyticsManager.logEvent("app_rate");
+		} else if (view.getId() == R.id.action_sponsor){
+			showAd();
+			AnalyticsManager.logEvent("app_sponsor");
+		} else if (view.getId() == R.id.action_support){
+			if(Utils.isProVersion()){
+				Intent intentMarketAll = new Intent("android.intent.action.VIEW");
+				intentMarketAll.setData(Utils.getAppProStoreUri());
+				startActivity(intentMarketAll);
+			} else {
+				DocumentsApplication.openPurchaseActivity(this);
+			}
+			AnalyticsManager.logEvent("app_love");
+		} else if (view.getId() == R.id.action_share){
 
-				String shareText = "I found this file mananger very useful. Give it a try. "
-						+ Utils.getAppShareUri().toString();
-				ShareCompat.IntentBuilder
-						.from(this)
-						.setText(shareText)
-						.setType("text/plain")
-						.setChooserTitle("Share AnExplorer")
-						.startChooser();
-				AnalyticsManager.logEvent("app_share");
-				break;
+			String shareText = "I found this file mananger very useful. Give it a try. "
+					+ Utils.getAppShareUri().toString();
+			ShareCompat.IntentBuilder
+					.from(this)
+					.setText(shareText)
+					.setType("text/plain")
+					.setChooserTitle("Share AnExplorer")
+					.startChooser();
+			AnalyticsManager.logEvent("app_share");
 		}
 	}
 
 	public void setUpDefaultStatusBar() {
-		int color = Utils.getStatusBarColor(SettingsActivity.getPrimaryColor());
-		if(Utils.hasLollipop()){
-			getWindow().setStatusBarColor(color);
-		}
-		else if(Utils.hasKitKat()){
-			SystemBarTintManager systemBarTintManager = new SystemBarTintManager(this);
-			systemBarTintManager.setTintColor(Utils.getStatusBarColor(color));
-			systemBarTintManager.setStatusBarTintEnabled(true);
-		}
+		ThemeColors.setUpStatusBar(this);
 	}
 }

@@ -32,6 +32,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
+import android.view.MenuInflater;
+import android.graphics.Color;
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
+import androidx.annotation.NonNull;
+import androidx.appcompat.view.ActionMode;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteFullException;
@@ -45,8 +51,14 @@ import android.os.Handler;
 
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.view.MenuItemCompat;
 import androidx.core.view.ViewCompat;
+import androidx.core.graphics.ColorUtils;
+import androidx.core.view.WindowInsetsCompat;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.shape.MaterialShapeDrawable;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.drawerlayout.widget.DrawerLayout.DrawerListener;
 import androidx.recyclerview.widget.RecyclerView;
@@ -59,12 +71,24 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.graphics.drawable.InsetDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.Rect;
+import android.graphics.PixelFormat;
+import android.graphics.ColorFilter;
+import android.graphics.Canvas;
+import android.animation.ValueAnimator;
+import android.util.TypedValue;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -81,6 +105,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -97,6 +122,7 @@ import dev.dworks.apps.anexplorer.fragment.MoveFragment;
 import dev.dworks.apps.anexplorer.fragment.PickFragment;
 import dev.dworks.apps.anexplorer.fragment.RecentsCreateFragment;
 import dev.dworks.apps.anexplorer.fragment.SaveFragment;
+import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 import dev.dworks.apps.anexplorer.fragment.ServerFragment;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
@@ -112,6 +138,7 @@ import dev.dworks.apps.anexplorer.misc.PermissionUtil;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper.PINDialogFragment;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
+import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.misc.SystemBarTintManager;
@@ -129,10 +156,12 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.RecentColumns;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.ResumeColumns;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.ui.DirectoryContainerView;
 import dev.dworks.apps.anexplorer.ui.DrawerLayoutHelper;
 import dev.dworks.apps.anexplorer.ui.FloatingActionsMenu;
 import dev.dworks.apps.anexplorer.ui.fabs.SimpleMenuListenerAdapter;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_CREATE;
@@ -170,6 +199,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private boolean mShowAsDialog;
 
     private SearchView mSearchView;
+    private MenuItem mSearchMenuItem;
+    private SearchPillDrawable mSearchPill;
+    private int mToolbarInsetStart = -1;
 
     private Toolbar mToolbar;
     private Spinner mToolbarStack;
@@ -206,6 +238,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             setTheme(R.style.DocumentsTheme_Translucent);
         }
         setUpStatusBar();
+        if (isTelevision()) {
+            // The TV keyboard is a panel in the middle of the screen; resizing the window around it
+            // leaves a black band, so keep the app full size behind it
+            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
+        }
     	
 /*		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll()
 				.penaltyLog()
@@ -240,6 +277,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         mToolbar.setTitleTextAppearance(context, R.style.TextAppearance_AppCompat_Widget_ActionBar_Title);
+        applyTvTitleColor();
         if(Utils.hasKitKat() && !Utils.hasLollipop()) {
             ((LinearLayout.LayoutParams) mToolbar.getLayoutParams()).setMargins(0, getStatusBarHeight(this), 0, 0);
             mToolbar.setPadding(0, getStatusBarHeight(this), 0, 0);
@@ -704,6 +742,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
+    /** TV titles in the accent color, the same for a root's title and a folder's path. */
+    private void applyTvTitleColor() {
+        if (isTelevision()) {
+            mToolbar.setTitleTextColor(getTvTitleColor());
+        }
+    }
+
+    private int getTvTitleColor() {
+        return MaterialColors.getColor(mToolbar, androidx.appcompat.R.attr.colorPrimary);
+    }
+
     public void updateActionBar() {
         final RootInfo root = getCurrentRoot();
         //final boolean showRootIcon = mShowAsDialog || (mState.action == DocumentsActivity.State.ACTION_MANAGE);
@@ -763,23 +812,34 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     }
 
     public void setTitle(String title){
-        if(isTelevision()){
-            mToolbar.setTitle(null);
-            return;
-        }
         mToolbar.setTitle(title);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
+        if (null != mToolbarActionMode) {
+            return mToolbarActionMode.onCreateMenu(menu);
+        }
         getMenuInflater().inflate(R.menu.activity, menu);
+        if (isTelevision()) {
+            replaceSortSubMenu(menu);
+        }
 
         final MenuItem searchMenu = menu.findItem(R.id.menu_search);
+        mSearchMenuItem = searchMenu;
         mSearchView = (SearchView) searchMenu.getActionView();
+        if (isTelevision()) {
+            styleTvSearchView();
+        }
         mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
+                if (isTelevision()) {
+                    mSearchView.removeCallbacks(mTvSearchRunnable);
+                    showTvSearchResults(query);
+                    return true;
+                }
                 mSearchExpanded = mSearchResultShown = true;
                 mState.currentSearch = query;
                 mSearchView.clearFocus();
@@ -792,6 +852,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
             @Override
             public boolean onQueryTextChange(String newText) {
+                if (isTelevision() && mSearchExpanded) {
+                    // Search as the user types, once they pause
+                    mSearchView.removeCallbacks(mTvSearchRunnable);
+                    mSearchView.postDelayed(mTvSearchRunnable, 400);
+                }
                 return false;
             }
         });
@@ -800,6 +865,26 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 mSearchExpanded = true;
+                if (isTelevision()) {
+                    // Let the pill start closer to the toolbar's edge
+                    mToolbarInsetStart = mToolbar.getContentInsetStart();
+                    mToolbar.setContentInsetsRelative(
+                            (int) (4 * getResources().getDisplayMetrics().density),
+                            mToolbar.getContentInsetEnd());
+                    final View pill = item.getActionView();
+                    if (pill instanceof ViewGroup && !item.isActionViewExpanded()) {
+                        animateSearchPillIn((ViewGroup) pill, pill.findViewWithTag("search_go"));
+                    }
+                    // The toolbar adds its collapse button after this callback
+                    mToolbar.post(() -> {
+                        setToolbarCollapseButtonVisible(false);
+                        mSearchView.setIconified(false);
+                        final View mag = mSearchView.findViewById(androidx.appcompat.R.id.search_button);
+                        if (mag != null) {
+                            mag.setVisibility(View.GONE);
+                        }
+                    });
+                }
                 updateActionBar();
                 return true;
             }
@@ -807,6 +892,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             @Override
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 mSearchExpanded = mSearchResultShown = false;
+                if (isTelevision()) {
+                    setToolbarCollapseButtonVisible(true);
+                    if (mToolbarInsetStart >= 0) {
+                        mToolbar.setContentInsetsRelative(mToolbarInsetStart, mToolbar.getContentInsetEnd());
+                    }
+                }
                 if (mIgnoreNextCollapse) {
                     mIgnoreNextCollapse = false;
                     updateActionBar();
@@ -841,11 +932,16 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         super.onPrepareOptionsMenu(menu);
+        if (null != mToolbarActionMode) {
+            return mToolbarActionMode.onPrepareMenu(menu);
+        }
         updateMenuItems(menu);
         return true;
     }
 
     public void updateMenuItems(Menu menu){
+        mMenuMode = mState.derivedMode;
+        mMenuShowSize = mState.showSize;
         final FragmentManager fm = getFragmentManager();
         final RootInfo root = getCurrentRoot();
         final DocumentInfo cwd = getCurrentDirectory();
@@ -856,10 +952,18 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
         final MenuItem search = menu.findItem(R.id.menu_search);
         final MenuItem sort = menu.findItem(R.id.menu_sort);
+        // Not in the menu on TV, where sorting has its own panel (showSortPanel)
         final MenuItem sortSize = menu.findItem(R.id.menu_sort_size);
         final MenuItem grid = menu.findItem(R.id.menu_grid);
         final MenuItem list = menu.findItem(R.id.menu_list);
         final MenuItem settings = menu.findItem(R.id.menu_settings);
+
+        // TV has Settings and About in the drawer, so drop the overflow button entirely
+        if (isTelevision()) {
+            menu.findItem(R.id.menu_receive_quickshare).setVisible(false);
+            menu.findItem(R.id.menu_about).setVisible(false);
+            menu.findItem(R.id.menu_exit).setVisible(false);
+        }
 
         // Open drawer means we hide most actions
         if (isRootsDrawerOpen()) {
@@ -874,7 +978,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
         sort.setVisible(cwd != null);
         grid.setVisible(!RootInfo.isOtherRoot(getCurrentRoot()) && mState.derivedMode != MODE_GRID);
-        list.setVisible(mState.derivedMode != MODE_LIST);
+        // Home, Connections, FTP server and Quick Share have no file listing to switch
+        final boolean noListing = RootInfo.isOtherRoot(getCurrentRoot()) && cwd == null;
+        list.setVisible(!noListing && mState.derivedMode != MODE_LIST);
 
         if (mState.currentSearch != null) {
             // Search uses backend ranking; no sorting
@@ -895,7 +1001,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
 
         // Only sort by size when visible
-        sortSize.setVisible(mState.showSize);
+        if (null != sortSize) {
+            sortSize.setVisible(mState.showSize);
+        }
 
         final boolean searchVisible;
         if (mState.action == ACTION_CREATE || mState.action == ACTION_OPEN_TREE) {
@@ -924,13 +1032,16 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         // TODO: close any search in-progress when hiding
         search.setVisible(searchVisible);
 
-        settings.setVisible(mState.action != ACTION_MANAGE);
+        settings.setVisible(!isTelevision() && mState.action != ACTION_MANAGE);
 
         Utils.inflateActionMenu(this, this, false, root, cwd);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (null != mToolbarActionMode) {
+            return mToolbarActionMode.onItemClicked(item);
+        }
         if (mDrawerToggle != null) {
         	if(mDrawerLayoutHelper.isDrawerOpen(mInfoContainer)){
                 mDrawerLayoutHelper.closeDrawer(mInfoContainer);
@@ -943,6 +1054,16 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public void openSettings() {
+        startActivityForResult(new Intent(this, SettingsActivity.class), CODE_SETTINGS);
+        AnalyticsManager.logEvent("setting_open");
+    }
+
+    public void openAbout() {
+        startActivity(new Intent(this, AboutActivity.class));
+        AnalyticsManager.logEvent("about_open");
     }
 
     public boolean menuAction(MenuItem item) {
@@ -960,6 +1081,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         } else if (id == R.id.menu_search) {
             return false;
+        } else if (id == R.id.menu_sort && isTelevision()) {
+            showSortPanel();
+            return true;
         } else if (id == R.id.menu_sort_name) {
             setUserSortOrder(State.SORT_ORDER_DISPLAY_NAME);
             Bundle params = new Bundle();
@@ -991,12 +1115,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             AnalyticsManager.logEvent("display_list", params);
             return true;
         } else if (id == R.id.menu_settings) {
-            startActivityForResult(new Intent(this, SettingsActivity.class), CODE_SETTINGS);
-            AnalyticsManager.logEvent("setting_open");
+            openSettings();
+            return true;
+        } else if (id == R.id.menu_receive_quickshare) {
+            openQuickShareReceiver();
             return true;
         } else if (id == R.id.menu_about) {
-            startActivity(new Intent(this, AboutActivity.class));
-            AnalyticsManager.logEvent("about_open");
+            openAbout();
             return true;
         } else if (id == R.id.menu_exit) {
             Bundle params = new Bundle();
@@ -1005,6 +1130,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         }
         return false;
+    }
+
+    private void openQuickShareReceiver() {
+        startActivity(new Intent(this, QuickShareReceiveActivity.class));
+        AnalyticsManager.logEvent("receive_quickshare_open");
     }
 
     private void createFolder() {
@@ -1040,6 +1170,72 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
      */
     public void onStateChanged() {
         invalidateMenu();
+    }
+
+    /**
+     * A toolbar item with a submenu always opens it as the old drop-down, so on TV the sort item
+     * becomes a plain button that opens {@link #showSortPanel()}.
+     */
+    private void replaceSortSubMenu(Menu menu) {
+        final MenuItem sort = menu.findItem(R.id.menu_sort);
+        if (null == sort) {
+            return;
+        }
+        final int group = sort.getGroupId();
+        final int order = sort.getOrder();
+        final CharSequence title = sort.getTitle();
+        final Drawable icon = sort.getIcon();
+        menu.removeItem(R.id.menu_sort);
+        menu.add(group, R.id.menu_sort, order, title)
+                .setIcon(icon)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+    }
+
+    /** "Sort by" panel under the sort button, with the current order checked. */
+    private void showSortPanel() {
+        View anchor = mToolbar.findViewById(R.id.menu_sort);
+        if (null == anchor) {
+            anchor = mToolbar;
+        }
+        final Menu menu = new PopupMenu(this, anchor).getMenu();
+        getMenuInflater().inflate(R.menu.sort, menu);
+        menu.findItem(R.id.menu_sort_size).setVisible(mState.showSize);
+        final int checked;
+        switch (mState.derivedSortOrder) {
+            case State.SORT_ORDER_LAST_MODIFIED:
+                checked = R.id.menu_sort_date;
+                break;
+            case State.SORT_ORDER_SIZE:
+                checked = R.id.menu_sort_size;
+                break;
+            default:
+                checked = R.id.menu_sort_name;
+                break;
+        }
+        menu.findItem(checked).setChecked(true);
+        SideMenuPopup.show(anchor, getString(R.string.menu_sort), menu,
+                new SideMenuPopup.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        return onOptionsItemSelected(item);
+                    }
+                }, true);
+    }
+
+    // What the toolbar menu was last prepared with; see onDirectoryLoaded
+    private int mMenuMode = State.MODE_UNKNOWN;
+    private boolean mMenuShowSize;
+
+    /**
+     * Rebuilding the toolbar menu takes ~80ms on a TV and would run between the folder loading and
+     * its first frame. Changing folder already rebuilt it, so only a different view mode or size
+     * option from the loaded folder needs another.
+     */
+    @Override
+    public void onDirectoryLoaded() {
+        if (mState.derivedMode != mMenuMode || mState.showSize != mMenuShowSize) {
+            invalidateMenu();
+        }
     }
 
     /**
@@ -1096,14 +1292,293 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
+    private final Runnable mTvSearchRunnable = () -> {
+        if (mSearchView != null) {
+            showTvSearchResults(mSearchView.getQuery().toString());
+        }
+    };
+
+    /**
+     * Swaps only the file list for the results, leaving the toolbar and the search field (and
+     * its focus) alone; an empty query brings the folder back.
+     */
+    private void showTvSearchResults(String query) {
+        if (!Utils.isActivityAlive(this) || !mSearchExpanded) {
+            return;
+        }
+        final RootInfo root = getCurrentRoot();
+        final DocumentInfo cwd = getCurrentDirectory();
+        if (root == null || cwd == null) {
+            return;
+        }
+        final String search = TextUtils.isEmpty(query.trim()) ? null : query.trim();
+        if (TextUtils.equals(search, mState.currentSearch)) {
+            return;
+        }
+        mState.currentSearch = search;
+        mSearchResultShown = search != null;
+        if (search != null) {
+            DirectoryFragment.showSearch(getFragmentManager(), root, cwd, search, ANIM_NONE);
+            Bundle params = new Bundle();
+            params.putString("query", search);
+            AnalyticsManager.logEvent("search", root, params);
+        } else {
+            DirectoryFragment.showNormal(getFragmentManager(), root, cwd, ANIM_NONE);
+        }
+    }
+
+    /** Grows the pill leftwards around the search icon, which stays put, then fades the rest in. */
+    private void animateSearchPillIn(ViewGroup pill, View searchButton) {
+        if (mSearchPill == null) {
+            return;
+        }
+        for (int i = 0; i < pill.getChildCount(); i++) {
+            final View child = pill.getChildAt(i);
+            if (child != searchButton) {
+                child.setAlpha(0f);
+                child.animate().alpha(1f).setStartDelay(90).setDuration(130).start();
+            }
+        }
+        mSearchPill.setCollapsed(1f);
+        final ValueAnimator grow = ValueAnimator.ofFloat(1f, 0f);
+        grow.setDuration(220);
+        grow.setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator());
+        grow.addUpdateListener(animation -> mSearchPill.setCollapsed((float) animation.getAnimatedValue()));
+        grow.start();
+    }
+
+    /**
+     * Rounded pill background that can shrink to a circle at its end. Changing it only redraws,
+     * unlike swapping inset drawables, which relayouts the toolbar on every frame.
+     */
+    private static class SearchPillDrawable extends Drawable {
+        private final MaterialShapeDrawable mShape;
+        private final int mHeight;
+        private final int mEndInset;
+        private float mCollapsed;
+
+        SearchPillDrawable(MaterialShapeDrawable shape, int height, int endInset) {
+            mShape = shape;
+            mHeight = height;
+            mEndInset = endInset;
+        }
+
+        void setCollapsed(float collapsed) {
+            mCollapsed = collapsed;
+            invalidateSelf();
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            final Rect bounds = getBounds();
+            final int top = bounds.centerY() - mHeight / 2;
+            final int bottom = top + mHeight;
+            final int right = bounds.right - mEndInset;
+            // Fully collapsed it is a circle as wide as it is tall
+            final int collapsedLeft = right - (bottom - top);
+            final int left = (int) (bounds.left + (collapsedLeft - bounds.left) * mCollapsed);
+            mShape.setBounds(left, top, right, bottom);
+            mShape.draw(canvas);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            mShape.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {
+            mShape.setColorFilter(colorFilter);
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    private void showSearchKeyboard(View field) {
+        field.requestFocus();
+        final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    private void setToolbarCollapseButtonVisible(boolean visible) {
+        final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        if (toolbar == null) {
+            return;
+        }
+        final CharSequence description = getString(androidx.appcompat.R.string.abc_toolbar_collapse_description);
+        for (int i = 0; i < toolbar.getChildCount(); i++) {
+            final View child = toolbar.getChildAt(i);
+            if (child instanceof ImageButton && description.equals(child.getContentDescription())
+                    && child.getParent() == toolbar) {
+                child.setVisibility(visible ? View.VISIBLE : View.GONE);
+            }
+        }
+    }
+
+    private Toolbar.LayoutParams newSearchPillParams(int margin, float density) {
+        final Toolbar.LayoutParams lp = new Toolbar.LayoutParams(
+                (int) (640 * density), ViewGroup.LayoutParams.MATCH_PARENT);
+        lp.setMargins(0, margin * 3 / 2, margin, margin * 3 / 2);
+        return lp;
+    }
+
+    private ImageButton newSearchPillButton(int icon, int size, ColorStateList tint) {
+        final ImageButton button = new ImageButton(this);
+        button.setImageResource(icon);
+        button.setImageTintList(tint);
+        // A round highlight that stays inside the pill; a background with a focused state also
+        // turns off the platform's square focus highlight
+        final GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(ColorUtils.setAlphaComponent(tint.getDefaultColor(), 0x3D));
+        final Drawable highlight = circle;
+        final StateListDrawable background = new StateListDrawable();
+        background.addState(new int[]{android.R.attr.state_focused}, highlight);
+        background.addState(new int[]{android.R.attr.state_pressed}, highlight);
+        button.setBackground(background);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            button.setDefaultFocusHighlightEnabled(false);
+        }
+        button.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+        return button;
+    }
+
+    /** Rounded, faded search field; Back closes it once the keyboard is hidden and it is empty. */
+    private void styleTvSearchView() {
+        final float radius = getResources().getDimension(R.dimen.card_corner_radius) * 2;
+        final MaterialShapeDrawable background = new MaterialShapeDrawable(
+                ShapeAppearanceModel.builder().setAllCornerSizes(radius).build());
+        final int fill = MaterialColors.getColor(mSearchView,
+                com.google.android.material.R.attr.colorOnSurface);
+        background.setFillColor(ColorStateList.valueOf(ColorUtils.setAlphaComponent(fill, 40)));
+        final float density = getResources().getDisplayMetrics().density;
+        final int margin = (int) (8 * density);
+        // Buttons are as tall as the pill so their round highlight follows its border
+        final int iconSize = (int) (36 * density);
+        // Puts the search button's centre where the toolbar's search icon was
+        final int endInset = (int) (6 * density);
+        final ColorStateList iconTint = ColorStateList.valueOf(fill);
+
+        // Back button, field and search button share one rounded pill
+        final LinearLayout pill = new LinearLayout(this);
+        pill.setOrientation(LinearLayout.HORIZONTAL);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        // The toolbar ignores margins on action views, so inset the drawn pill instead
+        // The search button keeps the toolbar search icon's spot, so the pill ends just past it
+        mSearchPill = new SearchPillDrawable(background, iconSize, endInset);
+        pill.setBackground(mSearchPill);
+        pill.setMinimumWidth((int) (640 * density));
+        pill.setLayoutParams(newSearchPillParams(margin, density));
+
+        final ImageButton back = newSearchPillButton(R.drawable.abc_ic_ab_back_material, iconSize, iconTint);
+        back.setContentDescription(getString(androidx.appcompat.R.string.abc_toolbar_collapse_description));
+        back.setOnClickListener(v -> mSearchMenuItem.collapseActionView());
+        final ImageButton clear = newSearchPillButton(R.drawable.abc_ic_clear_material, iconSize, iconTint);
+        clear.setContentDescription(getString(androidx.appcompat.R.string.abc_searchview_description_clear));
+        clear.setVisibility(View.GONE);
+        clear.setOnClickListener(v -> {
+            mSearchView.setQuery("", false);
+            mSearchView.requestFocus();
+        });
+        final ImageButton go = newSearchPillButton(R.drawable.abc_ic_search_api_material, iconSize, iconTint);
+        go.setContentDescription(getString(R.string.menu_search));
+        go.setTag("search_go");
+        // Search runs as the user types, so this is only a marker, not a stop for the remote
+        go.setBackground(null);
+        go.setFocusable(false);
+        go.setClickable(false);
+        go.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        mSearchView.setBackground(null);
+        mSearchView.setQueryHint(getString(androidx.appcompat.R.string.abc_search_hint));
+        final View closeButton = mSearchView.findViewById(androidx.appcompat.R.id.search_close_btn);
+        if (closeButton != null) {
+            // Replaced by the pill's own clear button, which shows only when there is text
+            closeButton.setLayoutParams(new LinearLayout.LayoutParams(0, 0));
+            closeButton.setEnabled(false);
+            closeButton.setFocusable(false);
+        }
+        final View magIcon = mSearchView.findViewById(androidx.appcompat.R.id.search_button);
+        if (magIcon != null) {
+            // The pill has its own search button on the right
+            magIcon.setLayoutParams(new LinearLayout.LayoutParams(0, 0));
+            magIcon.setVisibility(View.GONE);
+        }
+        mSearchView.setMaxWidth(Integer.MAX_VALUE);
+        pill.addView(back);
+        pill.addView(mSearchView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        pill.addView(clear);
+        final LinearLayout.LayoutParams goParams = new LinearLayout.LayoutParams(iconSize, iconSize);
+        goParams.setMarginEnd(endInset);
+        pill.addView(go, goParams);
+        final TextView queryText = mSearchView.findViewById(androidx.appcompat.R.id.search_src_text);
+        if (queryText != null) {
+            // Selecting the field with the remote brings the keyboard back after Back hid it
+            queryText.setOnKeyListener((v, keyCode, event) -> {
+                if (event.getAction() == KeyEvent.ACTION_UP && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
+                        || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    showSearchKeyboard(v);
+                }
+                return false;
+            });
+            queryText.setOnClickListener(this::showSearchKeyboard);
+            queryText.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence text, int start, int before, int count) {
+                    clear.setVisibility(TextUtils.isEmpty(text) ? View.GONE : View.VISIBLE);
+                }
+
+                @Override
+                public void afterTextChanged(android.text.Editable text) {
+                }
+            });
+        }
+        mSearchMenuItem.setActionView(pill);
+
+        final View root = getWindow().getDecorView();
+        final boolean[] imeShown = {false};
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            final boolean shown = insets.isVisible(WindowInsetsCompat.Type.ime());
+            if (imeShown[0] && !shown && mSearchExpanded && mSearchMenuItem != null) {
+                if (TextUtils.isEmpty(mSearchView.getQuery())) {
+                    mSearchMenuItem.collapseActionView();
+                } else {
+                    // The search field drops focus when Back hides the keyboard, which sends
+                    // focus to the sidebar; keep it on the field so OK reopens the keyboard
+                    final View field = mSearchView.findViewById(androidx.appcompat.R.id.search_src_text);
+                    if (field != null) {
+                        field.post(field::requestFocus);
+                    }
+                }
+            }
+            imeShown[0] = shown;
+            return ViewCompat.onApplyWindowInsets(v, insets);
+        });
+    }
+
     @Override
     public void onBackPressed() {
+        if (null != mToolbarActionMode) {
+            mToolbarActionMode.finish();
+            return;
+        }
         if(isRootsDrawerOpen() && !mShowAsDialog){
             mDrawerLayoutHelper.closeDrawer(mRootsContainer);
             return;
         }
-        if(mSearchExpanded){
-
+        if (mSearchExpanded && null != mSearchView && TextUtils.isEmpty(mSearchView.getQuery())) {
+            if (mSearchMenuItem != null && mSearchMenuItem.collapseActionView()) {
+                return;
+            }
         }
         if (!mState.stackTouched) {
             super.onBackPressed();
@@ -1177,6 +1652,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 title.setText(root.title);
             } else {
                 title.setText(doc.displayName);
+            }
+            if (isTelevision()) {
+                title.setTextColor(getTvTitleColor());
             }
 
             // No padding when shown in actionbar
@@ -1325,6 +1803,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                     HomeFragment.show(fm);
                 } else if(null != root && root.isConnections()){
                     ConnectionsFragment.show(fm);
+                } else if(null != root && root.isQuickShare()){
+                    QuickShareFragment.show(fm);
                 } else if(null != root && root.isServerStorage()){
                     ServerFragment.show(fm, root);
                 } else {
@@ -1419,9 +1899,26 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         onRootPicked(root, true);
     }
 
-    public void onRootPicked(RootInfo root, boolean closeDrawer) {
+    public void onRootPicked(final RootInfo root, final boolean closeDrawer) {
 
         if(null == root){
+            return;
+        }
+        // Connections to LAN servers need local network access on Android 17+
+        if (root.isNetworkStorage() && !root.isServerStorage()
+                && !PermissionUtil.hasLocalNetworkPermission(this)) {
+            runWithLocalNetwork(new Runnable() {
+                @Override
+                public void run() {
+                    onRootPicked(root, closeDrawer);
+                }
+            });
+            return;
+        }
+        // Local storage can't be listed without all-files access; ask instead of failing
+        if (ExternalStorageProvider.AUTHORITY.equals(root.authority)
+                && !PermissionUtil.hasStoragePermission(this)) {
+            requestStoragePermissions();
             return;
         }
         // Clear entire backstack and start in new root
@@ -1934,7 +2431,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return;
         }
 
-		int color = SettingsActivity.getPrimaryColor(this);
+		int color = ThemeColors.getAppBarColor(this);
 		Drawable colorDrawable = new ColorDrawable(color);
 
 		if (oldBackground == null) {
@@ -1973,25 +2470,231 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
 	public void setActionMode(boolean actionMode) {
 		mActionMode = actionMode;
-        mToolbar.setVisibility(actionMode ? View.INVISIBLE : View.VISIBLE);
+        // TV keeps its toolbar and shows the selection in it (ToolbarActionMode)
+        mToolbar.setVisibility(actionMode && null == mToolbarActionMode ? View.INVISIBLE : View.VISIBLE);
 	}
 
+    private ToolbarActionMode mToolbarActionMode;
+
+    @Override
+    public ActionMode startSupportActionMode(@NonNull ActionMode.Callback callback) {
+        if (!isTelevision()) {
+            return super.startSupportActionMode(callback);
+        }
+        if (null != mToolbarActionMode) {
+            mToolbarActionMode.finish();
+        }
+        mToolbarActionMode = new ToolbarActionMode(callback);
+        mToolbarActionMode.start();
+        return mToolbarActionMode;
+    }
+
+    /**
+     * Selection mode on TV: instead of overlaying a contextual bar, the toolbar itself turns
+     * into the selection bar, with every action shown in it rather than in an overflow menu.
+     */
+    private class ToolbarActionMode extends ActionMode {
+        // Bar order: open, then edit actions, then sharing, then details; Delete always goes last
+        private final int[] ACTION_ORDER = {
+                R.id.menu_open, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_rename,
+                R.id.menu_compress, R.id.menu_share, R.id.menu_bookmark, R.id.menu_info,
+        };
+        private final ActionMode.Callback callback;
+        private CharSequence title;
+        private CharSequence subtitle;
+        private View customView;
+        private int onColor;
+        private Drawable toolbarBackground;
+
+        ToolbarActionMode(ActionMode.Callback callback) {
+            this.callback = callback;
+        }
+
+        void start() {
+            final TypedArray a = obtainStyledAttributes(new int[]{
+                    androidx.appcompat.R.attr.actionModeBackground,
+                    com.google.android.material.R.attr.colorOnPrimaryContainer});
+            final Drawable background = a.getDrawable(0);
+            onColor = a.getColor(1, Color.WHITE);
+            a.recycle();
+            toolbarBackground = mToolbar.getBackground();
+            getSupportActionBar().setBackgroundDrawable(background);
+            mToolbar.setTitleTextColor(onColor);
+            mToolbarStack.setVisibility(View.GONE);
+            mToolbarStack.setAdapter(null);
+            final Drawable close = ContextCompat.getDrawable(DocumentsActivity.this, R.drawable.ic_action_close).mutate();
+            close.setTint(onColor);
+            mToolbar.setNavigationIcon(close);
+            mToolbar.setNavigationContentDescription(android.R.string.cancel);
+            mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    finish();
+                }
+            });
+            supportInvalidateOptionsMenu();
+        }
+
+        boolean onCreateMenu(Menu menu) {
+            // Re-creating the menu resets the title; keep the "N selected" one
+            final CharSequence currentTitle = title;
+            final boolean created = callback.onCreateActionMode(this, menu);
+            if (null != currentTitle) {
+                setTitle(currentTitle);
+            }
+            flattenSubMenus(menu);
+            styleItems(menu);
+            return created;
+        }
+
+        /**
+         * Lifts submenu entries (e.g. Edit: rename, copy, cut...) into the bar itself and puts the
+         * actions in a fixed order, with Delete last so it sits apart from the others.
+         */
+        private void flattenSubMenus(Menu menu) {
+            final List<MenuItem> items = new ArrayList<>();
+            for (int i = 0; i < menu.size(); i++) {
+                final MenuItem item = menu.getItem(i);
+                if (item.hasSubMenu()) {
+                    for (int j = 0; j < item.getSubMenu().size(); j++) {
+                        items.add(item.getSubMenu().getItem(j));
+                    }
+                } else {
+                    items.add(item);
+                }
+            }
+            final List<Object[]> entries = new ArrayList<>();
+            for (MenuItem item : items) {
+                entries.add(new Object[]{item.getItemId(), item.getTitle(), item.getIcon(), item.isVisible()});
+            }
+            // Stable sort: actions not listed in ACTION_ORDER keep their place, after the listed ones
+            Collections.sort(entries, (a, b) -> actionRank((Integer) a[0]) - actionRank((Integer) b[0]));
+            menu.clear();
+            for (Object[] entry : entries) {
+                menu.add(Menu.NONE, (Integer) entry[0], Menu.NONE, (CharSequence) entry[1])
+                        .setIcon((Drawable) entry[2])
+                        .setVisible((Boolean) entry[3]);
+            }
+        }
+
+        private int actionRank(int id) {
+            for (int i = 0; i < ACTION_ORDER.length; i++) {
+                if (ACTION_ORDER[i] == id) {
+                    return i;
+                }
+            }
+            return id == R.id.menu_delete ? Integer.MAX_VALUE : ACTION_ORDER.length;
+        }
+
+        boolean onPrepareMenu(Menu menu) {
+            final boolean prepared = callback.onPrepareActionMode(this, menu);
+            styleItems(menu);
+            return prepared;
+        }
+
+        boolean onItemClicked(MenuItem item) {
+            return callback.onActionItemClicked(this, item);
+        }
+
+        private void styleItems(Menu menu) {
+            final ColorStateList tint = ColorStateList.valueOf(onColor);
+            final ColorStateList deleteTint = ColorStateList.valueOf(
+                    ContextCompat.getColor(DocumentsActivity.this, R.color.action_delete));
+            for (int i = 0; i < menu.size(); i++) {
+                final MenuItem item = menu.getItem(i);
+                item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                MenuItemCompat.setIconTintList(item, item.getItemId() == R.id.menu_delete ? deleteTint : tint);
+            }
+        }
+
+        @Override
+        public void setTitle(CharSequence title) {
+            this.title = title;
+            mToolbar.setTitle(title);
+        }
+
+        @Override
+        public void setTitle(int resId) {
+            setTitle(getString(resId));
+        }
+
+        @Override
+        public void setSubtitle(CharSequence subtitle) {
+            this.subtitle = subtitle;
+            mToolbar.setSubtitle(subtitle);
+        }
+
+        @Override
+        public void setSubtitle(int resId) {
+            setSubtitle(getString(resId));
+        }
+
+        @Override
+        public void setCustomView(View view) {
+            customView = view;
+        }
+
+        @Override
+        public void invalidate() {
+            supportInvalidateOptionsMenu();
+        }
+
+        @Override
+        public void finish() {
+            if (mToolbarActionMode != this) {
+                return;
+            }
+            mToolbarActionMode = null;
+            callback.onDestroyActionMode(this);
+            mToolbar.setSubtitle(null);
+            mToolbar.setNavigationIcon(null);
+            mToolbar.setTitleTextAppearance(DocumentsActivity.this,
+                    R.style.TextAppearance_AppCompat_Widget_ActionBar_Title);
+            applyTvTitleColor();
+            mToolbar.setBackground(toolbarBackground);
+            updateActionBar();
+            supportInvalidateOptionsMenu();
+        }
+
+        @Override
+        public Menu getMenu() {
+            return mToolbar.getMenu();
+        }
+
+        @Override
+        public CharSequence getTitle() {
+            return title;
+        }
+
+        @Override
+        public CharSequence getSubtitle() {
+            return subtitle;
+        }
+
+        @Override
+        public View getCustomView() {
+            return customView;
+        }
+
+        @Override
+        public MenuInflater getMenuInflater() {
+            return DocumentsActivity.this.getMenuInflater();
+        }
+    }
+
+    @Override
     public void invalidateMenu(){
         supportInvalidateOptionsMenu();
+        // ComponentActivity calls this during super.onCreate(), before our state exists
+        if (null == mState || null == mActionMenu) {
+            return;
+        }
         mActionMenu.setVisibility(!isSpecialDevice() && showActionMenu() ? View.VISIBLE : View.GONE);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void setUpStatusBar() {
-        int color = Utils.getStatusBarColor(SettingsActivity.getPrimaryColor(this));
-        if(Utils.hasLollipop()){
-            getWindow().setStatusBarColor(color);
-        }
-        else if(Utils.hasKitKat()){
-            SystemBarTintManager systemBarTintManager = new SystemBarTintManager(this);
-            systemBarTintManager.setTintColor(color);
-            systemBarTintManager.setStatusBarTintEnabled(true);
-        }
+        ThemeColors.setUpStatusBar(this);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -2028,11 +2731,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if(null != root && root.isCloudStorage()){
             mActionMenu.newNavigationMenu(R.menu.menu_fab_cloud);
         }
-        int defaultColor = SettingsActivity.getPrimaryColor(this);
+        int defaultColor = ThemeColors.getPrimaryColor(this);
         ViewCompat.setNestedScrollingEnabled(currentView, true);
         mActionMenu.show();
         mActionMenu.setVisibility(!isSpecialDevice() && showActionMenu() ? View.VISIBLE : View.GONE);
-        mActionMenu.setBackgroundTintList(SettingsActivity.getAccentColor());
+        mActionMenu.setBackgroundTintList(ThemeColors.getAccentColor(this));
         mActionMenu.setSecondaryBackgroundTintList(Utils.getActionButtonColor(defaultColor));
     }
 
@@ -2053,24 +2756,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         @Override
         public boolean onMenuItemSelected(MenuItem menuItem) {
             Bundle params = new Bundle();
-            switch (menuItem.getItemId()){
-                case R.id.fab_create_file:
-                    onStateChanged();
-                    createFile();
-                    mActionMenu.closeMenu();
-                    break;
-
-                case R.id.fab_upload_file:
-                    onStateChanged();
-                    uploadFile();
-                    mActionMenu.closeMenu();
-                    break;
-
-                case R.id.fab_create_folder:
-                    createFolder();
-                    mActionMenu.closeMenu();
-                    break;
-
+            if (menuItem.getItemId() == R.id.fab_create_file){
+                onStateChanged();
+                createFile();
+                mActionMenu.closeMenu();
+            } else if (menuItem.getItemId() == R.id.fab_upload_file){
+                onStateChanged();
+                uploadFile();
+                mActionMenu.closeMenu();
+            } else if (menuItem.getItemId() == R.id.fab_create_folder){
+                createFolder();
+                mActionMenu.closeMenu();
             }
             return false;
         }

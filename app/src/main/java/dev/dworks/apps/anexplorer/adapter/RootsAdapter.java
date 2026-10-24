@@ -19,13 +19,14 @@ import dev.dworks.apps.anexplorer.fragment.RootsFragment.RootItem;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.SpacerItem;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 public class RootsAdapter extends ArrayAdapter<Item> {
 
     public RootsAdapter(Context context, Collection<RootInfo> roots, Intent includeAppss) {
         super(context, 0);
 
-        int defaultColor = SettingsActivity.getPrimaryColor(context);
+        int defaultColor = ThemeColors.getPrimaryColor(context);
         RootItem recents = null;
         RootItem images = null;
         RootItem videos = null;

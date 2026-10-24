@@ -21,8 +21,8 @@ import android.widget.Toast;
 
 import com.cloudrail.si.interfaces.CloudStorage;
 import com.cloudrail.si.types.CloudMetaData;
-import com.github.mjdev.libaums.fs.UsbFileInputStream;
-import com.github.mjdev.libaums.fs.UsbFileOutputStream;
+import me.jahnen.libaums.core.fs.UsbFileInputStream;
+import me.jahnen.libaums.core.fs.UsbFileOutputStream;
 
 import java.io.BufferedInputStream;
 import java.io.File;

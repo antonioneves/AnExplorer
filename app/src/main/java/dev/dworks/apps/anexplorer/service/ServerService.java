@@ -78,6 +78,7 @@ public class ServerService extends TileService {
         Intent intent = new Intent(ACTION_START_FTPSERVER);
         Bundle args = new Bundle();
         intent.putExtras(args);
+        intent.setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
@@ -85,6 +86,7 @@ public class ServerService extends TileService {
         Intent intent = new Intent(ACTION_STOP_FTPSERVER);
         Bundle args = new Bundle();
         intent.putExtras(args);
+        intent.setPackage(getPackageName());
         sendBroadcast(intent);
     }
 }

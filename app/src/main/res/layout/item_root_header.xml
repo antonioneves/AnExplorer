@@ -16,7 +16,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@drawable/item_root_header"
+    android:padding="0dp">
 
     <TextView
         android:id="@android:id/title"
@@ -25,8 +27,8 @@
         android:layout_gravity="start"
         android:gravity="start|center_vertical"
         android:minHeight="36dp"
-        android:paddingLeft="@dimen/list_item_padding"
-        android:paddingStart="@dimen/list_item_padding"
+        android:paddingLeft="@dimen/root_item_padding"
+        android:paddingStart="@dimen/root_item_padding"
         android:textAlignment="viewStart"
         android:textAllCaps="true"
         android:textColor="?android:attr/textColorTertiary"

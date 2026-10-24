@@ -190,7 +190,7 @@ public class AppRate implements View.OnClickListener{
         boolean hideSupport = DocumentsApplication.isPurchased();
         action_support.setVisibility(hideSupport ? View.GONE : View.VISIBLE);
 
-        int color = SettingsActivity.getAccentColor();
+        int color = ThemeColors.getAccentColor(activity);
         icon.setImageDrawable(IconUtils.applyTint(activity, R.drawable.ic_support, color));
         action_rate.setTextColor(color);
         action_support.setTextColor(color);
@@ -260,29 +260,23 @@ public class AppRate implements View.OnClickListener{
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()){
-            case action_close:
-                hideAllViews(mainView);
-                if (onShowListener != null)onShowListener.onRateAppDismissed();
-                break;
-            case action_rate:
-                openPlaystore(activity);
-                if (onShowListener != null)onShowListener.onRateAppClicked();
-                hideAllViews(mainView);
-                editor.putBoolean(KEY_CLICKED, true);
-                editor.apply();
-                break;
-            case action_feedback:
-                openFeedback(activity);
-                hideAllViews(mainView);
-                editor.putBoolean(KEY_CLICKED, true);
-                editor.apply();
-                break;
-
-            case action_support:
-                DocumentsApplication.openPurchaseActivity(activity);
-                hideAllViews(mainView);
-                break;
+        if (view.getId() == action_close){
+            hideAllViews(mainView);
+            if (onShowListener != null)onShowListener.onRateAppDismissed();
+        } else if (view.getId() == action_rate){
+            openPlaystore(activity);
+            if (onShowListener != null)onShowListener.onRateAppClicked();
+            hideAllViews(mainView);
+            editor.putBoolean(KEY_CLICKED, true);
+            editor.apply();
+        } else if (view.getId() == action_feedback){
+            openFeedback(activity);
+            hideAllViews(mainView);
+            editor.putBoolean(KEY_CLICKED, true);
+            editor.apply();
+        } else if (view.getId() == action_support){
+            DocumentsApplication.openPurchaseActivity(activity);
+            hideAllViews(mainView);
         }
     }
 

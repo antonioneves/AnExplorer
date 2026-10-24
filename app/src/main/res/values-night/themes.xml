@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="DocumentsTheme.PopupOverlay" parent="@style/ThemeOverlay.Material3Expressive.Dark">
+        <item name="colorSurface">@color/surfaceColor</item>
+        <item name="colorOnSurface">@color/onSurfaceColor</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerColor</item>
+        <item name="colorSurfaceContainerHigh">@color/surfaceContainerHighColor</item>
+    </style>
+
+</resources>

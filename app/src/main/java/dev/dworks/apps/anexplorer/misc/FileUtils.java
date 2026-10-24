@@ -573,7 +573,8 @@ public class FileUtils {
         boolean onlyFolders;
 
         public SearchFilter(String search) {
-            this.searchQuery = search;
+            // File names are lowercased before matching, so the query must be too
+            this.searchQuery = search.toLowerCase(Resources.getSystem().getConfiguration().locale);
         }
 
         @SuppressWarnings("unused")

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Colors come from the dynamic palette, generated from the user's primary color
+         (see ThemeColors.applyToActivity) -->
+    <style name="Base.DocumentsTheme" parent="@style/Theme.Material3Expressive.DynamicColors.DayNight.NoActionBar.FocusRings">
+        <item name="actionBarTheme">@style/DocumentsTheme.AppBarOverlay</item>
+        <item name="actionModeBackground">?attr/colorPrimaryContainer</item>
+        <item name="colorAccent">?attr/colorSecondary</item>
+    </style>
+
+    <!-- App bars are painted with colorPrimaryContainer, see ThemeColors.getAppBarColor -->
+    <style name="DocumentsTheme.AppBarOverlay" parent="@style/ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorControlNormal">?attr/colorOnPrimaryContainer</item>
+        <item name="android:textColorPrimary">?attr/colorOnPrimaryContainer</item>
+        <item name="android:textColorSecondary">?attr/colorOnPrimaryContainer</item>
+    </style>
+
+    <!-- Popups inherit the app bar overlay; only reset its content colors so the
+         generated palette shows through -->
+    <style name="DocumentsTheme.PopupOverlay" parent="">
+        <item name="colorControlNormal">?attr/colorOnSurfaceVariant</item>
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+</resources>

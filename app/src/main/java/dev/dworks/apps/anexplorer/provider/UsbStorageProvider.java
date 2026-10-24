@@ -22,9 +22,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
 import android.support.provider.DocumentFile;
@@ -34,13 +36,13 @@ import android.util.Log;
 import android.util.LruCache;
 import android.webkit.MimeTypeMap;
 
-import com.github.mjdev.libaums.UsbMassStorageDevice;
-import com.github.mjdev.libaums.fs.FileSystem;
-import com.github.mjdev.libaums.fs.UsbFile;
-import com.github.mjdev.libaums.fs.UsbFileInputStream;
-import com.github.mjdev.libaums.fs.UsbFileOutputStream;
-import com.github.mjdev.libaums.fs.UsbFileStreamFactory;
-import com.github.mjdev.libaums.partition.Partition;
+import me.jahnen.libaums.core.UsbMassStorageDevice;
+import me.jahnen.libaums.core.fs.FileSystem;
+import me.jahnen.libaums.core.fs.UsbFile;
+import me.jahnen.libaums.core.fs.UsbFileInputStream;
+import me.jahnen.libaums.core.fs.UsbFileOutputStream;
+import me.jahnen.libaums.core.fs.UsbFileStreamFactory;
+import me.jahnen.libaums.core.partition.Partition;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -116,7 +118,11 @@ public class UsbStorageProvider extends DocumentsProvider {
         filter.addAction(ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        context.registerReceiver(mUsbReceiver, filter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(mUsbReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            context.registerReceiver(mUsbReceiver, filter);
+        }
 
         updateRoots();
         return true;
@@ -439,6 +445,10 @@ public class UsbStorageProvider extends DocumentsProvider {
     public void discoverDevices(){
         try{
             for (UsbDevice device : usbManager.getDeviceList().values()) {
+                // Skip built-in non-storage devices (TVs wire Wi-Fi/Bluetooth chips over USB)
+                if(!isMassStorage(device)) {
+                    continue;
+                }
                 if(hasPermission(device)) {
                     discoverDevice(device);
                 } else {
@@ -448,6 +458,15 @@ public class UsbStorageProvider extends DocumentsProvider {
         } catch (Exception e){
             CrashReportingManager.logException(e);
         }
+    }
+
+    private static boolean isMassStorage(UsbDevice device) {
+        for (int i = 0; i < device.getInterfaceCount(); i++) {
+            if (device.getInterface(i).getInterfaceClass() == UsbConstants.USB_CLASS_MASS_STORAGE) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void discoverDevice(UsbDevice device) {
@@ -586,8 +605,11 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     public void requestPermission(UsbDevice device){
+        // Mutable so UsbManager can add the device and the grant result; explicit as required
+        // for mutable PendingIntents
         PendingIntent permissionIntent = PendingIntent.getBroadcast(getContext(), 0, new Intent(
-                ACTION_USB_PERMISSION), 0);
+                ACTION_USB_PERMISSION).setPackage(getContext().getPackageName()),
+                PendingIntent.FLAG_MUTABLE);
         usbManager.requestPermission(device, permissionIntent);
     }
 

@@ -11,6 +11,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -48,8 +50,8 @@ public class ConnectionUtils {
         NetworkInfo ni = cm.getActiveNetworkInfo();
         connected = ni != null
                 && ni.isConnected()
-                && (ni.getType() & (ConnectivityManager.TYPE_WIFI
-                | ConnectivityManager.TYPE_ETHERNET)) != 0;
+                && (ni.getType() == ConnectivityManager.TYPE_WIFI
+                || ni.getType() == ConnectivityManager.TYPE_ETHERNET);
 
         if (!connected) {
             Log.d(TAG, "isConnectedToLocalNetwork: see if it is an WIFI AP");
@@ -102,6 +104,8 @@ public class ConnectionUtils {
             return intToInet(ipAddress);
         }
 
+        // Wired (e.g. TVs on Ethernet) or tethered: prefer IPv4, which people can type
+        InetAddress fallback = null;
         try {
             Enumeration<NetworkInterface> netinterfaces = NetworkInterface
                     .getNetworkInterfaces();
@@ -111,15 +115,21 @@ public class ConnectionUtils {
                 while (adresses.hasMoreElements()) {
                     InetAddress address = adresses.nextElement();
                     // this is the condition that sometimes gives problems
-                    if (!address.isLoopbackAddress()
-                            && !address.isLinkLocalAddress())
+                    if (address.isLoopbackAddress() || address.isLinkLocalAddress()) {
+                        continue;
+                    }
+                    if (address instanceof Inet4Address) {
                         return address;
+                    }
+                    if (fallback == null) {
+                        fallback = address;
+                    }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return fallback;
     }
 
     public static InetAddress intToInet(int value) {
@@ -171,7 +181,13 @@ public class ConnectionUtils {
     public static String getFTPAddress(Context context){
         InetAddress inetAddress = getLocalInetAddress(context);
         if(null != inetAddress) {
-            return "ftp://" + inetAddress.getHostAddress() + ":" + FTP_SERVER_PORT;
+            String host = inetAddress.getHostAddress();
+            if (inetAddress instanceof Inet6Address) {
+                // Drop the scope (e.g. "%eth0") and bracket it so the port isn't ambiguous
+                int scope = host.indexOf('%');
+                host = "[" + (scope >= 0 ? host.substring(0, scope) : host) + "]";
+            }
+            return "ftp://" + host + ":" + FTP_SERVER_PORT;
         }
         return "";
     }

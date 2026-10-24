@@ -1,0 +1,23 @@
+apply plugin: 'java-library'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    // Lite runtime for the generated Quick Share / UKEY2 protobuf classes.
+    // These protos are Apache-2.0 (Copyright Google LLC); generated Java is
+    // committed under src/main/java so no protoc build step is required.
+    implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
+
+    testImplementation 'junit:junit:4.13.2'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+    }
+}

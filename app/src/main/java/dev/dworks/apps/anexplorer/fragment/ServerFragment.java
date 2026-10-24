@@ -7,8 +7,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.BaseColumns;
+import androidx.appcompat.app.AppCompatActivity;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -18,9 +24,12 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import dev.dworks.apps.anexplorer.common.ActionBarActivity;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
+import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
@@ -32,6 +41,8 @@ import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_FTPSERVER_S
 import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_START_FTPSERVER;
 import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_STOP_FTPSERVER;
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_ROOT;
+import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
+import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
 import static dev.dworks.apps.anexplorer.misc.Utils.isWatch;
 
 public class ServerFragment extends Fragment implements View.OnClickListener {
@@ -77,6 +88,11 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         warning = (TextView) view.findViewById(R.id.warning);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
+        // Only the TV layout has it
+        final View editButton = view.findViewById(R.id.edit_server);
+        if (null != editButton) {
+            editButton.setOnClickListener(this);
+        }
 
     }
 
@@ -85,17 +101,60 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         super.onActivityCreated(savedInstanceState);
         setRetainInstance(true);
         root = getArguments().getParcelable(EXTRA_ROOT);
+        showConnection();
+    }
 
+    private void showConnection() {
         NetworkConnection connection = NetworkConnection.fromRootInfo(getActivity(), root);
+        if (null == connection) {
+            // An edit changed the path this root was found by
+            connection = NetworkConnection.getDefaultServer(getActivity());
+        }
+        if (null == connection) {
+            return;
+        }
         path.setText(connection.getPath());
         username.setText(connection.getUserName());
-        password.setText(connection.getPassword());
+        // Anonymous access has no password; say so instead of leaving the value blank
+        password.setText(TextUtils.isEmpty(connection.getPassword())
+                ? getString(R.string.ftp_no_password) : connection.getPassword());
     }
+
+    /** The settings dialog the Connections list used to offer; TV edits them here instead. */
+    private void editServer() {
+        Cursor cursor = null;
+        try {
+            cursor = getActivity().getContentResolver().query(ExplorerProvider.buildConnection(),
+                    null, ExplorerProvider.ConnectionColumns.TYPE + "=?", new String[]{SERVER}, null);
+            if (null != cursor && cursor.moveToFirst()) {
+                CreateConnectionFragment.show(((AppCompatActivity) getActivity()).getSupportFragmentManager(),
+                        getCursorInt(cursor, BaseColumns._ID));
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+    }
+
+    private final ContentObserver mConnectionObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+        @Override
+        public void onChange(boolean selfChange) {
+            if (!isAdded()) {
+                return;
+            }
+            showConnection();
+            // The running server keeps the settings it started with
+            if (ConnectionUtils.isServerRunning(getActivity())) {
+                setText(warning, getString(R.string.ftp_restart_to_apply));
+            }
+        }
+    };
 
     @Override
     public void onResume(){
         super.onResume();
         updateStatus();
+        getActivity().getContentResolver().registerContentObserver(
+                ExplorerProvider.buildConnection(), true, mConnectionObserver);
         IntentFilter wifiFilter = new IntentFilter();
         wifiFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         getActivity().registerReceiver(mWifiReceiver, wifiFilter);
@@ -104,7 +163,11 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         ftpFilter.addAction(ACTION_FTPSERVER_STARTED);
         ftpFilter.addAction(ACTION_FTPSERVER_STOPPED);
         ftpFilter.addAction(ACTION_FTPSERVER_FAILEDTOSTART);
-        getActivity().registerReceiver(mFtpReceiver, ftpFilter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getActivity().registerReceiver(mFtpReceiver, ftpFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            getActivity().registerReceiver(mFtpReceiver, ftpFilter);
+        }
     }
 
     @Override
@@ -112,6 +175,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         super.onPause();
         getActivity().unregisterReceiver(mWifiReceiver);
         getActivity().unregisterReceiver(mFtpReceiver);
+        getActivity().getContentResolver().unregisterContentObserver(mConnectionObserver);
     }
 
     @Override
@@ -130,6 +194,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
                 getActivity().startService(serverService);
             }
         } else {
+            intent.setPackage(getActivity().getPackageName());
             getActivity().sendBroadcast(intent);
         }
     }
@@ -143,6 +208,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
             serverService.putExtras(intent.getExtras());
             getActivity().stopService(serverService);
         } else {
+            intent.setPackage(getActivity().getPackageName());
             getActivity().sendBroadcast(intent);
         }
     }
@@ -165,18 +231,24 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
     @Override
     public void onClick(View view) {
-        switch (view.getId()){
-            case R.id.action:
-                if(!ConnectionUtils.isServerRunning(getActivity())){
-                    if(ConnectionUtils.isConnectedToWifi(getActivity()))
-                        startServer();
-                    else
-                        setText(warning, getString(R.string.ftp_no_wifi));
-                }
-                else{
-                    stopServer();
-                }
-                break;
+        if (view.getId() == R.id.edit_server) {
+            editServer();
+        } else if (view.getId() == R.id.action){
+            if(!ConnectionUtils.isServerRunning(getActivity())){
+                // TVs are often wired, so any local network will do, not only Wi-Fi
+                if(ConnectionUtils.isConnectedToLocalNetwork(getActivity()))
+                    ((ActionBarActivity) getActivity()).runWithLocalNetwork(new Runnable() {
+                        @Override
+                        public void run() {
+                            startServer();
+                        }
+                    });
+                else
+                    setText(warning, getString(R.string.ftp_no_wifi));
+            }
+            else{
+                stopServer();
+            }
         }
     }
 
@@ -184,9 +256,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            ConnectivityManager conMan = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo netInfo = conMan.getActiveNetworkInfo();
-            if (netInfo != null && netInfo.getType() == ConnectivityManager.TYPE_WIFI){
+            if (ConnectionUtils.isConnectedToLocalNetwork(context)){
                 setText(warning, "");
             }
             else{

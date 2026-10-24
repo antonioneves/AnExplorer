@@ -73,7 +73,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         }
 
         if (result != null && result.exception != null) {
-            mFooters.add(new MessageFooter(mEnv,3, R.drawable.ic_dialog_alert, getString(R.string.query_error)));
+            mFooters.add(new MessageFooter(mEnv,ITEM_TYPE_ERROR, R.drawable.ic_dialog_alert, getString(R.string.query_error)));
         }
 
         mHeader = new MessageFooter(mEnv, ITEM_TYPE_HEADER, R.drawable.ic_doc_folder,
@@ -148,6 +148,9 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         }
         else if (position - offsetPosition < mCursorCount) {
             Cursor cursor = getItem(position );
+            if (holder instanceof DocumentHolder) {
+                ((DocumentHolder) holder).attach(mEnv, mOnItemClickListener);
+            }
             holder.setData(cursor, position);
         } else {
             position -= mCursorCount + offsetPosition;

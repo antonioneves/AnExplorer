@@ -11,7 +11,7 @@
         android:persistent="true"
         android:title="@string/pref_root_mode" />
     <SwitchPreference
-        android:defaultValue="true"
+        android:defaultValue="@bool/folder_animations_default"
         android:key="folderAnimations"
         android:persistent="true"
         android:title="@string/pref_folder_animations" />

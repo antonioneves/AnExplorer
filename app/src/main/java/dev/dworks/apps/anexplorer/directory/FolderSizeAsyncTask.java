@@ -46,13 +46,13 @@ public class FolderSizeAsyncTask extends AsyncTask<Uri, Void, Long> implements P
 			try {
 				if (!TextUtils.isEmpty(mPath)) {
 					File dir = new File(mPath);
-					result = Utils.getDirectorySize(dir);
+					result = Utils.getDirectorySize(dir, mSignal);
 				}
 			} catch (Exception e) {
 				if (!(e instanceof OperationCanceledException)) {
 					Log.w(TAG, "Failed to calculate size for " + mPath + ": " + e);
+					CrashReportingManager.logException(e);
 				}
-				CrashReportingManager.logException(e);
 			}
 			return result;
 		}

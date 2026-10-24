@@ -36,6 +36,7 @@ import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 /**
  * Display document title editor and save button.
@@ -92,7 +93,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		//final Context context = inflater.getContext();
 
 		final View view = inflater.inflate(R.layout.fragment_move, container, false);
-		view.findViewById(R.id.background).setBackgroundColor(SettingsActivity.getPrimaryColor());
+		view.findViewById(R.id.background).setBackgroundColor(ThemeColors.getPrimaryColor(view.getContext()));
 
 		mCancel = (ImageButton) view.findViewById(android.R.id.button2);
 		mCancel.setOnClickListener(this);
@@ -108,7 +109,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		mSave.setEnabled(false);
 
 		mProgress = (MaterialProgressBar) view.findViewById(android.R.id.progress);
-		mProgress.setColor(SettingsActivity.getAccentColor());
+		mProgress.setColor(ThemeColors.getAccentColor(view.getContext()));
 
 		return view;
 	}

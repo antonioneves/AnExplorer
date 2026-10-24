@@ -85,6 +85,7 @@ public class NetworkServiceHandler extends Handler {
         Bundle args = new Bundle();
         args.putParcelable(EXTRA_ROOT, service.getRootInfo());
         intent.putExtras(args);
+        intent.setPackage(service.getPackageName());
         service.sendBroadcast(intent);
     }
 }

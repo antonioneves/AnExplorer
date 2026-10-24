@@ -7,9 +7,10 @@ import android.content.DialogInterface;
 import android.text.TextUtils;
 import android.view.View;
 
-import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressDialog;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.common.DialogFragment.tintButtons;
 
@@ -114,7 +115,7 @@ public abstract class DialogCommonBuilder {
         mNegativeButtonText = TextUtils.isEmpty(mNegativeButtonText)
                 ? mContext.getString(android.R.string.cancel) : mNegativeButtonText;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(mContext);
         builder.setMessage(mMessage).setCancelable(mCancelable);
         builder.setPositiveButton(mPositiveButtonText, new DialogInterface.OnClickListener() {
             @Override
@@ -149,7 +150,7 @@ public abstract class DialogCommonBuilder {
         MaterialProgressDialog progressDialog = new MaterialProgressDialog(mContext);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressDialog.setIndeterminate(true);
-        progressDialog.setColor(SettingsActivity.getAccentColor());
+        progressDialog.setColor(ThemeColors.getAccentColor(mContext));
         progressDialog.setCancelable(mCancelable);
         progressDialog.setMessage(mMessage);
         return progressDialog;

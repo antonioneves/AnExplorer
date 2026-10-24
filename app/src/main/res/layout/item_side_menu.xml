@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Row of ui/SideMenuPopup; shares the drawer's pill and focus ring -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/item_root"
+    android:drawablePadding="16dp"
+    android:gravity="center_vertical|start"
+    android:minHeight="48dp"
+    android:paddingStart="@dimen/root_item_padding"
+    android:paddingLeft="@dimen/root_item_padding"
+    android:paddingEnd="@dimen/root_item_padding"
+    android:paddingRight="@dimen/root_item_padding"
+    android:singleLine="true"
+    android:textAppearance="?attr/textAppearanceBodyLarge"
+    android:textColor="?android:attr/textColorPrimary" />

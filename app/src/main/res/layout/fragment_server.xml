@@ -61,7 +61,7 @@
                     android:ellipsize="end"
                     android:padding="10dp"
                     android:textAppearance="@style/TextAppearance.AppCompat.Headline"
-                    android:textColor="@color/accentColor"
+                    android:textColor="?attr/colorPrimary"
                     android:textStyle="bold"
                     tools:text="ftp://192.168.1.101:2211" />
 
@@ -70,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:textColor="@color/button_text_color_red"
+                    android:textColor="?attr/colorError"
                     android:visibility="gone" />
             </LinearLayout>
 

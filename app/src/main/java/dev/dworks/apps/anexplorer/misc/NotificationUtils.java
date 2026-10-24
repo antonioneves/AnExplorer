@@ -42,11 +42,13 @@ public class NotificationUtils {
         notificationIntent.setData(root.getUri());
         notificationIntent.putExtras(intent.getExtras());
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0);
+        PendingIntent contentIntent = PendingIntent.getActivity(context, 0, notificationIntent,
+                PendingIntent.FLAG_IMMUTABLE);
         Intent stopIntent = new Intent(ACTION_STOP_FTPSERVER);
         stopIntent.putExtras(intent.getExtras());
+        stopIntent.setPackage(context.getPackageName());
         PendingIntent stopPendingIntent = PendingIntent.getBroadcast(context, 0,
-                stopIntent, PendingIntent.FLAG_ONE_SHOT);
+                stopIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
                 .setContentTitle(contentTitle)

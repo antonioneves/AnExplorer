@@ -28,6 +28,7 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.MimeTypes;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
+import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
@@ -136,7 +137,9 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 // These columns are required
                 row.add(Root.COLUMN_ROOT_ID, root.getKey());
                 row.add(Root.COLUMN_DOCUMENT_ID, documentId);
-                row.add(Root.COLUMN_TITLE, networkConnection.name);
+                // TV names the built-in server for what it is; the stored name is "Transfer to PC"
+                row.add(Root.COLUMN_TITLE, isServer && Utils.isTelevision(getContext())
+                        ? getContext().getString(R.string.ftp_server_title) : networkConnection.name);
                 row.add(Root.COLUMN_FLAGS, flags);
 
                 // These columns are optional

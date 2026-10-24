@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <color name="primaryContainerColor">#004B73</color>
+    <color name="onPrimaryContainerColor">#CDE5FF</color>
+    <color name="accentContainerColor">#8A1E00</color>
+    <color name="onAccentContainerColor">#FFDBD1</color>
+    <color name="surfaceColor">#101418</color>
+    <color name="onSurfaceColor">#E0E2E8</color>
+    <color name="surfaceVariantColor">#42474E</color>
+    <color name="onSurfaceVariantColor">#C2C7CE</color>
+    <color name="outlineColor">#8C9198</color>
+    <color name="outlineVariantColor">#42474E</color>
+    <color name="surfaceContainerLowestColor">#0B0F12</color>
+    <color name="surfaceContainerLowColor">#181C20</color>
+    <color name="surfaceContainerColor">#1C2024</color>
+    <color name="surfaceContainerHighColor">#272A2E</color>
+    <color name="surfaceContainerHighestColor">#313539</color>
+
     <color name="item_doc_grid_background">@color/material_blue_grey_800</color>
     <color name="item_doc_grid_overlay_activated">#88ffffff</color>
     <color name="item_doc_grid_overlay_disabled">#88000000</color>

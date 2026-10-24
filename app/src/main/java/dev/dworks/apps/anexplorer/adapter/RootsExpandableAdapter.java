@@ -10,12 +10,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.fragment.RootsFragment.ActionItem;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.BookmarkItem;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.GroupItem;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.Item;
 import dev.dworks.apps.anexplorer.fragment.RootsFragment.RootItem;
 import dev.dworks.apps.anexplorer.model.GroupInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
+
+import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 
 public class RootsExpandableAdapter extends BaseExpandableListAdapter {
 
@@ -38,6 +42,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> storage = new ArrayList<>();
         final List<Item> secondaryStorage = new ArrayList<>();
         final List<Item> network = new ArrayList<>();
+        final List<Item> quickShare = new ArrayList<>();
         final List<Item> cloud = new ArrayList<>();
         final List<Item> apps = new ArrayList<>();
         final List<Item> libraryMedia = new ArrayList<>();
@@ -49,11 +54,14 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             if (root.isHome()) {
                 home.add(new RootItem(root));
             } else if (root.isRecents()) {
-                if(recent.size() == 0) {
+                // TV shows Recent as a Home card instead
+                if(recent.size() == 0 && !isTelevision()) {
                     recent.add(new RootItem(root));
                 }
             } else if (root.isConnections()) {
                 connection.add(new RootItem(root));
+            } else if (root.isQuickShare()) {
+                quickShare.add(new RootItem(root));
             } else if (root.isRootedStorage()) {
                 rooted.add(new RootItem(root));
             } else if (root.isPhoneStorage()) {
@@ -94,6 +102,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Storage", home));
         }
 
+        connection.addAll(quickShare);
         if(!network.isEmpty()){
             network.addAll(connection);
             groupRoots.add(new GroupInfo("Network & Cloud", network));
@@ -119,6 +128,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         if(!folders.isEmpty()){
             folders.addAll(bookmarks);
             groupRoots.add(new GroupInfo("Folders", folders));
+        }
+
+        if(isTelevision()){
+            final List<Item> more = new ArrayList<>();
+            more.add(new ActionItem(R.id.menu_settings, R.drawable.ic_menu_settings, R.string.menu_settings));
+            more.add(new ActionItem(R.id.menu_about, R.drawable.ic_menu_info, R.string.menu_about));
+            groupRoots.add(new GroupInfo("More", more));
         }
 
         group.clear();

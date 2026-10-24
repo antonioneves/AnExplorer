@@ -27,6 +27,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.storage.StorageManager;
@@ -62,6 +63,7 @@ import dev.dworks.apps.anexplorer.loader.RecentLoader;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.QuickShareReceiveActivity;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
@@ -100,6 +102,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     private HomeAdapter mAdapter;
     private RootInfo processRoot;
     private int totalSpanSize;
+    private int shortcutSpanSize;
 
     public static void show(FragmentManager fm) {
         final HomeFragment fragment = new HomeFragment();
@@ -123,6 +126,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         super.onViewCreated(view, savedInstanceState);
 
         totalSpanSize = getResources().getInteger(R.integer.home_span);
+        shortcutSpanSize = getResources().getInteger(R.integer.home_shortcut_span);
         mActivity = ((BaseActivity) getActivity());
         mIconHelper = new IconHelper(mActivity, MODE_GRID);
         ArrayList<CommonInfo> data = new ArrayList<>();
@@ -179,6 +183,22 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         shortcutsData = new ArrayList<>();
         for (RootInfo root: data) {
             shortcutsData.add(CommonInfo.from(root, TYPE_SHORTCUT));
+        }
+        // TV keeps Recent out of the drawer and offers it here instead
+        if(isTelevision() && null != roots.getRecentsRoot()) {
+            shortcutsData.add(CommonInfo.from(roots.getRecentsRoot(), TYPE_SHORTCUT));
+        }
+        // TV lists Quick Share in the drawer
+        if(!isTelevision()) {
+            RootInfo quickShareRoot = new RootInfo();
+            quickShareRoot.authority = null;
+            quickShareRoot.rootId = "quickshare";
+            quickShareRoot.icon = R.drawable.ic_root_bluetooth;
+            quickShareRoot.flags = DocumentsContract.Root.FLAG_LOCAL_ONLY;
+            quickShareRoot.title = getString(R.string.home_quickshare);
+            quickShareRoot.availableBytes = -1;
+            quickShareRoot.deriveFields();
+            shortcutsData.add(CommonInfo.from(quickShareRoot, TYPE_SHORTCUT));
         }
         if(isWatch()) {
             RootInfo rootInfo = new RootInfo();
@@ -244,6 +264,10 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
             case TYPE_SHORTCUT:
                 if(item.commonInfo.rootInfo.rootId.equals("clean")){
                     cleanRAM();
+                } else if(item.commonInfo.rootInfo.rootId.equals("quickshare")){
+                    Intent intent = new Intent(getActivity(), QuickShareReceiveActivity.class);
+                    getActivity().startActivity(intent);
+                    AnalyticsManager.logEvent("receive_quickshare_open");
                 } else {
                     openRoot(item.commonInfo.rootInfo);
                 }
@@ -264,25 +288,21 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
 
     @Override
     public void onItemViewClick(HomeAdapter.ViewHolder item, View view, int position) {
-        switch (view.getId()) {
-            case R.id.recents:
-                openRoot(roots.getRecentsRoot());
-                break;
-
-            case R.id.action:
-                Bundle params = new Bundle();
-                if(item.commonInfo.rootInfo.isAppProcess()) {
-                    cleanRAM();
-                } else {
-                    Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
-                    if(Utils.isIntentAvailable(getActivity(), intent)) {
-                        getActivity().startActivity(intent);
-                    } else  {
-                        Utils.showSnackBar(getActivity(), "Coming Soon!");
-                    }
-                    AnalyticsManager.logEvent("storage_analyze", params);
+        if (view.getId() == R.id.recents){
+            openRoot(roots.getRecentsRoot());
+        } else if (view.getId() == R.id.action){
+            Bundle params = new Bundle();
+            if(item.commonInfo.rootInfo.isAppProcess()) {
+                cleanRAM();
+            } else {
+                Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+                if(Utils.isIntentAvailable(getActivity(), intent)) {
+                    getActivity().startActivity(intent);
+                } else  {
+                    Utils.showSnackBar(getActivity(), "Coming Soon!");
                 }
-                break;
+                AnalyticsManager.logEvent("storage_analyze", params);
+            }
         }
 
     }
@@ -395,7 +415,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                         spanSize = totalSpanSize;
                         break;
                     case TYPE_SHORTCUT:
-                        spanSize = isWatch() ? 1 : 2;
+                        spanSize = isWatch() ? 1 : shortcutSpanSize;
                         break;
                     case TYPE_RECENT:
                         spanSize = totalSpanSize;
@@ -404,5 +424,36 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                 return spanSize;
             }
         });
+        if (!isWatch()) {
+            getListView().addItemDecoration(new ShortcutSpacingDecoration(
+                    getResources().getDimensionPixelSize(R.dimen.home_shortcut_spacing)));
+        }
+    }
+
+    /**
+     * Spaces the shortcut cards evenly, with outer edges lining up with the full-width
+     * cards above them (which carry the same margin themselves).
+     */
+    private class ShortcutSpacingDecoration extends RecyclerView.ItemDecoration {
+        private final int mSpacing;
+
+        ShortcutSpacingDecoration(int spacing) {
+            mSpacing = spacing;
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            final int position = parent.getChildAdapterPosition(view);
+            if (position == RecyclerView.NO_POSITION || mAdapter.getItem(position).type != TYPE_SHORTCUT) {
+                return;
+            }
+            final GridLayoutManager.LayoutParams lp = (GridLayoutManager.LayoutParams) view.getLayoutParams();
+            final int columns = totalSpanSize / shortcutSpanSize;
+            final int column = lp.getSpanIndex() / shortcutSpanSize;
+            outRect.left = mSpacing - column * mSpacing / columns;
+            outRect.right = (column + 1) * mSpacing / columns;
+            outRect.top = mSpacing / 2;
+            outRect.bottom = mSpacing / 2;
+        }
     }
 }

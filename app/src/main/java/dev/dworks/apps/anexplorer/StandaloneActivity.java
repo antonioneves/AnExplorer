@@ -341,6 +341,7 @@ public class StandaloneActivity extends BaseActivity {
         final MenuItem sortSize = menu.findItem(R.id.menu_sort_size);
         final MenuItem grid = menu.findItem(R.id.menu_grid);
         final MenuItem list = menu.findItem(R.id.menu_list);
+        menu.findItem(R.id.menu_receive_quickshare).setVisible(false);
         sort.setVisible(cwd != null);
         grid.setVisible(mState.derivedMode != State.MODE_GRID);
         list.setVisible(mState.derivedMode != State.MODE_LIST);

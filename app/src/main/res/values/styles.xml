@@ -45,6 +45,14 @@
         <item name="android:background">@drawable/abc_spinner_mtrl_am_alpha</item>
     </style>
 
+    <style name="Custom.Widget.ActionBar" parent="Widget.Material3.ActionBar.Solid">
+        <item name="titleTextStyle">@style/Custom.TextAppearance.ActionBar.Title</item>
+    </style>
+
+    <style name="Custom.TextAppearance.ActionBar.Title" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
     <style name="Custom.Widget.ActionMode" parent="Widget.AppCompat.ActionMode">
         <item name="android:paddingLeft">@dimen/toolbar_h_padding</item>
         <item name="android:paddingRight">@dimen/toolbar_h_padding</item>

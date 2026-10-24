@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.cursor.RootCursorWrapper;
@@ -17,6 +18,7 @@ import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
@@ -33,7 +35,7 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
     public RecentsAdapter(Context context, Cursor cursor, IconHelper iconHelper){
         super(context, cursor);
         mContext = context;
-        mDefaultColor = SettingsActivity.getPrimaryColor();
+        mDefaultColor = ThemeColors.getPrimaryColor(context);
         mIconHelper = iconHelper;
     }
 
@@ -65,6 +67,8 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
         private final ImageView iconMime;
         private final ImageView iconThumb;
         private final View iconMimeBackground;
+        // Only the TV card shows the name
+        private final TextView title;
         private Cursor mCursor;
         public DocumentInfo mDocumentInfo;
 
@@ -79,10 +83,14 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
             iconMime = (ImageView) v.findViewById(R.id.icon_mime);
             iconThumb = (ImageView) v.findViewById(R.id.icon_thumb);
             iconMimeBackground = v.findViewById(R.id.icon_mime_background);
+            title = v.findViewById(android.R.id.title);
         }
 
         public void setData(Cursor cursor){
             mDocumentInfo = DocumentInfo.fromDirectoryCursor(cursor);
+            if (null != title) {
+                title.setText(mDocumentInfo.displayName);
+            }
 
             mIconHelper.stopLoading(iconThumb);
 

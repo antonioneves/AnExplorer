@@ -53,6 +53,10 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
     }
 
     public void setType(int type){
+        // A new layout manager throws away every laid-out row, so only swap it when the type changes
+        if (type == mType && null != layoutManager) {
+            return;
+        }
         mType = type;
         updateLayoutManager();
     }
@@ -79,6 +83,11 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
                 break;
         }
 
+        if (layoutManager instanceof LinearLayoutManager) {
+            // Hand the rows to a shared view pool when this list goes away, so the next folder
+            // can reuse them instead of inflating new ones
+            ((LinearLayoutManager) layoutManager).setRecycleChildrenOnDetach(true);
+        }
         setLayoutManager(layoutManager);
     }
 

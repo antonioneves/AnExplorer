@@ -15,6 +15,7 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 
 public class HomeItem extends FrameLayout {
@@ -48,8 +49,8 @@ public class HomeItem extends FrameLayout {
 
     private void init(Context context, AttributeSet attrs) {
         mContext = context;
-        color = SettingsActivity.getPrimaryColor();
-        accentColor = SettingsActivity.getAccentColor();
+        color = ThemeColors.getOnSurfacePrimaryColor(context);
+        accentColor = ThemeColors.getAccentColor(context);
         LayoutInflater.from(context).inflate(R.layout.item_home, this, true);
         card_view = findViewById(R.id.card_view);
         icon = (ImageView) findViewById(android.R.id.icon);
@@ -111,8 +112,8 @@ public class HomeItem extends FrameLayout {
     }
 
     public void updateColor(){
-        color = SettingsActivity.getPrimaryColor();
-        accentColor = SettingsActivity.getAccentColor();
+        color = ThemeColors.getOnSurfacePrimaryColor(mContext);
+        accentColor = ThemeColors.getAccentColor(mContext);
         progress.setColor(color);
         action.setImageDrawable(IconUtils.applyTint(mContext, mActionDrawable, accentColor));
     }

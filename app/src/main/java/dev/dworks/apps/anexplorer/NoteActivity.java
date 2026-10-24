@@ -33,8 +33,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 
-import com.github.mjdev.libaums.fs.UsbFile;
-import com.github.mjdev.libaums.fs.UsbFileOutputStream;
+import me.jahnen.libaums.core.fs.UsbFile;
+import me.jahnen.libaums.core.fs.UsbFileOutputStream;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -143,24 +143,20 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
-            case android.R.id.home:
-                checkUnsavedChanges();
-                break;
-            case R.id.menu_save:
-                save(false);
-                AnalyticsManager.logEvent("text_save");
-                break;
-            case R.id.menu_revert:
-                setSaveProgress(true);
-                try {
-                    mInput.setText(mOriginal);
-                } catch (OutOfMemoryError e){
-                    showError("Unable to Load file");
-                }
-                setSaveProgress(false);
-                AnalyticsManager.logEvent("text_revert");
-                break;
+        if (item.getItemId() == android.R.id.home){
+            checkUnsavedChanges();
+        } else if (item.getItemId() == R.id.menu_save){
+            save(false);
+            AnalyticsManager.logEvent("text_save");
+        } else if (item.getItemId() == R.id.menu_revert){
+            setSaveProgress(true);
+            try {
+                mInput.setText(mOriginal);
+            } catch (OutOfMemoryError e){
+                showError("Unable to Load file");
+            }
+            setSaveProgress(false);
+            AnalyticsManager.logEvent("text_revert");
         }
         return super.onOptionsItemSelected(item);
     }

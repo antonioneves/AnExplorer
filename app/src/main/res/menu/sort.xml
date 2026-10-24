@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sort choices shown in the TV sort panel (ui/SideMenuPopup); phones use the submenu of
+     menu_sort in activity.xml -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/menu_sort_name"
+            android:icon="@drawable/ic_sort_name"
+            android:title="@string/sort_name" />
+        <item
+            android:id="@+id/menu_sort_date"
+            android:icon="@drawable/ic_sort_date"
+            android:title="@string/sort_date" />
+        <item
+            android:id="@+id/menu_sort_size"
+            android:icon="@drawable/ic_sort_size"
+            android:title="@string/sort_size" />
+    </group>
+</menu>

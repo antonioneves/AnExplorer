@@ -30,6 +30,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
+import dev.dworks.apps.anexplorer.misc.ThemeColors;
 import dev.dworks.apps.anexplorer.misc.Utils;
 
 /**
@@ -60,6 +61,8 @@ public abstract class AppCompatPreferenceActivity extends PreferenceActivity {
                 setTheme(mThemeId);
             }
         }
+        // PreferenceActivity builds its views in super.onCreate(), so generate the palette first
+        ThemeColors.applyToActivity(this);
         super.onCreate(savedInstanceState);
         AnalyticsManager.setCurrentScreen(this, getTag());
     }

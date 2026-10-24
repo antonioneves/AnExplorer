@@ -13,17 +13,42 @@
     </style>
 
 
-    <style name="DocumentsTheme" parent="@style/Theme.AppCompat.DayNight">
-        <item name="actionBarWidgetTheme">@null</item>
-        <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
-        <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
+    <!-- Static brand palette; values-v31 generates it from the user's color instead -->
+    <style name="Base.DocumentsTheme" parent="@style/Theme.Material3Expressive.DayNight.NoActionBar.FocusRings">
+        <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
         <item name="actionModeBackground">@color/alertDarkColor</item>
 
         <item name="colorPrimaryDark">@color/primaryDarkColor</item>
         <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">@color/primaryContainerColor</item>
+        <item name="colorOnPrimaryContainer">@color/onPrimaryContainerColor</item>
+        <item name="colorSecondary">@color/accentColor</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="colorSecondaryContainer">@color/accentContainerColor</item>
+        <item name="colorOnSecondaryContainer">@color/onAccentContainerColor</item>
         <item name="colorAccent">@color/accentColor</item>
+
+        <item name="android:colorBackground">@color/surfaceColor</item>
+        <item name="colorSurface">@color/surfaceColor</item>
+        <item name="colorOnSurface">@color/onSurfaceColor</item>
+        <item name="colorSurfaceVariant">@color/surfaceVariantColor</item>
+        <item name="colorOnSurfaceVariant">@color/onSurfaceVariantColor</item>
+        <item name="colorOutline">@color/outlineColor</item>
+        <item name="colorOutlineVariant">@color/outlineVariantColor</item>
+        <item name="colorSurfaceContainerLowest">@color/surfaceContainerLowestColor</item>
+        <item name="colorSurfaceContainerLow">@color/surfaceContainerLowColor</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerColor</item>
+        <item name="colorSurfaceContainerHigh">@color/surfaceContainerHighColor</item>
+        <item name="colorSurfaceContainerHighest">@color/surfaceContainerHighestColor</item>
         <item name="colorControlNormal">@color/primary_text_default_material_dark</item>
         <item name="colorControlActivated">@color/primary_text_default_material_dark</item>
+    </style>
+
+    <style name="DocumentsTheme" parent="@style/Base.DocumentsTheme">
+        <item name="actionBarWidgetTheme">@null</item>
+        <item name="actionBarPopupTheme">@style/DocumentsTheme.PopupOverlay</item>
+        <item name="actionBarStyle">@style/Custom.Widget.ActionBar</item>
 
         <!--<item name="android:listDivider">@drawable/list_divider_material</item>-->
 
@@ -49,18 +74,34 @@
         <item name="android:navigationBarColor" tools:targetApi="26">#303030</item>
     </style>
 
+    <style name="DocumentsTheme.PopupOverlay" parent="@style/ThemeOverlay.Material3Expressive.Light">
+        <item name="colorSurface">@color/surfaceColor</item>
+        <item name="colorOnSurface">@color/onSurfaceColor</item>
+        <item name="colorSurfaceContainer">@color/surfaceContainerColor</item>
+        <item name="colorSurfaceContainerHigh">@color/surfaceContainerHighColor</item>
+    </style>
+
+    <!-- Unpainted bars sitting on the window surface, e.g. on TV -->
+    <style name="DocumentsTheme.SurfaceBarOverlay" parent="@style/ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorControlNormal">?attr/colorOnSurface</item>
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">?attr/colorOnSurfaceVariant</item>
+    </style>
+
     <style name="DocumentsTheme.DailogPIN">
         <item name="android:windowNoTitle">true</item>
     </style>
 
     <style name="DocumentsTheme.Setting">
-        <item name="colorControlNormal">@color/primaryColor</item>
-        <item name="colorControlActivated">@color/accentColor</item>
+        <item name="colorControlNormal">?attr/colorPrimary</item>
+        <item name="colorControlActivated">?attr/colorSecondary</item>
         <item name="windowActionBar">true</item>
+        <item name="windowNoTitle">false</item>
     </style>
 
     <style name="DocumentsTheme.Note">
         <item name="windowActionBar">true</item>
+        <item name="windowNoTitle">false</item>
     </style>
     <style name="EditTextAppTheme" parent="DocumentsTheme">
         <item name="colorControlNormal">@color/defaultThemeColor</item>

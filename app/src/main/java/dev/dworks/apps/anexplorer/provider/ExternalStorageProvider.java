@@ -36,6 +36,10 @@ import android.os.ParcelFileDescriptor;
 import androidx.core.os.EnvironmentCompat;
 import android.support.provider.DocumentFile;
 import androidx.collection.ArrayMap;
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
+import android.system.StructStat;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -550,12 +554,29 @@ public class ExternalStorageProvider extends StorageProvider {
             file = getFileForDocId(docId);
         }
 
-        DocumentFile documentFile = getDocumentFile(docId, file);
+        // Hidden entries are skipped before the stat calls below; a folder with many entries
+        // pays for them once per entry
+        final String displayName = file.getName();
+        if (!showFilesHidden && !TextUtils.isEmpty(displayName) && displayName.charAt(0) == '.') {
+            return;
+        }
+
+        // One stat call for type, size and date instead of one call each
+        StructStat stat = null;
+        if (Utils.hasLollipop()) {
+            try {
+                stat = Os.stat(file.getPath());
+            } catch (ErrnoException ignored) {
+            }
+        }
+        final boolean isDirectory = null != stat ? OsConstants.S_ISDIR(stat.st_mode) : file.isDirectory();
+        // Only fall back to the (slower) document file when the plain file isn't writable
+        final boolean canWrite = file.canWrite() || getDocumentFile(docId, file).canWrite();
 
         int flags = 0;
 
-        if (documentFile.canWrite()) {
-            if (file.isDirectory()) {
+        if (canWrite) {
+            if (isDirectory) {
                 flags |= Document.FLAG_DIR_SUPPORTS_CREATE;
             } else {
                 flags |= Document.FLAG_SUPPORTS_WRITE;
@@ -573,17 +594,11 @@ public class ExternalStorageProvider extends StorageProvider {
             }
         }
 
-        final String mimeType = getTypeForFile(file);
+        final String mimeType = isDirectory ? Document.MIME_TYPE_DIR : FileUtils.getTypeForName(displayName);
         if (DocumentArchiveHelper.isSupportedArchiveType(mimeType)) {
             flags |= Document.FLAG_ARCHIVE;
         }
 
-        final String displayName = file.getName();
-        if (!showFilesHidden && !TextUtils.isEmpty(displayName)) {
-            if(displayName.charAt(0) == '.'){
-                return;
-            }
-        }
         if(MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, mimeType)){
             flags |= Document.FLAG_SUPPORTS_THUMBNAIL;
         }
@@ -591,16 +606,15 @@ public class ExternalStorageProvider extends StorageProvider {
         final RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, docId);
         row.add(Document.COLUMN_DISPLAY_NAME, displayName);
-        row.add(Document.COLUMN_SIZE, file.length());
+        row.add(Document.COLUMN_SIZE, null != stat ? stat.st_size : file.length());
         row.add(Document.COLUMN_MIME_TYPE, mimeType);
         row.add(Document.COLUMN_PATH, file.getAbsolutePath());
         row.add(Document.COLUMN_FLAGS, flags);
-        if(file.isDirectory() && null != file.list()){
-        	row.add(Document.COLUMN_SUMMARY, FileUtils.formatFileCount(file.list().length));
-        }
+        // The folder's file count is no longer listed here; opening every subfolder made a
+        // listing slow. The details dialog counts it when it is asked for.
 
         // Only publish dates reasonably after epoch
-        long lastModified = file.lastModified();
+        long lastModified = null != stat ? stat.st_mtime * 1000L : file.lastModified();
         if (lastModified > 31536000000L) {
             row.add(Document.COLUMN_LAST_MODIFIED, lastModified);
         }
@@ -727,6 +741,8 @@ public class ExternalStorageProvider extends StorageProvider {
                                String targetParentDocumentId)
             throws FileNotFoundException {
         final String afterDocId = move(sourceDocumentId, targetParentDocumentId);
+        // The folder the document left changes too
+        notifyDocumentsChanged(sourceDocumentId);
         notifyDocumentsChanged(afterDocId);
         return afterDocId;
     }
@@ -792,9 +808,16 @@ public class ExternalStorageProvider extends StorageProvider {
             throws FileNotFoundException {
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
 
-        final File parent;
+        File parent = null;
         synchronized (mRootsLock) {
-            parent = mRoots.get(rootId).path;
+            final RootInfo root = mRoots.get(rootId);
+            if (null != root) {
+                parent = root.path;
+            }
+        }
+        if (null == parent) {
+            // Not a root: a folder's document id, to search just that folder
+            parent = getFileForDocId(rootId);
         }
         updateSettings();
         for (File file : FileUtils.searchDirectory(parent.getPath(), query)) {
@@ -979,11 +1002,18 @@ public class ExternalStorageProvider extends StorageProvider {
         return DocumentsApplication.getSAFManager(getContext()).getDocumentFile(docId, file);
     }
 
+    /**
+     * Refreshes the lists showing a changed document: the folder it is in, and its own contents
+     * when it is a folder (callers pass either). Internal storage used to rely on the inotify
+     * observer alone, which misses changes on FUSE-backed storage, so a deleted file could stay
+     * on screen.
+     */
     private void notifyDocumentsChanged(String docId){
-        if(docId.startsWith(ROOT_ID_SECONDARY)){
-            final String rootId = getParentRootIdForDocId(docId);
-            Uri uri = DocumentsContract.buildChildDocumentsUri(AUTHORITY, rootId);
-            getContext().getContentResolver().notifyChange(uri, null, false);
+        final ContentResolver resolver = getContext().getContentResolver();
+        final String parentDocId = getParentRootIdForDocId(docId);
+        resolver.notifyChange(DocumentsContract.buildChildDocumentsUri(AUTHORITY, parentDocId), null, false);
+        if (!TextUtils.equals(parentDocId, docId)) {
+            resolver.notifyChange(DocumentsContract.buildChildDocumentsUri(AUTHORITY, docId), null, false);
         }
     }
 

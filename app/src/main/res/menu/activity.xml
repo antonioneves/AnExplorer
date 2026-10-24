@@ -22,6 +22,13 @@
     xmlns:support="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/menu_search"
+        support:actionViewClass="androidx.appcompat.widget.SearchView"
+        android:icon="@drawable/abc_ic_search_api_material"
+        support:showAsAction="ifRoom|collapseActionView"
+        android:title="@string/menu_search"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_create_file"
         android:icon="@drawable/ic_menu_new_file"
         support:showAsAction="always"
@@ -32,13 +39,6 @@
         android:icon="@drawable/ic_menu_new_folder"
         support:showAsAction="always"
         android:title="@string/menu_create_dir"
-        android:visible="false"/>
-    <item
-        android:id="@+id/menu_search"
-        support:actionViewClass="androidx.appcompat.widget.SearchView"
-        android:icon="@drawable/abc_ic_search_api_material"
-        support:showAsAction="ifRoom|collapseActionView"
-        android:title="@string/menu_search"
         android:visible="false"/>
     <item
         android:id="@+id/menu_list"
@@ -71,6 +71,11 @@
         </menu>
     </item>
     <item
+        android:id="@+id/menu_receive_quickshare"
+        android:icon="@drawable/ic_root_download"
+        support:showAsAction="never"
+        android:title="@string/menu_receive_quickshare"/>
+    <item
         android:id="@+id/menu_settings"
         android:icon="@drawable/ic_menu_settings"
         support:showAsAction="never"
@@ -79,7 +84,7 @@
         android:id="@+id/menu_about"
         android:icon="@drawable/ic_dialog_info"
         support:showAsAction="never"
-        android:title="About"/>
+        android:title="@string/menu_about"/>
 
     <item
         android:id="@+id/menu_exit"

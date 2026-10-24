@@ -25,14 +25,20 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatSpinner;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputLayout;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
@@ -41,6 +47,7 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
+import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
@@ -60,13 +67,15 @@ public class CreateConnectionFragment extends DialogFragment {
     private AppCompatEditText username;
     private AppCompatEditText password;
     private AppCompatSpinner scheme;
-    private AppCompatCheckBox anonymous;
+    private CompoundButton anonymous;
     private View passwordContainer;
     private View usernameContainer;
     private int connection_id;
     private AppCompatEditText path;
     private View hostContainer;
     private View pathContainer;
+    // The built-in server being edited, whose type, host, port and scheme aren't in the form
+    private NetworkConnection editedServer;
 
     public static void show(FragmentManager fm) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
@@ -98,6 +107,7 @@ public class CreateConnectionFragment extends DialogFragment {
         final LayoutInflater dialogInflater = getActivity().getLayoutInflater();
 
         final View view = dialogInflater.inflate(R.layout.dialog_create_connection, null, false);
+        boolean isTvServer = false;
         name = (AppCompatEditText) view.findViewById(R.id.name);
         host = (AppCompatEditText) view.findViewById(R.id.host);
         port = (AppCompatEditText) view.findViewById(R.id.port);
@@ -109,10 +119,14 @@ public class CreateConnectionFragment extends DialogFragment {
         password = (AppCompatEditText) view.findViewById(R.id.password);
         passwordContainer = view.findViewById(R.id.passwordContainer);
         scheme = (AppCompatSpinner) view.findViewById(R.id.scheme);
-        anonymous = (AppCompatCheckBox) view.findViewById(R.id.anonymous);
+        anonymous = (CompoundButton) view.findViewById(R.id.anonymous);
         anonymous.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                // "anonymous" is only the placeholder login; don't offer it as the user's name
+                if (!b && "anonymous".equals(username.getText().toString())) {
+                    username.setText("");
+                }
                 usernameContainer.setVisibility(b ? View.GONE : View.VISIBLE);
                 passwordContainer.setVisibility(b ? View.GONE : View.VISIBLE);
             }
@@ -134,29 +148,108 @@ public class CreateConnectionFragment extends DialogFragment {
             password.setText(connection.getPassword());
             anonymous.setChecked(connection.isAnonymousLogin());
             if(SERVER.equals(connection.getType())){
+                editedServer = connection;
                 hostContainer.setVisibility(View.GONE);
                 pathContainer.setVisibility(View.VISIBLE);
+                isTvServer = Utils.isTelevision(context);
             }
         }
-        builder.setTitle( (connection_id == 0 ? "New" : "Edit") + " Connection");
+        if (Utils.isTelevision(context)) {
+            return createTvDialog(context, view, isTvServer);
+        }
+        builder.setTitle(connection_id == 0 ? R.string.connection_new : R.string.connection_edit);
         builder.setView(view);
 
-        builder.setPositiveButton(connection_id == 0 ? "ADD" : "SAVE", new OnClickListener() {
+        builder.setPositiveButton(connection_id == 0 ? R.string.connection_add : R.string.connection_save,
+                new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                final BaseActivity activity = (BaseActivity) getActivity();
-
-                NetworkConnection networkConnection = getNetworkConnection();
-                if(validate(networkConnection)){
-                    new CreateConnectionTask(activity, networkConnection).executeOnExecutor(
-                            ProviderExecutor.forAuthority(ExplorerProvider.AUTHORITY));
-                }
-
+                save();
             }
         });
         builder.setNegativeButton(android.R.string.cancel, null);
 
         return builder.create();
+    }
+
+    /**
+     * Material 3 fields with the buttons in the layout, so Save stays open on a missing field
+     * and marks it, and the remote's focus is easy to see on a filled button.
+     */
+    private Dialog createTvDialog(Context context, final View view, boolean isServer) {
+        if (isServer) {
+            // The type and name don't apply to the built-in server
+            view.findViewById(R.id.nameContainer).setVisibility(View.GONE);
+        }
+        // The fields scroll when they don't fit; the buttons stay in view below them
+        final View buttons = view.findViewById(R.id.dialog_buttons);
+        ((ViewGroup) buttons.getParent()).removeView(buttons);
+        final ScrollView scroller = new ScrollView(context);
+        scroller.addView(view);
+        final LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.addView(scroller, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        final LinearLayout.LayoutParams buttonParams = (LinearLayout.LayoutParams) buttons.getLayoutParams();
+        buttonParams.setMarginStart(view.getPaddingStart());
+        buttonParams.setMarginEnd(view.getPaddingEnd());
+        buttonParams.topMargin = 0;
+        buttonParams.bottomMargin = view.getPaddingBottom();
+        content.addView(buttons, buttonParams);
+        final AlertDialog dialog = new MaterialAlertDialogBuilder(context)
+                .setTitle(isServer ? R.string.ftp_settings_title
+                        : connection_id == 0 ? R.string.connection_new : R.string.connection_edit)
+                .setView(content)
+                .create();
+        final Button saveButton = (Button) buttons.findViewById(R.id.dialog_save);
+        saveButton.setText(connection_id == 0 ? R.string.connection_add : R.string.connection_save);
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (save()) {
+                    dialog.dismiss();
+                } else {
+                    markMissingFields(view);
+                }
+            }
+        });
+        buttons.findViewById(R.id.dialog_cancel).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        return dialog;
+    }
+
+    private void markMissingFields(View view) {
+        if (null != editedServer) {
+            markIfEmpty(view, R.id.pathLayout, path);
+        } else {
+            markIfEmpty(view, R.id.nameLayout, name);
+            markIfEmpty(view, R.id.hostLayout, host);
+            markIfEmpty(view, R.id.portLayout, port);
+        }
+        if (!anonymous.isChecked()) {
+            markIfEmpty(view, R.id.usernameContainer, username);
+            markIfEmpty(view, R.id.passwordContainer, password);
+        }
+    }
+
+    private void markIfEmpty(View view, int layoutId, AppCompatEditText field) {
+        final TextInputLayout layout = (TextInputLayout) view.findViewById(layoutId);
+        layout.setError(TextUtils.isEmpty(field.getText()) ? getString(R.string.connection_required) : null);
+    }
+
+    /** Saves the form when it's complete; returns false and saves nothing otherwise. */
+    private boolean save() {
+        final NetworkConnection networkConnection = getNetworkConnection();
+        if (!validate(networkConnection)) {
+            return false;
+        }
+        new CreateConnectionTask((BaseActivity) getActivity(), networkConnection).executeOnExecutor(
+                ProviderExecutor.forAuthority(ExplorerProvider.AUTHORITY));
+        return true;
     }
 
     private NetworkConnection getNetworkConnection(){
@@ -172,7 +265,17 @@ public class CreateConnectionFragment extends DialogFragment {
         networkConnection.scheme = scheme.getSelectedItem().toString().toLowerCase();
         networkConnection.type = CLIENT;
         networkConnection.setAnonymous(anonymous.isChecked());
+        if (null != editedServer) {
+            networkConnection.type = SERVER;
+            networkConnection.host = editedServer.getHost();
+            networkConnection.port = editedServer.getPort();
+            networkConnection.scheme = editedServer.getScheme();
+        }
         networkConnection.build();
+        if (null != editedServer) {
+            // build() resets the path to the root; the server shares the folder in the form
+            networkConnection.path = path.getText().toString();
+        }
         return networkConnection;
     }
 
@@ -181,7 +284,12 @@ public class CreateConnectionFragment extends DialogFragment {
         if(TextUtils.isEmpty(networkConnection.name)){
             return false;
         }
-        if(TextUtils.isEmpty(networkConnection.host)){
+        if(SERVER.equals(networkConnection.type)){
+            // The server has no host to check, only a folder to share
+            if(TextUtils.isEmpty(networkConnection.path)){
+                return false;
+            }
+        } else if(TextUtils.isEmpty(networkConnection.host)){
             return false;
         }
         if(networkConnection.port == 0){
