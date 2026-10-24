@@ -19,6 +19,15 @@ public class CommonInfo {
     public int type;
     public DocumentInfo documentInfo;
     public RootInfo rootInfo;
+    /** For a header, which Home section it heads */
+    public int section;
+
+    public static CommonInfo header(int section){
+        CommonInfo commonInfo = new CommonInfo();
+        commonInfo.type = HomeAdapter.TYPE_HEADER;
+        commonInfo.section = section;
+        return commonInfo;
+    }
 
     public static CommonInfo from(RootInfo rootInfo, int type){
         CommonInfo commonInfo = new CommonInfo();

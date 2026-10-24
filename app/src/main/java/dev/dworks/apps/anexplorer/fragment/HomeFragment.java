@@ -57,6 +57,7 @@ import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
+import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_HEADER;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_MAIN;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_RECENT;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_SHORTCUT;
@@ -106,9 +107,8 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         shortcutSpanSize = getResources().getInteger(R.integer.home_shortcut_span);
         mActivity = ((BaseActivity) getActivity());
         mIconHelper = new IconHelper(mActivity, MODE_GRID);
-        ArrayList<CommonInfo> data = new ArrayList<>();
         if(null == mAdapter){
-            mAdapter = new HomeAdapter(getActivity(), data, mIconHelper);
+            mAdapter = new HomeAdapter(getActivity(), mIconHelper);
             mAdapter.setOnItemClickListener(this);
         }
 
@@ -128,10 +128,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         getMainData();
         getShortcutsData();
         getRecentsData();
-        ArrayList<CommonInfo> data = new ArrayList<>();
-        data.addAll(mainData);
-        data.addAll(shortcutsData);
-        mAdapter.setData(data);
+        mAdapter.setData(mainData, shortcutsData);
     }
 
     private void getMainData(){
@@ -281,6 +278,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                         spanSize = shortcutSpanSize;
                         break;
                     case TYPE_RECENT:
+                    case TYPE_HEADER:
                         spanSize = totalSpanSize;
                         break;
                 }

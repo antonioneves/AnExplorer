@@ -2,6 +2,7 @@ package dev.dworks.apps.anexplorer.adapter;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -14,10 +15,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import androidx.core.content.ContextCompat;
+import android.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
@@ -36,37 +40,95 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     public static final int TYPE_MAIN = 1;
     public static final int TYPE_SHORTCUT = 2;
     public static final int TYPE_RECENT = 3;
+    public static final int TYPE_HEADER = 4;
+
+    public static final int SECTION_STORAGE = 0;
+    public static final int SECTION_LIBRARY = 1;
+    public static final int SECTION_RECENT = 2;
+    /** Sections from this one on get a header that collapses them */
+    private static final int FIRST_COLLAPSIBLE_SECTION = SECTION_RECENT;
+    private static final int[] SECTION_TITLES = {0, 0, R.string.home_section_recent};
+    private static final String PREF_SECTION_COLLAPSED = "home_section_collapsed_";
 
     private final int mDefaultColor;
     private Activity mContext;
     private OnItemClickListener onItemClickListener;
-    private ArrayList<CommonInfo> mData = new ArrayList<>();
+    private List<CommonInfo> mStorage = new ArrayList<>();
+    private List<CommonInfo> mLibrary = new ArrayList<>();
+    /** What is shown: each non-empty section's items, under a header if it is collapsible */
+    private final ArrayList<CommonInfo> mItems = new ArrayList<>();
     private Cursor recentCursor;
     private final IconHelper mIconHelper;
+    private final SharedPreferences mPreferences;
 
-    public HomeAdapter(Activity context, ArrayList<CommonInfo> data, IconHelper iconHelper){
+    public HomeAdapter(Activity context, IconHelper iconHelper){
         mContext = context;
-        mData = data;
         mDefaultColor = ThemeColors.getPrimaryColor(context);
         mIconHelper = iconHelper;
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
     }
 
-    public void setData(ArrayList<CommonInfo> data) {
-        if (data == mData) {
-            return;
-        }
-
-        mData = data;
-        notifyDataSetChanged();
+    public void setData(List<CommonInfo> storage, List<CommonInfo> library) {
+        mStorage = storage;
+        mLibrary = library;
+        rebuildItems();
     }
 
     public void setRecentData(Cursor cursor) {
         recentCursor = cursor;
+        rebuildItems();
+    }
+
+    private void rebuildItems() {
+        mItems.clear();
+        for (int section = SECTION_STORAGE; section <= SECTION_RECENT; section++) {
+            final List<CommonInfo> items = getSectionItems(section);
+            if (items.isEmpty()) {
+                continue;
+            }
+            if (section >= FIRST_COLLAPSIBLE_SECTION) {
+                mItems.add(CommonInfo.header(section));
+            }
+            if (!isCollapsed(section)) {
+                mItems.addAll(items);
+            }
+        }
         notifyDataSetChanged();
     }
 
-    public int getRecentSize() {
-        return recentCursor != null && recentCursor.getCount() != 0 ? 1 : 0;
+    private List<CommonInfo> getSectionItems(int section) {
+        switch (section) {
+            case SECTION_STORAGE:
+                return mStorage;
+            case SECTION_LIBRARY:
+                return mLibrary;
+            default:
+                if (recentCursor == null || recentCursor.getCount() == 0) {
+                    return Collections.emptyList();
+                }
+                final CommonInfo recent = new CommonInfo();
+                recent.type = TYPE_RECENT;
+                return Collections.singletonList(recent);
+        }
+    }
+
+    private boolean isCollapsed(int section) {
+        return section >= FIRST_COLLAPSIBLE_SECTION && mPreferences.getBoolean(PREF_SECTION_COLLAPSED + section, false);
+    }
+
+    /** Hides or shows the items under the header at this position, remembering the choice. */
+    private void toggleSection(int position) {
+        final int section = mItems.get(position).section;
+        final boolean collapse = !isCollapsed(section);
+        mPreferences.edit().putBoolean(PREF_SECTION_COLLAPSED + section, collapse).apply();
+        final List<CommonInfo> items = getSectionItems(section);
+        if (collapse) {
+            mItems.subList(position + 1, position + 1 + items.size()).clear();
+            notifyItemRangeRemoved(position + 1, items.size());
+        } else {
+            mItems.addAll(position + 1, items);
+            notifyItemRangeInserted(position + 1, items.size());
+        }
     }
 
     @Override
@@ -76,7 +138,7 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        return mData.size() + getRecentSize();
+        return mItems.size();
     }
 
     @Override
@@ -101,6 +163,11 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
                 View itemView = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.item_gallery, parent, false);
                 return new GalleryViewHolder(itemView);
+            }
+            case TYPE_HEADER: {
+                View itemView = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_home_header, parent, false);
+                return new HeaderViewHolder(itemView);
             }
         }
         View itemView = LayoutInflater.from(parent.getContext())
@@ -235,6 +302,56 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         }
     }
 
+    public class HeaderViewHolder extends ViewHolder {
+        private final ImageView expander;
+        private final View recents;
+
+        public HeaderViewHolder(View v) {
+            super(v);
+            // Only the title part is selectable, so the remote can also reach More beside it
+            v.setOnClickListener(null);
+            v.setOnLongClickListener(null);
+            v.setClickable(false);
+            v.setLongClickable(false);
+            final View toggle = v.findViewById(R.id.toggle);
+            toggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final int position = getAdapterPosition();
+                    if (position == RecyclerView.NO_POSITION) {
+                        return;
+                    }
+                    toggleSection(position);
+                    updateExpander();
+                }
+            });
+            expander = v.findViewById(R.id.expander);
+            recents = v.findViewById(R.id.recents);
+            recents.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(null != onItemClickListener) {
+                        onItemClickListener.onItemViewClick(HeaderViewHolder.this, recents, getLayoutPosition());
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void setData(int position){
+            commonInfo = getItem(position);
+            title.setText(SECTION_TITLES[commonInfo.section]);
+            recents.setVisibility(commonInfo.section == SECTION_RECENT ? View.VISIBLE : View.GONE);
+            updateExpander();
+        }
+
+        private void updateExpander() {
+            final boolean collapsed = isCollapsed(commonInfo.section);
+            expander.setImageResource(collapsed ? R.drawable.expander_open : R.drawable.expander_close);
+            itemView.findViewById(R.id.toggle).setContentDescription(mContext.getString(SECTION_TITLES[commonInfo.section]));
+        }
+    }
+
     public class ShortcutViewHolder extends ViewHolder {
         private int mPosition;
 
@@ -258,7 +375,6 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     public class GalleryViewHolder extends ViewHolder {
         private int mPosition;
         private final RecyclerView recyclerview;
-        private TextView recents;
         private RecentsAdapter adapter;
 
         public GalleryViewHolder(View v) {
@@ -272,21 +388,12 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             v.setLongClickable(false);
             v.setFocusable(false);
             recyclerview = (RecyclerView) v.findViewById(R.id.recyclerview);
-            recents = v.findViewById(R.id.recents);
-            recents.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if(null != onItemClickListener) {
-                        onItemClickListener.onItemViewClick(GalleryViewHolder.this, recents, getLayoutPosition());
-                    }
-                }
-            });
         }
 
         @Override
         public void setData(int position){
             mPosition = position;
-            commonInfo = CommonInfo.from(recentCursor);
+            commonInfo = HomeAdapter.this.getItem(position);
             adapter = new RecentsAdapter(mContext, recentCursor, mIconHelper);
             adapter.setOnItemClickListener(new RecentsAdapter.OnItemClickListener() {
                 @Override
@@ -305,11 +412,7 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     }
 
     public CommonInfo getItem(int position){
-        if(position < mData.size()){
-            return mData.get(position);
-        } else {
-            return CommonInfo.from(recentCursor);
-        }
+        return mItems.get(position);
     }
 
     private void animateProgress(final NumberProgressBar item, RootInfo root){
