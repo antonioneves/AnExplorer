@@ -22,7 +22,6 @@ import dev.dworks.apps.anexplorer.model.RootInfo;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_LIST;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
     public static final int ITEM_TYPE_LIST = 1;
@@ -31,23 +30,17 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
     public static final int ITEM_TYPE_LOADING = Integer.MAX_VALUE;
     public static final int ITEM_TYPE_INFO = Integer.MAX_VALUE - 1;
     public static final int ITEM_TYPE_ERROR = Integer.MAX_VALUE - 2;
-    public static final int ITEM_TYPE_HEADER = Integer.MAX_VALUE - 3;
-    private final boolean mShowHeader;
-    private final int offsetPosition;
 
     private Cursor mCursor;
     private int mCursorCount;
 
     private ArrayList<Footer> mFooters = new ArrayList<>();
-    private Footer mHeader;
     private final Environment mEnv;
     private final OnItemClickListener mOnItemClickListener;
 
     public DocumentsAdapter(OnItemClickListener onItemClickListener, Environment environment) {
         mEnv = environment;
         mOnItemClickListener = onItemClickListener;
-        mShowHeader = isWatch();
-        offsetPosition = mShowHeader ? 1 : 0;
     }
 
     public void swapResult(DirectoryResult result) {
@@ -76,19 +69,9 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
             mFooters.add(new MessageFooter(mEnv,ITEM_TYPE_ERROR, R.drawable.ic_dialog_alert, getString(R.string.query_error)));
         }
 
-        mHeader = new MessageFooter(mEnv, ITEM_TYPE_HEADER, R.drawable.ic_doc_folder,
-                getTitle());
         mEnv.setEmptyState();
 
         notifyDataSetChanged();
-    }
-
-    private String getTitle(){
-        if(mEnv.getDisplayState().stack.size() == 1 || null == mEnv.getDocumentInfo()){
-            RootInfo rootInfo = mEnv.getRoot();
-            return  null != rootInfo ? rootInfo.title : "";
-        }
-        return mEnv.getDocumentInfo().displayName;
     }
 
     private String getString(int resId){
@@ -97,12 +80,12 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
 
     @Override
     public int getItemCount() {
-        return mCursorCount + (mShowHeader ? 1 : 0) + mFooters.size();
+        return mCursorCount + mFooters.size();
     }
 
     public Cursor getItem(int position) {
-        if (position - offsetPosition< mCursorCount) {
-            mCursor.moveToPosition(position - offsetPosition);
+        if (position < mCursorCount) {
+            mCursor.moveToPosition(position);
             return mCursor;
         } else {
             return null;
@@ -133,27 +116,20 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
             case ITEM_TYPE_ERROR: {
                 return new MessageHolder(mEnv, mEnv.getContext(), parent);
             }
-            case ITEM_TYPE_HEADER: {
-                return new MessageHolder(mEnv, mEnv.getContext(), parent, R.layout.item_message_header);
-            }
         }
         return null;
     }
 
     @Override
     public void onBindViewHolder(@NonNull BaseHolder holder, int position) {
-        if(position == 0 && mShowHeader){
-            holder.setData(mHeader.mMessage, mHeader.mIcon);
-            holder.itemView.setEnabled(false);
-        }
-        else if (position - offsetPosition < mCursorCount) {
+        if (position < mCursorCount) {
             Cursor cursor = getItem(position );
             if (holder instanceof DocumentHolder) {
                 ((DocumentHolder) holder).attach(mEnv, mOnItemClickListener);
             }
             holder.setData(cursor, position);
         } else {
-            position -= mCursorCount + offsetPosition;
+            position -= mCursorCount;
             Footer footer = mFooters.get(position);
             holder.setData(footer.mMessage, footer.mIcon);
             // Only the view itself is disabled; contents inside shouldn't
@@ -165,10 +141,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
 
     @Override
     public int getItemViewType(int position) {
-        if(position == 0 && mShowHeader){
-            return mHeader.getItemViewType();
-        }
-        else if (position - offsetPosition < mCursorCount) {
+        if (position < mCursorCount) {
             final State state = mEnv.getDisplayState();
             switch (state.derivedMode) {
                 case MODE_GRID:
@@ -179,7 +152,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
                     return ITEM_TYPE_LIST;
             }
         } else {
-            position -= mCursorCount + offsetPosition;
+            position -= mCursorCount;
             return mFooters.get(position).getItemViewType();
         }
     }
@@ -189,11 +162,11 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
     }
 
     public void setSelected(int position, boolean selected){
-        getMultiChoiceHelper().setItemChecked(position - offsetPosition, selected, true);
+        getMultiChoiceHelper().setItemChecked(position, selected, true);
     }
 
     public boolean isItemChecked(int position) {
-        return getMultiChoiceHelper().isItemChecked(position - offsetPosition);
+        return getMultiChoiceHelper().isItemChecked(position);
     }
 
     public int getCheckedItemCount() {

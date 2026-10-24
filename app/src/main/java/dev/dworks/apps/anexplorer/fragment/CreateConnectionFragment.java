@@ -103,11 +103,10 @@ public class CreateConnectionFragment extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         final Context context = getActivity();
 
-        final DialogBuilder builder = new DialogBuilder(context);
         final LayoutInflater dialogInflater = getActivity().getLayoutInflater();
 
         final View view = dialogInflater.inflate(R.layout.dialog_create_connection, null, false);
-        boolean isTvServer = false;
+        boolean isServer = false;
         name = (AppCompatEditText) view.findViewById(R.id.name);
         host = (AppCompatEditText) view.findViewById(R.id.host);
         port = (AppCompatEditText) view.findViewById(R.id.port);
@@ -151,32 +150,17 @@ public class CreateConnectionFragment extends DialogFragment {
                 editedServer = connection;
                 hostContainer.setVisibility(View.GONE);
                 pathContainer.setVisibility(View.VISIBLE);
-                isTvServer = Utils.isTelevision(context);
+                isServer = true;
             }
         }
-        if (Utils.isTelevision(context)) {
-            return createTvDialog(context, view, isTvServer);
-        }
-        builder.setTitle(connection_id == 0 ? R.string.connection_new : R.string.connection_edit);
-        builder.setView(view);
-
-        builder.setPositiveButton(connection_id == 0 ? R.string.connection_add : R.string.connection_save,
-                new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                save();
-            }
-        });
-        builder.setNegativeButton(android.R.string.cancel, null);
-
-        return builder.create();
+        return createDialog(context, view, isServer);
     }
 
     /**
      * Material 3 fields with the buttons in the layout, so Save stays open on a missing field
      * and marks it, and the remote's focus is easy to see on a filled button.
      */
-    private Dialog createTvDialog(Context context, final View view, boolean isServer) {
+    private Dialog createDialog(Context context, final View view, boolean isServer) {
         if (isServer) {
             // The type and name don't apply to the built-in server
             view.findViewById(R.id.nameContainer).setVisibility(View.GONE);

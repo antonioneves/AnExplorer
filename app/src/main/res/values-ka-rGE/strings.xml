@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"შენახვა აქ:"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"საქაღალდის შექმნა"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ბადის ხედი"</string>
     <string name="menu_list" msgid="7279285939892417279">"სიის ხედი"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"სახელით"</string>
     <string name="sort_date" msgid="586080032956151448">"ცვლილების თარიღით"</string>
     <string name="sort_size" msgid="3350681319735474741">"ზომით"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"ფესვების ჩვენება"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"ფესვების დამალვა"</string>
     <string name="save_error" msgid="6167009778003223664">"დოკუმენტის შენახვა ვერ მოხერხდა"</string>
     <string name="create_error" msgid="3735649141335444215">"საქაღალდის შექმნა ვერ მოხერხდა"</string>
     <string name="query_error" msgid="1222448261663503501">"დოკუმენტებზე მოთხოვნა ვერ გაიგზავნა"</string>

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- The 400ms slide is most of what makes opening a folder feel slow on a TV -->
-    <bool name="folder_animations_default">false</bool>
-</resources>

@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"ഇതില്‍‌ സംരക്ഷിക്കുക"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"ഫോൾഡർ സൃഷ്‌ടിക്കുക"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ഗ്രിഡ് കാഴ്‌ച"</string>
     <string name="menu_list" msgid="7279285939892417279">"ലിസ്റ്റ് കാഴ്‌ച"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"പേര് പ്രകാരം"</string>
     <string name="sort_date" msgid="586080032956151448">"പരിഷ്‌ക്കരിച്ച തീയതി പ്രകാരം"</string>
     <string name="sort_size" msgid="3350681319735474741">"വലുപ്പം പ്രകാരം"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"റൂട്ടുകൾ ദൃശ്യമാക്കുക"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"റൂട്ടുകൾ മറയ്‌ക്കുക"</string>
     <string name="save_error" msgid="6167009778003223664">"പ്രമാണം സംരക്ഷിക്കുന്നതിൽ പരാജയപ്പെട്ടു"</string>
     <string name="create_error" msgid="3735649141335444215">"ഫോൾഡർ സൃഷ്‌ടിക്കുന്നതിൽ പരാജയപ്പെട്ടു"</string>
     <string name="query_error" msgid="1222448261663503501">"പ്രമാണങ്ങൾ അന്വേഷിക്കുന്നതിൽ പരാജയപ്പെട്ടു"</string>

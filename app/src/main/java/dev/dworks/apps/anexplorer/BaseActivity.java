@@ -75,7 +75,6 @@ public abstract class BaseActivity extends ActionBarActivity {
     public void onDirectoryLoaded() {
         onStateChanged();
     }
-    public abstract void setRootsDrawerOpen(boolean open);
     public abstract void onDocumentPicked(DocumentInfo doc);
     public abstract void onDocumentsPicked(List<DocumentInfo> docs);
     public abstract DocumentInfo getCurrentDirectory();
@@ -95,9 +94,6 @@ public abstract class BaseActivity extends ActionBarActivity {
     public abstract void setUpDefaultStatusBar();
 
 
-    public abstract boolean isShowAsDialog();
-    public abstract void upadateActionItems(RecyclerView mCurrentView);
-    public abstract void setInfoDrawerOpen(boolean open);
     public abstract void again();
 
     public static BaseActivity get(Fragment fragment) {

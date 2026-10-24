@@ -108,9 +108,6 @@ import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_UNKNOWN;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_UNKNOWN;
 import static dev.dworks.apps.anexplorer.BaseActivity.TAG;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isSpecialDevice;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.misc.AnalyticsManager.FILE_COUNT;
 import static dev.dworks.apps.anexplorer.misc.AnalyticsManager.FILE_MOVE;
 import static dev.dworks.apps.anexplorer.misc.AnalyticsManager.FILE_TYPE;
@@ -282,9 +279,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		mMultiChoiceHelper = new MultiChoiceHelper(mActivity, mAdapter);
 		mMultiChoiceHelper.setMultiChoiceModeListener(mMultiListener);
-		if (isWatch()){
-			mMultiChoiceHelper.setMenuItemClickListener(this);
-		}
 
 		if(null != savedInstanceState) {
 			mMultiChoiceHelper.onRestoreInstanceState(savedInstanceState.getParcelable(KEY_ADAPTER));
@@ -315,7 +309,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				case TYPE_SEARCH:
 					// On TV, search the folder being shown rather than the whole storage; the
 					// provider accepts a folder's document id in place of a root id
-					final boolean searchFolder = isTelevision() && null != doc
+					final boolean searchFolder = null != doc
 							&& ExternalStorageProvider.AUTHORITY.equals(root.authority);
 					contentsUri = DocumentsContract.buildSearchDocumentsUri(root.authority,
 							searchFolder ? doc.documentId : root.rootId, query);
@@ -351,10 +345,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 				updateDisplayState();
 
-				// When launched into empty recents, show drawer
-				if (mType == TYPE_RECENT_OPEN && mAdapter.isEmpty() && !state.stackTouched) {
-					((BaseActivity) context).setRootsDrawerOpen(true);
-				}
 				if (isResumed()) {
 					showList(true);
 				} else {
@@ -363,7 +353,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 				mLastSortOrder = state.derivedSortOrder;
 				// Don't take focus from the search field while the user is typing
-				if(isTelevision() && !(getActivity().getCurrentFocus() instanceof EditText)){
+				if(!(getActivity().getCurrentFocus() instanceof EditText)){
 					getListView().requestFocus();
 				}
 			}
@@ -509,7 +499,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mIconHelper.setViewMode(state.derivedMode);
 		setItemDivider();
 		restoreDisplaySate();
-        ((BaseActivity) getActivity()).upadateActionItems(getListView());
 
         if(refreshData) {
             onUserSortOrderChanged();
@@ -536,9 +525,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			itemDecoration = decoration;
 		}
-		if(!isWatch()) {
-			getListView().addItemDecoration(itemDecoration);
-		}
+		getListView().addItemDecoration(itemDecoration);
 	}
 
 	private RecyclerItemClickListener.OnItemClickListener mItemListener
@@ -681,7 +668,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				compress.setVisible(editMode && !isOperationSupported);
 
 				info.setVisible(count == 1);
-				bookmark.setVisible(isSpecialDevice() && count == 1);
+				bookmark.setVisible(count == 1);
 			}
 			return true;
 		}
@@ -1084,9 +1071,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void setEmptyState() {
 		boolean isEmpty = mAdapter.isEmpty();
-		if(isWatch()){
-			isEmpty = mAdapter.getItemCount() == 1;
-		}
 		if (isEmpty) {
 			mEmptyView.setVisibility(View.VISIBLE);
 			if(null == root){
@@ -1160,7 +1144,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		popup.getMenuInflater().inflate(menuId, popup.getMenu());
 		// TV reaches multi-select through this menu, since long press opens it
-		popup.getMenu().findItem(R.id.menu_select_item).setVisible(isTelevision());
+		popup.getMenu().findItem(R.id.menu_select_item).setVisible(true);
 		popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
 			@Override
 			public boolean onMenuItemClick(MenuItem menuItem) {
@@ -1207,23 +1191,18 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		}
 
-		if (isTelevision()) {
-			// Beside the item, so every option fits on screen without scrolling
-			SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
-				@Override
-				public boolean onMenuItemClick(MenuItem menuItem) {
-					return onPopupMenuItemClick(menuItem, position);
-				}
-			});
-		} else {
-			popup.show();
-		}
+		// Beside the item, so every option fits on screen without scrolling
+		SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
+			@Override
+			public boolean onMenuItemClick(MenuItem menuItem) {
+				return onPopupMenuItemClick(menuItem, position);
+			}
+		});
 	}
 
 	@Override
 	public boolean onMenuItemClick(MenuItem item) {
 		if(handleMenuAction(item)){
-			((DocumentsActivity)getActivity()).closeDrawer();
 			mMultiChoiceHelper.clearChoices();
 			return true;
 		}
@@ -1393,12 +1372,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void infoDocument(DocumentInfo doc) {
 		final BaseActivity activity = (BaseActivity) getActivity();
-		activity.setInfoDrawerOpen(true);
-		if (activity.isShowAsDialog() || isWatch()) {
-			DetailFragment.showAsDialog(activity.getSupportFragmentManager(), doc);
-		} else {
-			DetailFragment.show(activity.getSupportFragmentManager(), doc);
-		}
+		DetailFragment.showAsDialog(activity.getSupportFragmentManager(), doc);
 		Bundle params = new Bundle();
 		String type = IconUtils.getTypeNameFromMimeType(doc.mimeType);
 		params.putString(FILE_TYPE, type);

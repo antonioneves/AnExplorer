@@ -59,8 +59,6 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.shape.MaterialShapeDrawable;
 import com.google.android.material.shape.ShapeAppearanceModel;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.drawerlayout.widget.DrawerLayout.DrawerListener;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -126,7 +124,6 @@ import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 import dev.dworks.apps.anexplorer.fragment.ServerFragment;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
-import dev.dworks.apps.anexplorer.misc.AppRate;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
@@ -158,9 +155,6 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider.ResumeColumns;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.ui.DirectoryContainerView;
-import dev.dworks.apps.anexplorer.ui.DrawerLayoutHelper;
-import dev.dworks.apps.anexplorer.ui.FloatingActionsMenu;
-import dev.dworks.apps.anexplorer.ui.fabs.SimpleMenuListenerAdapter;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
@@ -171,8 +165,6 @@ import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_OPEN;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_OPEN_TREE;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_LIST;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.fragment.DirectoryFragment.ANIM_DOWN;
 import static dev.dworks.apps.anexplorer.fragment.DirectoryFragment.ANIM_NONE;
 import static dev.dworks.apps.anexplorer.fragment.DirectoryFragment.ANIM_SIDE;
@@ -196,7 +188,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private static final int CODE_FORWARD = 42;
     private static final int CODE_SETTINGS = 92;
 
-    private boolean mShowAsDialog;
 
     private SearchView mSearchView;
     private MenuItem mSearchMenuItem;
@@ -206,10 +197,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private Toolbar mToolbar;
     private Spinner mToolbarStack;
 
-    private DrawerLayoutHelper mDrawerLayoutHelper;
-    private ActionBarDrawerToggle mDrawerToggle;
-    private View mRootsContainer;
-    private View mInfoContainer;
 
     private DirectoryContainerView mDirectoryContainer;
 
@@ -223,9 +210,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private RootsCache mRoots;
     private State mState;
 	private boolean mAuthenticated;
-    private FrameLayout mRateContainer;
     private boolean mActionMode;
-    private FloatingActionsMenu mActionMenu;
     private RootInfo mParentRoot;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -238,11 +223,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             setTheme(R.style.DocumentsTheme_Translucent);
         }
         setUpStatusBar();
-        if (isTelevision()) {
-            // The TV keyboard is a panel in the middle of the screen; resizing the window around it
-            // leaves a black band, so keep the app full size behind it
-            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
-        }
+        // The TV keyboard is a panel in the middle of the screen; resizing the window around it
+        // leaves a black band, so keep the app full size behind it
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
     	
 /*		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll()
 				.penaltyLog()
@@ -260,12 +243,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
         final Context context = this;
         final Resources res = getResources();
-        mShowAsDialog = res.getBoolean(R.bool.show_as_dialog);
 
         mDirectoryContainer = (DirectoryContainerView) findViewById(R.id.container_directory);
-        mRateContainer = (FrameLayout) findViewById(R.id.container_rate);
-
-        initControls();
 
         if (icicle != null) {
             mState = icicle.getParcelable(EXTRA_STATE);
@@ -289,32 +268,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
         setSupportActionBar(mToolbar);
 
-        mRootsContainer = findViewById(R.id.drawer_roots);
-        mInfoContainer = findViewById(R.id.container_info);
-
-        if (!mShowAsDialog) {
-            // Non-dialog means we have a drawer
-            mDrawerLayoutHelper = new DrawerLayoutHelper(findViewById(R.id.drawer_layout));
-            View view = findViewById(R.id.drawer_layout);
-            if(view instanceof DrawerLayout) {
-                DrawerLayout mDrawerLayout = (DrawerLayout) view;
-
-                mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, mToolbar, R.string.drawer_open, R.string.drawer_close);
-                mDrawerLayout.setDrawerListener(mDrawerListener);
-                lockInfoContainter();
-            }
-        }
-
-        changeActionBarColor();
         initProtection();
 
         // Hide roots when we're managing a specific root
         if (mState.action == ACTION_MANAGE) {
-            if (mShowAsDialog) {
-                findViewById(R.id.container_roots).setVisibility(View.GONE);
-            } else {
-                mDrawerLayoutHelper.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
-            }
+            findViewById(R.id.container_roots).setVisibility(View.GONE);
         }
 
         if (mState.action == ACTION_CREATE) {
@@ -344,10 +302,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             		onRootPicked(getDownloadRoot(), true);
             	} else if(ConnectionUtils.isServerAuthority(getIntent())){
                     RootInfo root = getIntent().getExtras().getParcelable(EXTRA_ROOT);
-                    onRootPicked(root, true);
-                } else if(Utils.isQSTile(getIntent())){
-                    NetworkConnection networkConnection = NetworkConnection.getDefaultServer(this);
-                    RootInfo root = mRoots.getRootInfo(networkConnection);
                     onRootPicked(root, true);
                 } else{
                     try {
@@ -415,14 +369,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 }
             }, 500);
         }
-    }
-
-    private void lockInfoContainter() {
-        if(mDrawerLayoutHelper.isDrawerOpen(mInfoContainer)){
-            mDrawerLayoutHelper.closeDrawer(mInfoContainer);
-        }
-
-        mDrawerLayoutHelper.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, mInfoContainer);
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
@@ -519,14 +465,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public boolean onMenuItemClick(MenuItem item) {
         if(menuAction(item)){
-            closeDrawer();
             return true;
         }
         return false;
-    }
-
-    public void closeDrawer(){
-        mDrawerLayoutHelper.closeDrawer(Utils.getActionDrawer(this));
     }
 
     private class RestoreRootTask extends AsyncTask<Void, Void, RootInfo> {
@@ -625,25 +566,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             }
             mState.restored = true;
 
-            // Show drawer when no stack restored, but only when requesting
-            // non-visual content. However, if we last used an external app,
-            // drawer is always shown.
-
-            boolean showDrawer = false;
-            if (!mRestoredStack) {
-                showDrawer = false;
-            }
-            if (MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, mState.acceptMimes)) {
-                showDrawer = false;
-            }
-            if (mExternal && (mState.action == ACTION_GET_CONTENT || mState.action == ACTION_BROWSE)) {
-                showDrawer = false;
-            }
-
-            if (showDrawer) {
-                setRootsDrawerOpen(true);
-            }
-
             onCurrentDirectoryChanged(ANIM_NONE);
         }
     }
@@ -651,7 +573,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public void onResume() {
         super.onResume();
-        changeActionBarColor();
         if (mState.action == ACTION_MANAGE) {
             mState.showSize = true;
             mState.showFolderSize = false;
@@ -665,88 +586,15 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
-    private DrawerListener mDrawerListener = new DrawerListener() {
-        @Override
-        public void onDrawerSlide(View drawerView, float slideOffset) {
-            mDrawerToggle.onDrawerSlide(drawerView, slideOffset);
-        }
-
-        @Override
-        public void onDrawerOpened(View drawerView) {
-            if(!mInfoContainer.equals(drawerView) && mDrawerLayoutHelper.isDrawerOpen(mInfoContainer)){
-                mDrawerLayoutHelper.closeDrawer(mInfoContainer);
-            }
-            mDrawerToggle.onDrawerOpened(drawerView);
-            updateActionBar();
-            invalidateMenu();
-        }
-
-        @Override
-        public void onDrawerClosed(View drawerView) {
-            lockInfoContainter();
-            mDrawerToggle.onDrawerClosed(drawerView);
-            updateActionBar();
-            invalidateMenu();
-        }
-
-        @Override
-        public void onDrawerStateChanged(int newState) {
-            mDrawerToggle.onDrawerStateChanged(newState);
-        }
-    };
-
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        if (mDrawerToggle != null) {
-            mDrawerToggle.onConfigurationChanged(newConfig);
-        }
-    }
-
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        if (mDrawerToggle != null) {
-            mDrawerToggle.syncState();
-        }
         updateActionBar();
-    }
-
-    public void setRootsDrawerOpen(boolean open) {
-        if (!mShowAsDialog) {
-            if (open) {
-                mDrawerLayoutHelper.openDrawer(mRootsContainer);
-            } else {
-                mDrawerLayoutHelper.closeDrawer(mRootsContainer);
-            }
-        }
-    }
-    
-    public void setInfoDrawerOpen(boolean open) {
-    	if(!mShowAsDialog){
-    		setRootsDrawerOpen(false);
-            if (open) {
-                mDrawerLayoutHelper.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, mInfoContainer);
-                mDrawerLayoutHelper.openDrawer(mInfoContainer);
-            } else {
-                lockInfoContainter();
-            }
-    	}
-    }
-
-    private boolean isRootsDrawerOpen() {
-        if (mShowAsDialog) {
-            return false;
-        } else {
-            return mDrawerLayoutHelper.isDrawerOpen(mRootsContainer);
-        }
     }
 
     /** TV titles in the accent color, the same for a root's title and a folder's path. */
     private void applyTvTitleColor() {
-        if (isTelevision()) {
-            mToolbar.setTitleTextColor(getTvTitleColor());
-        }
+        mToolbar.setTitleTextColor(getTvTitleColor());
     }
 
     private int getTvTitleColor() {
@@ -755,58 +603,26 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     public void updateActionBar() {
         final RootInfo root = getCurrentRoot();
-        //final boolean showRootIcon = mShowAsDialog || (mState.action == DocumentsActivity.State.ACTION_MANAGE);
-        final boolean showIndicator = !mShowAsDialog && (mState.action != ACTION_MANAGE);
-        if(mShowAsDialog){
-            //getSupportActionBar().setDisplayHomeAsUpEnabled(showIndicator);
-            //mToolbar.setLogo(R.drawable.logo);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-            if (mDrawerToggle != null) {
-                mDrawerToggle.setDrawerIndicatorEnabled(showIndicator);
-            }
-        }
-        mToolbar.setNavigationContentDescription(R.string.drawer_open);
-        mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setRootsDrawerOpen(!isRootsDrawerOpen());
-            }
-        });
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
 
-        if (isRootsDrawerOpen()) {
-            //mToolbar.setNavigationIcon(root != null ? root.loadToolbarIcon(mToolbar.getContext()) : null);
-            if (mState.action == ACTION_OPEN || mState.action == ACTION_GET_CONTENT
-                    || mState.action == ACTION_BROWSE || mState.action == ACTION_OPEN_TREE) {
-                //mToolbar.setTitle(R.string.title_open);
-                setTitle(R.string.app_name);
-            } else if (mState.action == DocumentsActivity.State.ACTION_CREATE) {
-                setTitle(R.string.title_save);
-            }
+        if (mSearchExpanded) {
+            setTitle(null);
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
-
         } else {
-            //mToolbar.setNavigationIcon(R.drawable.ic_drawer_glyph);
-
-            if (mSearchExpanded) {
-                setTitle(null);
+            if (mState.stack.size() <= 1) {
+                if(null != root){
+                    setTitle(root.title);
+                    AnalyticsManager.setCurrentScreen(this, root.derivedTag);
+                }
                 mToolbarStack.setVisibility(View.GONE);
                 mToolbarStack.setAdapter(null);
             } else {
-                if (mState.stack.size() <= 1) {
-                    if(null != root){
-                        setTitle(root.title);
-                        AnalyticsManager.setCurrentScreen(this, root.derivedTag);
-                    }
-                    mToolbarStack.setVisibility(View.GONE);
-                    mToolbarStack.setAdapter(null);
-                } else {
-                    setTitle(null);
-                    mToolbarStack.setVisibility(View.VISIBLE);
-                    mToolbarStack.setAdapter(mStackAdapter);
-                    mIgnoreNextNavigation = true;
-                    mToolbarStack.setSelection(mStackAdapter.getCount() - 1);
-                }
+                setTitle(null);
+                mToolbarStack.setVisibility(View.VISIBLE);
+                mToolbarStack.setAdapter(mStackAdapter);
+                mIgnoreNextNavigation = true;
+                mToolbarStack.setSelection(mStackAdapter.getCount() - 1);
             }
         }
     }
@@ -822,37 +638,23 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return mToolbarActionMode.onCreateMenu(menu);
         }
         getMenuInflater().inflate(R.menu.activity, menu);
-        if (isTelevision()) {
-            replaceSortSubMenu(menu);
-        }
+        replaceSortSubMenu(menu);
 
         final MenuItem searchMenu = menu.findItem(R.id.menu_search);
         mSearchMenuItem = searchMenu;
         mSearchView = (SearchView) searchMenu.getActionView();
-        if (isTelevision()) {
-            styleTvSearchView();
-        }
+        styleTvSearchView();
         mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                if (isTelevision()) {
-                    mSearchView.removeCallbacks(mTvSearchRunnable);
-                    showTvSearchResults(query);
-                    return true;
-                }
-                mSearchExpanded = mSearchResultShown = true;
-                mState.currentSearch = query;
-                mSearchView.clearFocus();
-                onCurrentDirectoryChanged(ANIM_NONE);
-                Bundle params = new Bundle();
-                params.putString("query", query);
-                AnalyticsManager.logEvent("search", getCurrentRoot(), params);
+                mSearchView.removeCallbacks(mTvSearchRunnable);
+                showTvSearchResults(query);
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                if (isTelevision() && mSearchExpanded) {
+                if (mSearchExpanded) {
                     // Search as the user types, once they pause
                     mSearchView.removeCallbacks(mTvSearchRunnable);
                     mSearchView.postDelayed(mTvSearchRunnable, 400);
@@ -865,26 +667,24 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
                 mSearchExpanded = true;
-                if (isTelevision()) {
-                    // Let the pill start closer to the toolbar's edge
-                    mToolbarInsetStart = mToolbar.getContentInsetStart();
-                    mToolbar.setContentInsetsRelative(
-                            (int) (4 * getResources().getDisplayMetrics().density),
-                            mToolbar.getContentInsetEnd());
-                    final View pill = item.getActionView();
-                    if (pill instanceof ViewGroup && !item.isActionViewExpanded()) {
-                        animateSearchPillIn((ViewGroup) pill, pill.findViewWithTag("search_go"));
-                    }
-                    // The toolbar adds its collapse button after this callback
-                    mToolbar.post(() -> {
-                        setToolbarCollapseButtonVisible(false);
-                        mSearchView.setIconified(false);
-                        final View mag = mSearchView.findViewById(androidx.appcompat.R.id.search_button);
-                        if (mag != null) {
-                            mag.setVisibility(View.GONE);
-                        }
-                    });
+                // Let the pill start closer to the toolbar's edge
+                mToolbarInsetStart = mToolbar.getContentInsetStart();
+                mToolbar.setContentInsetsRelative(
+                        (int) (4 * getResources().getDisplayMetrics().density),
+                        mToolbar.getContentInsetEnd());
+                final View pill = item.getActionView();
+                if (pill instanceof ViewGroup && !item.isActionViewExpanded()) {
+                    animateSearchPillIn((ViewGroup) pill, pill.findViewWithTag("search_go"));
                 }
+                // The toolbar adds its collapse button after this callback
+                mToolbar.post(() -> {
+                    setToolbarCollapseButtonVisible(false);
+                    mSearchView.setIconified(false);
+                    final View mag = mSearchView.findViewById(androidx.appcompat.R.id.search_button);
+                    if (mag != null) {
+                        mag.setVisibility(View.GONE);
+                    }
+                });
                 updateActionBar();
                 return true;
             }
@@ -892,11 +692,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             @Override
             public boolean onMenuItemActionCollapse(MenuItem item) {
                 mSearchExpanded = mSearchResultShown = false;
-                if (isTelevision()) {
-                    setToolbarCollapseButtonVisible(true);
-                    if (mToolbarInsetStart >= 0) {
-                        mToolbar.setContentInsetsRelative(mToolbarInsetStart, mToolbar.getContentInsetEnd());
-                    }
+                setToolbarCollapseButtonVisible(true);
+                if (mToolbarInsetStart >= 0) {
+                    mToolbar.setContentInsetsRelative(mToolbarInsetStart, mToolbar.getContentInsetEnd());
                 }
                 if (mIgnoreNextCollapse) {
                     mIgnoreNextCollapse = false;
@@ -946,10 +744,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final RootInfo root = getCurrentRoot();
         final DocumentInfo cwd = getCurrentDirectory();
 
-        if(isSpecialDevice()) {
-            menu.findItem(R.id.menu_create_dir).setVisible(showActionMenu());
-            menu.findItem(R.id.menu_create_file).setVisible(showActionMenu());
-        }
+        menu.findItem(R.id.menu_create_dir).setVisible(showActionMenu());
+        menu.findItem(R.id.menu_create_file).setVisible(showActionMenu());
         final MenuItem search = menu.findItem(R.id.menu_search);
         final MenuItem sort = menu.findItem(R.id.menu_sort);
         // Not in the menu on TV, where sorting has its own panel (showSortPanel)
@@ -959,22 +755,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final MenuItem settings = menu.findItem(R.id.menu_settings);
 
         // TV has Settings and About in the drawer, so drop the overflow button entirely
-        if (isTelevision()) {
-            menu.findItem(R.id.menu_receive_quickshare).setVisible(false);
-            menu.findItem(R.id.menu_about).setVisible(false);
-            menu.findItem(R.id.menu_exit).setVisible(false);
-        }
-
-        // Open drawer means we hide most actions
-        if (isRootsDrawerOpen()) {
-            search.setVisible(false);
-            sort.setVisible(false);
-            grid.setVisible(false);
-            list.setVisible(false);
-            mIgnoreNextCollapse = true;
-            search.collapseActionView();
-            return;
-        }
+        menu.findItem(R.id.menu_receive_quickshare).setVisible(false);
+        menu.findItem(R.id.menu_about).setVisible(false);
+        menu.findItem(R.id.menu_exit).setVisible(false);
 
         sort.setVisible(cwd != null);
         grid.setVisible(!RootInfo.isOtherRoot(getCurrentRoot()) && mState.derivedMode != MODE_GRID);
@@ -1032,23 +815,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         // TODO: close any search in-progress when hiding
         search.setVisible(searchVisible);
 
-        settings.setVisible(!isTelevision() && mState.action != ACTION_MANAGE);
-
-        Utils.inflateActionMenu(this, this, false, root, cwd);
+        settings.setVisible(false);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (null != mToolbarActionMode) {
             return mToolbarActionMode.onItemClicked(item);
-        }
-        if (mDrawerToggle != null) {
-        	if(mDrawerLayoutHelper.isDrawerOpen(mInfoContainer)){
-                mDrawerLayoutHelper.closeDrawer(mInfoContainer);
-            }
-            if(mDrawerToggle.onOptionsItemSelected(item)){
-            	return true;
-            }
         }
         if(menuAction(item)){
             return true;
@@ -1081,7 +854,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         } else if (id == R.id.menu_search) {
             return false;
-        } else if (id == R.id.menu_sort && isTelevision()) {
+        } else if (id == R.id.menu_sort) {
             showSortPanel();
             return true;
         } else if (id == R.id.menu_sort_name) {
@@ -1571,10 +1344,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mToolbarActionMode.finish();
             return;
         }
-        if(isRootsDrawerOpen() && !mShowAsDialog){
-            mDrawerLayoutHelper.closeDrawer(mRootsContainer);
-            return;
-        }
         if (mSearchExpanded && null != mSearchView && TextUtils.isEmpty(mSearchView.getQuery())) {
             if (mSearchMenuItem != null && mSearchMenuItem.collapseActionView()) {
                 return;
@@ -1589,7 +1358,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if (size > 1) {
             mState.stack.pop();
             onCurrentDirectoryChanged(ANIM_UP);
-        } else if (size == 1 && !isRootsDrawerOpen()) {
+        } else if (size == 1) {
             // TODO: open root drawer once we can capture back key
             if(null != mParentRoot){
                 onRootPicked(mParentRoot, true);
@@ -1653,9 +1422,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             } else {
                 title.setText(doc.displayName);
             }
-            if (isTelevision()) {
-                title.setTextColor(getTvTitleColor());
-            }
+            title.setTextColor(getTvTitleColor());
 
             // No padding when shown in actionbar
             //convertView.setPadding(0, 0, 0, 0);
@@ -1749,10 +1516,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return mState;
     }
     
-    public boolean isShowAsDialog() {
-    	return mShowAsDialog;
-    }
-
     public boolean isCreateSupported() {
         final DocumentInfo cwd = getCurrentDirectory();
         if (mState.action == ACTION_OPEN_TREE) {
@@ -1857,28 +1620,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         updateActionBar();
         invalidateMenu();
         dumpStack();
-
-        if(!Utils.isOtherBuild() && !isSpecialDevice()){
-            AppRate.with(this, mRateContainer).listener(mOnShowListener).checkAndShow();
-        }
     }
-
-    private AppRate.OnShowListener mOnShowListener = new AppRate.OnShowListener() {
-        @Override
-        public void onRateAppShowing() {
-            // View is shown
-        }
-
-        @Override
-        public void onRateAppDismissed() {
-            // User has dismissed it
-        }
-
-        @Override
-        public void onRateAppClicked() {
-            AnalyticsManager.logEvent("app_rate");
-        }
-    };
 
     public void onStackPicked(DocumentStack stack) {
         try {
@@ -1930,10 +1672,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             onCurrentDirectoryChanged(ANIM_SIDE);
         } else {
             new PickRootTask(root).executeOnExecutor(getCurrentExecutor());
-        }
-
-        if (closeDrawer) {
-            setRootsDrawerOpen(false);
         }
     }
 
@@ -2422,48 +2160,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return (DocumentsActivity) fragment.getActivity();
     }
 
-	private final Handler handler = new Handler();
-	private Drawable oldBackground;
-
-    private void changeActionBarColor() {
-
-        if(isSpecialDevice()){
-            return;
-        }
-
-		int color = ThemeColors.getAppBarColor(this);
-		Drawable colorDrawable = new ColorDrawable(color);
-
-		if (oldBackground == null) {
-            getSupportActionBar().setBackgroundDrawable(colorDrawable);
-		} else {
-			TransitionDrawable td = new TransitionDrawable(new Drawable[] { oldBackground, colorDrawable });
-            getSupportActionBar().setBackgroundDrawable(td);
-			td.startTransition(200);
-		}
-
-		oldBackground = colorDrawable;
-
-        setUpStatusBar();
-	}
-	
-	private Drawable.Callback drawableCallback = new Drawable.Callback() {
-		@Override
-		public void invalidateDrawable(Drawable who) {
-			getSupportActionBar().setBackgroundDrawable(who);
-		}
-
-		@Override
-		public void scheduleDrawable(Drawable who, Runnable what, long when) {
-			handler.postAtTime(what, when);
-		}
-
-		@Override
-		public void unscheduleDrawable(Drawable who, Runnable what) {
-			handler.removeCallbacks(what);
-		}
-	};
-	
 	public boolean getActionMode() {
 		return mActionMode;
 	}
@@ -2478,9 +2174,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     @Override
     public ActionMode startSupportActionMode(@NonNull ActionMode.Callback callback) {
-        if (!isTelevision()) {
-            return super.startSupportActionMode(callback);
-        }
         if (null != mToolbarActionMode) {
             mToolbarActionMode.finish();
         }
@@ -2685,11 +2378,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public void invalidateMenu(){
         supportInvalidateOptionsMenu();
-        // ComponentActivity calls this during super.onCreate(), before our state exists
-        if (null == mState || null == mActionMenu) {
-            return;
-        }
-        mActionMenu.setVisibility(!isSpecialDevice() && showActionMenu() ? View.VISIBLE : View.GONE);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -2719,30 +2407,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return result;
     }
 
-    private void initControls() {
-        mActionMenu = (FloatingActionsMenu) findViewById(R.id.fabs);
-        mActionMenu.setMenuListener(mMenuListener);
-    }
-
-    public void upadateActionItems(RecyclerView currentView) {
-
-        mActionMenu.attachToListView(currentView);
-        RootInfo root = getCurrentRoot();
-        if(null != root && root.isCloudStorage()){
-            mActionMenu.newNavigationMenu(R.menu.menu_fab_cloud);
-        }
-        int defaultColor = ThemeColors.getPrimaryColor(this);
-        ViewCompat.setNestedScrollingEnabled(currentView, true);
-        mActionMenu.show();
-        mActionMenu.setVisibility(!isSpecialDevice() && showActionMenu() ? View.VISIBLE : View.GONE);
-        mActionMenu.setBackgroundTintList(ThemeColors.getAccentColor(this));
-        mActionMenu.setSecondaryBackgroundTintList(Utils.getActionButtonColor(defaultColor));
-    }
-
-    public boolean isSpecialDevice() {
-        return isTelevision() || isWatch();
-    }
-
     private boolean showActionMenu() {
         final RootInfo root = getCurrentRoot();
         return !RootInfo.isOtherRoot(root) &&
@@ -2751,24 +2415,4 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 && mState.currentSearch == null;
     }
 
-    private SimpleMenuListenerAdapter mMenuListener = new SimpleMenuListenerAdapter() {
-
-        @Override
-        public boolean onMenuItemSelected(MenuItem menuItem) {
-            Bundle params = new Bundle();
-            if (menuItem.getItemId() == R.id.fab_create_file){
-                onStateChanged();
-                createFile();
-                mActionMenu.closeMenu();
-            } else if (menuItem.getItemId() == R.id.fab_upload_file){
-                onStateChanged();
-                uploadFile();
-                mActionMenu.closeMenu();
-            } else if (menuItem.getItemId() == R.id.fab_create_folder){
-                createFolder();
-                mActionMenu.closeMenu();
-            }
-            return false;
-        }
-    };
 }

@@ -57,7 +57,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 
 import static android.content.pm.PackageManager.GET_UNINSTALLED_PACKAGES;
 import static android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 
 /**
  * Presents a {@link DocumentsContract} view of Apps contents.
@@ -341,9 +340,7 @@ public class AppsProvider extends DocumentsProvider {
 			final String mimeType = Document.MIME_TYPE_APK;
 			
 	        int flags = Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_THUMBNAIL;
-			if(isTelevision()) {
-				flags |= Document.FLAG_DIR_PREFERS_GRID;
-			}
+			flags |= Document.FLAG_DIR_PREFERS_GRID;
 			summary = processTypeCache.get(processInfo.importance);
 			final long size = getProcessSize(processInfo.pid);
 			final String packageName = processInfo.processName;
@@ -377,9 +374,7 @@ public class AppsProvider extends DocumentsProvider {
 			final String mimeType = Document.MIME_TYPE_APK;
 
 			int flags = Document.FLAG_SUPPORTS_COPY | Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_THUMBNAIL;
-			if(isTelevision()) {
-				flags |= Document.FLAG_DIR_PREFERS_GRID;
-			}
+			flags |= Document.FLAG_DIR_PREFERS_GRID;
 
 	        final long size = new File(appInfo.sourceDir).length();
 	        final long lastModified = packageInfo.lastUpdateTime;
@@ -419,9 +414,7 @@ public class AppsProvider extends DocumentsProvider {
 		final String mimeType = Document.MIME_TYPE_APK;
 
 		int flags = Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_THUMBNAIL;
-		if(isTelevision()) {
-			flags |= Document.FLAG_DIR_PREFERS_GRID;
-		}
+		flags |= Document.FLAG_DIR_PREFERS_GRID;
 
 		int importance = processInfo.foreground ? RunningAppProcessInfo.IMPORTANCE_FOREGROUND : RunningAppProcessInfo.IMPORTANCE_BACKGROUND;
 		summary = processTypeCache.get(importance);
@@ -463,9 +456,7 @@ public class AppsProvider extends DocumentsProvider {
 		final String mimeType = Document.MIME_TYPE_APK;
 
 		int flags = Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_THUMBNAIL;
-		if(isTelevision()) {
-			flags |= Document.FLAG_DIR_PREFERS_GRID;
-		}
+		flags |= Document.FLAG_DIR_PREFERS_GRID;
 
 		int importance = processInfo.foreground ? RunningAppProcessInfo.IMPORTANCE_FOREGROUND : RunningAppProcessInfo.IMPORTANCE_BACKGROUND;
 		summary = processTypeCache.get(importance);

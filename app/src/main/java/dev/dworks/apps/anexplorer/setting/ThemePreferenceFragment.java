@@ -35,9 +35,7 @@ public class ThemePreferenceFragment extends PreferenceFragment
 		Preference preferenceThemeStyle = findPreference(KEY_THEME_STYLE);
 		preferenceThemeStyle.setOnPreferenceChangeListener(this);
 		preferenceThemeStyle.setOnPreferenceClickListener(this);
-		if(DocumentsApplication.isTelevision()){
-			preferenceScreen.removePreference(preferenceThemeStyle);
-		}
+		preferenceScreen.removePreference(preferenceThemeStyle);
 
 	}
 

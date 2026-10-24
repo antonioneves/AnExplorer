@@ -21,8 +21,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import java.util.Collections;
 
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
@@ -33,7 +36,6 @@ import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
-import dev.dworks.apps.anexplorer.service.ConnectionsService;
 
 import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_FTPSERVER_FAILEDTOSTART;
 import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_FTPSERVER_STARTED;
@@ -43,13 +45,15 @@ import static dev.dworks.apps.anexplorer.misc.ConnectionUtils.ACTION_STOP_FTPSER
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_ROOT;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
 import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
-import static dev.dworks.apps.anexplorer.misc.Utils.isWatch;
 
 public class ServerFragment extends Fragment implements View.OnClickListener {
 
     private TextView status;
     private TextView username;
     private TextView password;
+    private ImageButton passwordVisibility;
+    private String passwordValue;
+    private boolean passwordShown;
     private TextView path;
     private TextView address;
     private Button action;
@@ -83,6 +87,10 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         status =(TextView) view.findViewById(R.id.status);
         username =(TextView) view.findViewById(R.id.username);
         password =(TextView) view.findViewById(R.id.password);
+        passwordVisibility = (ImageButton) view.findViewById(R.id.password_visibility);
+        if (null != passwordVisibility) {
+            passwordVisibility.setOnClickListener(this);
+        }
         path = (TextView) view.findViewById(R.id.path);
         address = (TextView) view.findViewById(R.id.address);
         warning = (TextView) view.findViewById(R.id.warning);
@@ -115,9 +123,27 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
         path.setText(connection.getPath());
         username.setText(connection.getUserName());
-        // Anonymous access has no password; say so instead of leaving the value blank
-        password.setText(TextUtils.isEmpty(connection.getPassword())
-                ? getString(R.string.ftp_no_password) : connection.getPassword());
+        passwordValue = connection.getPassword();
+        showPassword();
+    }
+
+    private void showPassword() {
+        final boolean hasPassword = !TextUtils.isEmpty(passwordValue);
+        if (!hasPassword) {
+            // Anonymous access has no password; say so instead of leaving the value blank
+            password.setText(R.string.ftp_no_password);
+        } else if (passwordShown || null == passwordVisibility) {
+            password.setText(passwordValue);
+        } else {
+            password.setText(TextUtils.join("", Collections.nCopies(passwordValue.length(), "\u2022")));
+        }
+        if (null != passwordVisibility) {
+            passwordVisibility.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
+            passwordVisibility.setImageResource(passwordShown
+                    ? R.drawable.design_ic_visibility_off : R.drawable.design_ic_visibility);
+            passwordVisibility.setContentDescription(getString(passwordShown
+                    ? R.string.ftp_hide_password : R.string.ftp_show_password));
+        }
     }
 
     /** The settings dialog the Connections list used to offer; TV edits them here instead. */
@@ -187,30 +213,16 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         Intent intent = new Intent(ACTION_START_FTPSERVER);
         intent.putExtras(getArguments());
 
-        if(DocumentsApplication.isWatch()) {
-            Intent serverService = new Intent(getActivity(), ConnectionsService.class);
-            serverService.putExtras(intent.getExtras());
-            if (!ConnectionUtils.isServerRunning(getActivity())) {
-                getActivity().startService(serverService);
-            }
-        } else {
-            intent.setPackage(getActivity().getPackageName());
-            getActivity().sendBroadcast(intent);
-        }
+        intent.setPackage(getActivity().getPackageName());
+        getActivity().sendBroadcast(intent);
     }
 
     private void stopServer() {
         Intent intent = new Intent(ACTION_STOP_FTPSERVER);
         intent.putExtras(getArguments());
 
-        if(DocumentsApplication.isWatch()){
-            Intent serverService = new Intent(getActivity(), ConnectionsService.class);
-            serverService.putExtras(intent.getExtras());
-            getActivity().stopService(serverService);
-        } else {
-            intent.setPackage(getActivity().getPackageName());
-            getActivity().sendBroadcast(intent);
-        }
+        intent.setPackage(getActivity().getPackageName());
+        getActivity().sendBroadcast(intent);
     }
 
     private void updateStatus(){
@@ -233,6 +245,9 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     public void onClick(View view) {
         if (view.getId() == R.id.edit_server) {
             editServer();
+        } else if (view.getId() == R.id.password_visibility) {
+            passwordShown = !passwordShown;
+            showPassword();
         } else if (view.getId() == R.id.action){
             if(!ConnectionUtils.isServerRunning(getActivity())){
                 // TVs are often wired, so any local network will do, not only Wi-Fi

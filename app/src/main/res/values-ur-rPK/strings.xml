@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"اس میں محفوظ کریں"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"فولڈر بنائیں"</string>
     <string name="menu_grid" msgid="6878021334497835259">"گرڈ منظر"</string>
     <string name="menu_list" msgid="7279285939892417279">"فہرست منظر"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"نام کے لحاظ سے"</string>
     <string name="sort_date" msgid="586080032956151448">"ترمیم کی تاریخ کے لحاظ سے"</string>
     <string name="sort_size" msgid="3350681319735474741">"سائز کے لحاظ سے"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"روٹس دکھائیں"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"روٹس کو چھپائیں"</string>
     <string name="save_error" msgid="6167009778003223664">"دستاویز کو محفوظ کرنے میں ناکام ہو گیا۔"</string>
     <string name="create_error" msgid="3735649141335444215">"فولڈر بنانے میں ناکام ہو گیا"</string>
     <string name="query_error" msgid="1222448261663503501">"دستاویزات استفسار کرنے میں ناکام"</string>

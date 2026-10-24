@@ -12,7 +12,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.BaseColumns;
-import android.support.design.internal.NavigationMenu;
 
 import androidx.appcompat.app.AlertDialog;
 import android.view.LayoutInflater;
@@ -43,23 +42,18 @@ import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
-import dev.dworks.apps.anexplorer.ui.FloatingActionsMenu;
-import dev.dworks.apps.anexplorer.ui.fabs.FabSpeedDial;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isSpecialDevice;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
 import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_BOX;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_CLOUD;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_DROPBOX;
-import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_GDRIVE;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_ONEDRIVE;
 
 public class ConnectionsFragment extends RecyclerFragment
-        implements View.OnClickListener, FabSpeedDial.MenuListener, ConnectionsAdapter.OnItemClickListener {
+        implements ConnectionsAdapter.OnItemClickListener {
 
     public static final String TAG = "ConnectionsFragment";
 
@@ -67,9 +61,7 @@ public class ConnectionsFragment extends RecyclerFragment
     private LoaderManager.LoaderCallbacks<Cursor> mCallbacks;
 
     private final int mLoaderId = 42;
-    private FloatingActionsMenu mActionMenu;
     private RootInfo mConnectionsRoot;
-    private int mLastShowAccentColor;
 
     public static void show(FragmentManager fm) {
         final ConnectionsFragment fragment = new ConnectionsFragment();
@@ -85,7 +77,7 @@ public class ConnectionsFragment extends RecyclerFragment
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(isSpecialDevice());
+        setHasOptionsMenu(true);
         mConnectionsRoot = DocumentsApplication.getRootsCache(getActivity()).getConnectionsRoot();
     }
 
@@ -99,11 +91,6 @@ public class ConnectionsFragment extends RecyclerFragment
     public void onViewCreated(View view, Bundle savedInstanceState) {
         final Resources res = getActivity().getResources();
 
-        mActionMenu = (FloatingActionsMenu) view.findViewById(R.id.fabs);
-        mActionMenu.setMenuListener(this);
-        mActionMenu.setVisibility(!isSpecialDevice() ? View.VISIBLE : View.GONE);
-        mActionMenu.attachToListView(getListView());
-
         // Indent our list divider to align with text
         final boolean insetLeft = res.getBoolean(R.bool.list_divider_inset_left);
         final int insetSize = res.getDimensionPixelSize(R.dimen.list_divider_inset);
@@ -113,20 +100,7 @@ public class ConnectionsFragment extends RecyclerFragment
         } else {
             decoration.setInset(0, insetSize);
         }
-        if(!isWatch()) {
-            getListView().addItemDecoration(decoration);
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        int accentColor = SettingsActivity.getAccentColor();
-        if ((mLastShowAccentColor != 0 && mLastShowAccentColor == accentColor))
-            return;
-        int defaultColor = ThemeColors.getPrimaryColor(getActivity());
-        mActionMenu.setBackgroundTintList(ThemeColors.getAccentColor(getActivity()));
-        mActionMenu.setSecondaryBackgroundTintList(Utils.getActionButtonColor(defaultColor));
+        getListView().addItemDecoration(decoration);
     }
 
 
@@ -140,9 +114,7 @@ public class ConnectionsFragment extends RecyclerFragment
 
     @Override
     public void onItemLongClick(ConnectionsAdapter.ViewHolder item, View view, int position) {
-        if(isSpecialDevice()) {
-            showPopupMenu(view, position);
-        }
+        showPopupMenu(view, position);
     }
 
     @Override
@@ -163,13 +135,9 @@ public class ConnectionsFragment extends RecyclerFragment
             public Loader<Cursor> onCreateLoader(int id, Bundle args) {
                 Uri contentsUri = ExplorerProvider.buildConnection();
 
-                String selection = null;
-                String[] selectionArgs = null;
-                // TV has the server in the drawer and edits it on its screen
-                if(!Utils.hasWiFi(getActivity()) || Utils.isTelevision(getActivity())){
-                    selection = ExplorerProvider.ConnectionColumns.TYPE + "!=? " ;
-                    selectionArgs = new String[]{SERVER};
-                }
+                // The server has its own screen in the drawer
+                final String selection = ExplorerProvider.ConnectionColumns.TYPE + "!=? ";
+                final String[] selectionArgs = new String[]{SERVER};
 
                 return new CursorLoader(context, contentsUri, null, selection, selectionArgs, null);
             }
@@ -215,13 +183,6 @@ public class ConnectionsFragment extends RecyclerFragment
     public boolean onOptionsItemSelected(MenuItem item) {
         menuItemAction(item);
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onClick(final View view) {
-        if (view.getId() == R.id.fab){
-            addConnection();
-        }
     }
 
     private void showPopupMenu(View view, final int position) {
@@ -306,22 +267,6 @@ public class ConnectionsFragment extends RecyclerFragment
         activity.onRootPicked(activity.getRoots().getRootInfo(connection), mConnectionsRoot);
     }
 
-    @Override
-    public boolean onPrepareMenu(NavigationMenu navigationMenu) {
-        return true;
-    }
-
-    public boolean onMenuItemSelected(MenuItem menuItem) {
-        menuItemAction(menuItem);
-        mActionMenu.closeMenu();
-        return false;
-    }
-
-    @Override
-    public void onMenuClosed() {
-
-    }
-
     public void addCloudConnection(String cloudType){
         final BaseActivity activity = (BaseActivity) getActivity();
         CloudConnection cloudStorage = CloudConnection.createCloudConnections(getActivity(), cloudType);
@@ -337,9 +282,7 @@ public class ConnectionsFragment extends RecyclerFragment
             return;
         }
         final int itemId = menuItem.getItemId();
-        if (itemId == R.id.cloud_gridve){
-            addCloudConnection(TYPE_GDRIVE);
-        } else if (itemId == R.id.cloud_dropbox){
+        if (itemId == R.id.cloud_dropbox){
             addCloudConnection(TYPE_DROPBOX);
         } else if (itemId == R.id.cloud_onedrive){
             addCloudConnection(TYPE_ONEDRIVE);

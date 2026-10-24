@@ -65,8 +65,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 import dev.dworks.apps.anexplorer.usb.UsbUtils;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.misc.FileUtils.getTypeForName;
 import static dev.dworks.apps.anexplorer.misc.MimeTypes.BASIC_MIME_TYPE;
 
@@ -408,9 +406,7 @@ public class UsbStorageProvider extends DocumentsProvider {
         flags |= Document.FLAG_SUPPORTS_COPY;
         flags |= Document.FLAG_SUPPORTS_EDIT;
 
-        if(isTelevision()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
 
 
         final String mimeType = getMimeType(file);
@@ -636,9 +632,7 @@ public class UsbStorageProvider extends DocumentsProvider {
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
         int flags = Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_DIR_PREFERS_LAST_MODIFIED
                 | Document.FLAG_DIR_HIDE_GRID_TITLES | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 

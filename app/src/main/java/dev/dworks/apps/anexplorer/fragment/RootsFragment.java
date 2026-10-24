@@ -79,7 +79,6 @@ import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 import static dev.dworks.apps.anexplorer.R.layout.item_root_spacer;
 
 /**
@@ -123,16 +122,12 @@ public class RootsFragment extends Fragment {
         final View view = inflater.inflate(R.layout.fragment_roots, container, false);
         proWrapper = view.findViewById(R.id.proWrapper);
         title = view.findViewById(android.R.id.title);
-        if(isTelevision()){
-            title.setVisibility(View.VISIBLE);
-        }
+        title.setVisibility(View.VISIBLE);
         mList = (ExpandableListView) view.findViewById(android.R.id.list);
         mList.setOnChildClickListener(mItemListener);
         mList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        if(isTelevision()){
-            // Items draw their own selected and focused states (drawable-television/item_root)
-            mList.setSelector(android.R.color.transparent);
-        }
+        // Items draw their own selected and focused states (drawable-television/item_root)
+        mList.setSelector(android.R.color.transparent);
 
         DisplayMetrics metrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -237,13 +232,11 @@ public class RootsFragment extends Fragment {
 
     private void changeThemeColor() {
 
-        if(isTelevision()){
-            // A calm surface lets the selected section and the D-pad focus stand out
-            int color = MaterialColors.getColor(getActivity(), R.attr.colorSurfaceContainer,
-                    ThemeColors.getPrimaryColor(getActivity()));
-            Drawable colorDrawable = new ColorDrawable(color);
-            getView().setBackground(colorDrawable);
-        }
+        // A calm surface lets the selected section and the D-pad focus stand out
+        int color = MaterialColors.getColor(getActivity(), R.attr.colorSurfaceContainer,
+                ThemeColors.getPrimaryColor(getActivity()));
+        Drawable colorDrawable = new ColorDrawable(color);
+        getView().setBackground(colorDrawable);
     }
 
     public void onCurrentRootChanged() {

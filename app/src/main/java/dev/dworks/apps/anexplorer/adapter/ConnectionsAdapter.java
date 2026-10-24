@@ -16,7 +16,6 @@ import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isSpecialDevice;
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_CLOUD;
 
 public class ConnectionsAdapter extends CursorRecyclerViewAdapter<ConnectionsAdapter.ViewHolder> {
@@ -87,7 +86,7 @@ public class ConnectionsAdapter extends CursorRecyclerViewAdapter<ConnectionsAda
             title = (TextView) v.findViewById(android.R.id.title);
             summary = (TextView) v.findViewById(android.R.id.summary);
             popupButton = v.findViewById(R.id.button_popup);
-            popupButton.setVisibility(isSpecialDevice() ? View.INVISIBLE : View.VISIBLE);
+            popupButton.setVisibility(View.INVISIBLE);
             popupButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

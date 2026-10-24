@@ -43,7 +43,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 
 /**
@@ -467,9 +466,7 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, root_type);
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(name_id));
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
     }

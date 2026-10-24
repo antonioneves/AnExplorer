@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"ಇದಕ್ಕೆ ಉಳಿಸಿ"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"ಫೋಲ್ಡರ್ ರಚಿಸು"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ಗ್ರಿಡ್ ವೀಕ್ಷಣೆ"</string>
     <string name="menu_list" msgid="7279285939892417279">"ಪಟ್ಟಿ ವೀಕ್ಷಣೆ"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"ಹೆಸರಿನ ಪ್ರಕಾರ"</string>
     <string name="sort_date" msgid="586080032956151448">"ಮಾರ್ಪಡಿಸಿರುವ ದಿನಾಂಕದ ಪ್ರಕಾರ"</string>
     <string name="sort_size" msgid="3350681319735474741">"ಗಾತ್ರದ ಪ್ರಕಾರ"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"ರೂಟ್‌ಗಳನ್ನು ತೋರಿಸು"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"ರೂಟ್‌ಗಳನ್ನು ಮರೆಮಾಡು"</string>
     <string name="save_error" msgid="6167009778003223664">"ಡಾಕ್ಯುಮೆಂಟ್ ಉಳಿಸಲು ವಿಫಲವಾಗಿದೆ"</string>
     <string name="create_error" msgid="3735649141335444215">"ಫೋಲ್ಡರ್ ರಚಿಸಲು ವಿಫಲವಾಗಿದೆ"</string>
     <string name="query_error" msgid="1222448261663503501">"ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳನ್ನು ಪ್ರಶ್ನಿಸಲು ವಿಫಲವಾಗಿದೆ"</string>

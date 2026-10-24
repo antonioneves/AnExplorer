@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"यहां जोड़ें"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"फ़ोल्डर बनाएं"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ग्रिड दृश्य"</string>
     <string name="menu_list" msgid="7279285939892417279">"सूची दृश्य"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"नाम के अनुसार"</string>
     <string name="sort_date" msgid="586080032956151448">"बदलाव के दिनांक के अनुसार"</string>
     <string name="sort_size" msgid="3350681319735474741">"आकार के अनुसार"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"रूट दिखाएं"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"रूट छिपाएं"</string>
     <string name="save_error" msgid="6167009778003223664">"दस्तावेज़ सहेजने में विफल रहा"</string>
     <string name="create_error" msgid="3735649141335444215">"फ़ोल्डर बनाने में विफल"</string>
     <string name="query_error" msgid="1222448261663503501">"दस्तावेजों के लिए क्वेरी करने में विफल रहा"</string>

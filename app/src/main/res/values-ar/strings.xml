@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"حفظ في"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"إنشاء مجلد"</string>
     <string name="menu_grid" msgid="6878021334497835259">"عرض الشبكة"</string>
     <string name="menu_list" msgid="7279285939892417279">"عرض القائمة"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"بحسب الاسم"</string>
     <string name="sort_date" msgid="586080032956151448">"بحسب تاريخ التعديل"</string>
     <string name="sort_size" msgid="3350681319735474741">"بحسب الحجم"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"عرض الجذور"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"إخفاء الجذور"</string>
     <string name="save_error" msgid="6167009778003223664">"أخفق حفظ المستند"</string>
     <string name="create_error" msgid="3735649141335444215">"أخفق إنشاء المجلد"</string>
     <string name="query_error" msgid="1222448261663503501">"أخفق إرسال طلب بحث عن المستندات"</string>

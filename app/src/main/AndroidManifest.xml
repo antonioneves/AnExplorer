@@ -29,16 +29,12 @@
         android:required="false" />
     <uses-feature
         android:name="android.software.leanback"
-        android:required="false" />
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.usb.host"
         android:required="false" />
     <uses-feature
         android:name="android.hardware.wifi"
-        android:required="false" />
-
-    <uses-feature
-        android:name="android.hardware.type.pc"
         android:required="false" />
 
     <application
@@ -50,11 +46,6 @@
         android:label="@string/name"
         tools:replace="android:label"
         android:supportsRtl="true">
-
-        <meta-data android:name="WindowManagerPreference:FreeformWindowSize"
-            android:value="[phone|tablet|maximize]" />
-        <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation"
-            android:value="[portrait|landscape]" />
 
         <!-- TODO: allow rotation when state saving is in better shape -->
         <activity
@@ -99,24 +90,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <!-- For Phones and tablets -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!-- For TV -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
 
-            <!-- For Quick Setting Tiles -->
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
-            </intent-filter>
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
@@ -128,37 +107,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
-
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
-        </activity>
-        <activity
-            android:name=".StandaloneActivity"
-            android:theme="@style/DocumentsTheme.Document" >
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
         <activity
             android:name=".setting.SettingsActivity"
             android:exported="false"
             android:label="@string/menu_settings"
             android:theme="@style/DocumentsTheme.Setting" >
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
         <activity
             android:name=".AboutActivity"
             android:label="About"
             android:theme="@style/DocumentsTheme.Document" >
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
 
         <activity
             android:name=".QuickShareReceiveActivity"
             android:theme="@style/DocumentsTheme.Document" >
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
 
         <receiver
@@ -188,7 +152,6 @@
         <activity
             android:name=".NoteActivity"
             android:configChanges="keyboardHidden|orientation"
-            android:screenOrientation="sensor"
             android:theme="@style/DocumentsTheme.Note"
             android:exported="true">
             <intent-filter android:label="Text Viewer"
@@ -199,8 +162,6 @@
 
                 <data android:mimeType="text/*" />
             </intent-filter>
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
 
         <receiver
@@ -219,16 +180,6 @@
             android:name=".service.ConnectionsService"
             android:enabled="true"
             android:exported="false" />
-        <service
-            android:name=".service.ServerService"
-            android:icon="@drawable/ic_root_server"
-            android:label="@string/toggle_messages"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
         <service
             android:name=".service.QuickShareReceiveService"
             android:enabled="true"
@@ -377,8 +328,6 @@
                 <data android:scheme="https"
                     android:host="integrations.cloudrail.com" />
             </intent-filter>
-            <meta-data android:name="WindowManagerPreference:SuppressWindowControlNavigationButton"
-                android:value="true" />
         </activity>
 
     </application>

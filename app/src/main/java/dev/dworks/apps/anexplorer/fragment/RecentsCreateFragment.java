@@ -127,10 +127,6 @@ public class RecentsCreateFragment extends ListFragment {
                 } else {
                     setListShownNoAnimation(true);
                 }
-                // When launched into empty recents, show drawer
-                if (mAdapter.isEmpty() && !state.stackTouched) {
-                    ((BaseActivity) context).setRootsDrawerOpen(true);
-                }
             }
 
             @Override

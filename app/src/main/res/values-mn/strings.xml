@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"Хадгалах"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"Фолдер үүсгэх"</string>
     <string name="menu_grid" msgid="6878021334497835259">"Эгнүүлж харах"</string>
     <string name="menu_list" msgid="7279285939892417279">"Жагсааж харах"</string>
@@ -31,8 +30,6 @@
     <string name="sort_name" msgid="9183560467917256779">"Нэрээр"</string>
     <string name="sort_date" msgid="586080032956151448">"Өөрчлөгдсөн огноогоор"</string>
     <string name="sort_size" msgid="3350681319735474741">"Хэмжээгээр"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"Язгуурыг харуулах"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"Язгуурыг нууцлах"</string>
     <string name="save_error" msgid="6167009778003223664">"Документыг хадгалж чадсангүй"</string>
     <string name="root_recent" msgid="4470053704320518133">"Саяхны"</string>
     <string name="root_available_bytes" msgid="8568452858617033281">"<xliff:g id="SIZE">%1$s</xliff:g> чөлөөтэй"</string>

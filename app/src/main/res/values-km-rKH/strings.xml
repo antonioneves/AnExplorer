@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"រក្សា​ទុក​ទៅ"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"បង្កើត​ថត"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ទិដ្ឋភាព​ក្រឡា​"</string>
     <string name="menu_list" msgid="7279285939892417279">"ទិដ្ឋភាព​បញ្ជី"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"តាម​ឈ្មោះ"</string>
     <string name="sort_date" msgid="586080032956151448">"តាម​កាលបរិច្ឆេទ​បាន​កែប្រែ"</string>
     <string name="sort_size" msgid="3350681319735474741">"តាម​​ទំហំ"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"បង្ហាញ roots"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"លាក់ roots"</string>
     <string name="save_error" msgid="6167009778003223664">"បាន​បរាជ័យ​ក្នុង​ការ​រក្សា​ទុក​ឯកសារ"</string>
     <string name="create_error" msgid="3735649141335444215">"បាន​បរាជ័យ​ក្នុង​ការ​បង្កើត​ថត"</string>
     <string name="query_error" msgid="1222448261663503501">"បាន​បរាជ័យ​ក្នុង​ការ​​ច្រោះ​ឯកសារ"</string>

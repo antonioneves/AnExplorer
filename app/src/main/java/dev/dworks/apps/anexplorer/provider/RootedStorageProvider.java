@@ -51,7 +51,6 @@ import androidx.annotation.GuardedBy;
 import dev.dworks.apps.anexplorer.root.RootCommands;
 import dev.dworks.apps.anexplorer.root.RootFile;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 
 public class RootedStorageProvider extends StorageProvider {
     private static final String TAG = "RootedStorage";
@@ -214,9 +213,7 @@ public class RootedStorageProvider extends StorageProvider {
             flags |= Document.FLAG_SUPPORTS_ARCHIVE;
             flags |= Document.FLAG_SUPPORTS_EDIT;
 
-            if(isTelevision()) {
-                flags |= Document.FLAG_DIR_PREFERS_GRID;
-            }
+            flags |= Document.FLAG_DIR_PREFERS_GRID;
         }
 
         final String displayName = file.getName();

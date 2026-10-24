@@ -88,18 +88,6 @@ public class DetailFragment extends DialogFragment {
     private CircleImage iconMimeBackground;
     private View path_layout;
 
-    public static void show(FragmentManager fm, DocumentInfo doc) {
-		final Bundle args = new Bundle();
-		args.putParcelable(EXTRA_DOC, doc);
-		
-		final DetailFragment fragment = new DetailFragment();
-		fragment.setArguments(args);
-
-		final FragmentTransaction ft = fm.beginTransaction();
-		ft.replace(R.id.container_info, fragment, TAG_DETAIL);
-		ft.commitAllowingStateLoss();
-	}
-
     public static void showAsDialog(FragmentManager fm, DocumentInfo doc) {
 		final Bundle args = new Bundle();
 		args.putParcelable(EXTRA_DOC, doc);
@@ -159,22 +147,17 @@ public class DetailFragment extends DialogFragment {
 		if(isDialog){
             setShowsDialog(isDialog);
 			getDialog().setTitle("Details");
-			if (Utils.isTelevision(getActivity())) {
-				// Rounded M3 card instead of the default square dialog window
-				final MaterialShapeDrawable background = new MaterialShapeDrawable(
-						ShapeAppearanceModel.builder()
-								.setAllCornerSizes(getResources().getDimension(R.dimen.card_corner_radius))
-								.build());
-				background.setFillColor(ColorStateList.valueOf(MaterialColors.getColor(getView(),
-						com.google.android.material.R.attr.colorSurfaceContainerHigh)));
-				getDialog().getWindow().setBackgroundDrawable(background);
-			}
+			// Rounded M3 card instead of the default square dialog window
+			final MaterialShapeDrawable background = new MaterialShapeDrawable(
+					ShapeAppearanceModel.builder()
+							.setAllCornerSizes(getResources().getDimension(R.dimen.card_corner_radius))
+							.build());
+			background.setFillColor(ColorStateList.valueOf(MaterialColors.getColor(getView(),
+					com.google.android.material.R.attr.colorSurfaceContainerHigh)));
+			getDialog().getWindow().setBackgroundDrawable(background);
 		}
 		
 		name.setText(doc.displayName);
-        if (!Utils.isTelevision(getActivity())) {
-            name.setTextColor(Utils.getLightColor(ThemeColors.getPrimaryColor(getActivity())));
-        }
         iconMimeBackground.setBackgroundColor(IconColorUtils.loadMimeColor(getActivity(), doc.mimeType, doc.authority, doc.documentId, ThemeColors.getPrimaryColor(getActivity())));
 		path.setText(doc.path);
         if(!TextUtils.isEmpty(doc.path)){

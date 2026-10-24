@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"Opslaan in"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"Map maken"</string>
     <string name="menu_grid" msgid="6878021334497835259">"Rasterweergave"</string>
     <string name="menu_list" msgid="7279285939892417279">"Lijstweergave"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"Op naam"</string>
     <string name="sort_date" msgid="586080032956151448">"Op aanpassingsdatum"</string>
     <string name="sort_size" msgid="3350681319735474741">"Op grootte"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"Roots weergeven"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"Roots verbergen"</string>
     <string name="save_error" msgid="6167009778003223664">"Kan document niet opslaan"</string>
     <string name="create_error" msgid="3735649141335444215">"Kan map niet maken"</string>
     <string name="query_error" msgid="1222448261663503501">"Kan geen query\'s voor documenten verzenden"</string>

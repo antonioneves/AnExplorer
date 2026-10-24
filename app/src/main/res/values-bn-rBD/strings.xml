@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"এতে সংরক্ষণ করুন"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"ফোল্ডার তৈরি করুন"</string>
     <string name="menu_grid" msgid="6878021334497835259">"গ্রিড দৃশ্য"</string>
     <string name="menu_list" msgid="7279285939892417279">"তালিকা দৃশ্য"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"নামের দ্বারা"</string>
     <string name="sort_date" msgid="586080032956151448">"পরিবর্তনের তারিখ দ্বারা"</string>
     <string name="sort_size" msgid="3350681319735474741">"আকার অনুযায়ী"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"রুটগুলি দেখান"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"রুটগুলি লুকান"</string>
     <string name="save_error" msgid="6167009778003223664">"দস্তাবেজ সংরক্ষণ করতে ব্যর্থ হয়েছে"</string>
     <string name="create_error" msgid="3735649141335444215">"ফোল্ডার তৈরি করতে ব্যর্থ হয়েছে"</string>
     <string name="query_error" msgid="1222448261663503501">"উন্নত ডিভাইসগুলি প্রদর্শন করে"</string>

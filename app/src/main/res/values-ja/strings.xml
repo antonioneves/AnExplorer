@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"次に保存:"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"フォルダを作成"</string>
     <string name="menu_grid" msgid="6878021334497835259">"グリッド表示"</string>
     <string name="menu_list" msgid="7279285939892417279">"リスト表示"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"名前順"</string>
     <string name="sort_date" msgid="586080032956151448">"更新日順"</string>
     <string name="sort_size" msgid="3350681319735474741">"サイズ順"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"ルートを表示する"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"ルートを非表示にする"</string>
     <string name="save_error" msgid="6167009778003223664">"ドキュメントを保存できませんでした"</string>
     <string name="create_error" msgid="3735649141335444215">"フォルダを作成できませんでした"</string>
     <string name="query_error" msgid="1222448261663503501">"ドキュメントのクエリに失敗しました"</string>

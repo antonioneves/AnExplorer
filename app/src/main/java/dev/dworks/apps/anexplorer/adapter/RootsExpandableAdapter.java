@@ -19,7 +19,6 @@ import dev.dworks.apps.anexplorer.fragment.RootsFragment.RootItem;
 import dev.dworks.apps.anexplorer.model.GroupInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 
 public class RootsExpandableAdapter extends BaseExpandableListAdapter {
 
@@ -54,10 +53,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             if (root.isHome()) {
                 home.add(new RootItem(root));
             } else if (root.isRecents()) {
-                // TV shows Recent as a Home card instead
-                if(recent.size() == 0 && !isTelevision()) {
-                    recent.add(new RootItem(root));
-                }
+                // Recent is a Home card instead
             } else if (root.isConnections()) {
                 connection.add(new RootItem(root));
             } else if (root.isQuickShare()) {
@@ -130,12 +126,10 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Folders", folders));
         }
 
-        if(isTelevision()){
-            final List<Item> more = new ArrayList<>();
-            more.add(new ActionItem(R.id.menu_settings, R.drawable.ic_menu_settings, R.string.menu_settings));
-            more.add(new ActionItem(R.id.menu_about, R.drawable.ic_menu_info, R.string.menu_about));
-            groupRoots.add(new GroupInfo("More", more));
-        }
+        final List<Item> more = new ArrayList<>();
+        more.add(new ActionItem(R.id.menu_settings, R.drawable.ic_menu_settings, R.string.menu_settings));
+        more.add(new ActionItem(R.id.menu_about, R.drawable.ic_menu_info, R.string.menu_about));
+        groupRoots.add(new GroupInfo("More", more));
 
         group.clear();
         group.addAll(groupRoots);

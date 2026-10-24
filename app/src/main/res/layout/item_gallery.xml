@@ -20,18 +20,13 @@
             android:textAlignment="viewStart"
             android:textColor="?android:attr/textColorPrimary" />
 
-        <TextView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/recents"
-            android:layout_width="match_parent"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:clickable="true"
-            android:gravity="end|center_vertical"
-            android:minHeight="36dp"
-            android:paddingEnd="10dp"
+            android:layout_gravity="end|center_vertical"
             android:text="MORE"
-            android:textAlignment="viewEnd"
-            android:textAllCaps="true"
             android:textColor="@color/accentColor" />
 
     </FrameLayout>

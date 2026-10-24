@@ -48,7 +48,6 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RootedStorageProvider;
 import dev.dworks.apps.anexplorer.provider.UsbStorageProvider;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorLong;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;

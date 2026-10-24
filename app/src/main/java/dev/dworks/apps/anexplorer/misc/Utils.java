@@ -73,7 +73,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
-import static android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES;
 import static com.google.android.material.snackbar.Snackbar.LENGTH_SHORT;
 
 public class Utils extends UtilsFlavour{
@@ -90,7 +89,6 @@ public class Utils extends UtilsFlavour{
     public static final String EXTRA_CONNECTION_ID = "connection_id";
     public static final String EXTRA_IGNORE_STATE = "ignoreState";
 
-    public static String AMAZON_FEATURE_FIRE_TV = "amazon.hardware.fire_tv";
 
     static final String[] BinaryPlaces = { "/data/bin/", "/system/bin/", "/system/xbin/", "/sbin/",
         "/data/local/xbin/", "/data/local/bin/", "/system/sd/xbin/", "/system/bin/failsafe/",
@@ -166,9 +164,6 @@ public class Utils extends UtilsFlavour{
     	return !hasMoreHeap();
 	}
 
-    public static boolean isTablet(Context context) {
-		return context.getResources().getConfiguration().smallestScreenWidthDp >= 600;
-	}
     
 	public static int parseMode(String mode) {
         final int modeBits;
@@ -413,23 +408,8 @@ public class Utils extends UtilsFlavour{
         return context.getPackageManager().hasSystemFeature(feature);
     }
 
-    public static boolean hasLeanback(Context context) {
-        return hasFeature(context, PackageManager.FEATURE_LEANBACK);
-    }
-
     public static boolean hasWiFi(Context context) {
         return hasFeature(context, PackageManager.FEATURE_WIFI);
-    }
-
-    public static boolean isTelevision(Context context) {
-        UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
-        boolean isFireTV = hasFeature(context, AMAZON_FEATURE_FIRE_TV);
-        return uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION || isFireTV;
-    }
-
-    public static boolean isWatch(Context context) {
-        UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
-        return uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_WATCH;
     }
 
     public static void showError(Activity activity, int msg){
@@ -511,31 +491,6 @@ public class Utils extends UtilsFlavour{
         final float scale = resources.getDisplayMetrics().scaledDensity;
         return sp * scale;
     }
-
-    /**
-     * Returns true when running Android TV
-     *
-     * @param c Context to detect UI Mode.
-     * @return true when device is running in tv mode, false otherwise.
-     */
-    public static String getDeviceType(Context c) {
-        UiModeManager uiModeManager = (UiModeManager) c.getSystemService(Context.UI_MODE_SERVICE);
-        int modeType = uiModeManager.getCurrentModeType();
-        switch (modeType){
-            case Configuration.UI_MODE_TYPE_TELEVISION:
-                return "TELEVISION";
-            case Configuration.UI_MODE_TYPE_WATCH:
-                return "WATCH";
-            case Configuration.UI_MODE_TYPE_NORMAL:
-                String type = isTablet(c) ? "TABLET" : "PHONE";
-                return type;
-            case Configuration.UI_MODE_TYPE_UNDEFINED:
-                return "UNKOWN";
-            default:
-                return "";
-        }
-    }
-
     public static ColorStateList getColorStateList(Context context, int colorRes) {
         int[][] states = new int[][]{
                 new int[]{android.R.attr.state_enabled}, // enabled
@@ -550,22 +505,8 @@ public class Utils extends UtilsFlavour{
         return new ColorStateList(states, colors);
     }
 
-    public static boolean isQSTile(Intent intent){
-        if(null != intent.getAction()){
-            String action = intent.getAction();
-            return ACTION_QS_TILE_PREFERENCES.equals(action);
-        }
-        return false;
-    }
-
     public static String getSuffix(){
-        String suffix = "";
-        if(DocumentsApplication.isTelevision()){
-            suffix = " for Android TV";
-        } else if(DocumentsApplication.isWatch()){
-            suffix = " for Wear OS";
-        }
-        return Utils.isProVersion() ? " Pro" : "" + suffix;
+        return Utils.isProVersion() ? " Pro" : " for Android TV";
     }
 
     public static void openFeedback(Activity activity){

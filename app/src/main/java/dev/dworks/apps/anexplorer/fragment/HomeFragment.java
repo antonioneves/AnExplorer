@@ -63,7 +63,6 @@ import dev.dworks.apps.anexplorer.loader.RecentLoader;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
-import dev.dworks.apps.anexplorer.QuickShareReceiveActivity;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
@@ -76,8 +75,6 @@ import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_MAIN;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_RECENT;
 import static dev.dworks.apps.anexplorer.adapter.HomeAdapter.TYPE_SHORTCUT;
@@ -89,7 +86,7 @@ import static dev.dworks.apps.anexplorer.provider.AppsProvider.getRunningAppProc
  */
 public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItemClickListener {
     public static final String TAG = "HomeFragment";
-    private static final int MAX_RECENT_COUNT = isTelevision() ? 20 : 10;
+    private static final int MAX_RECENT_COUNT = 20;
 
     private final int mLoaderId = 42;
     private RootsCache roots;
@@ -163,7 +160,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         final RootInfo secondaryRoot = roots.getSecondaryRoot();
         final RootInfo usbRoot = roots.getUSBRoot();
         processRoot = roots.getProcessRoot();
-        int type = !isWatch() ? TYPE_MAIN : TYPE_SHORTCUT;
+        int type = TYPE_MAIN;
         if(null != primaryRoot){
             mainData.add(CommonInfo.from(primaryRoot, type));
         }
@@ -185,32 +182,10 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
             shortcutsData.add(CommonInfo.from(root, TYPE_SHORTCUT));
         }
         // TV keeps Recent out of the drawer and offers it here instead
-        if(isTelevision() && null != roots.getRecentsRoot()) {
+        if(null != roots.getRecentsRoot()) {
             shortcutsData.add(CommonInfo.from(roots.getRecentsRoot(), TYPE_SHORTCUT));
         }
         // TV lists Quick Share in the drawer
-        if(!isTelevision()) {
-            RootInfo quickShareRoot = new RootInfo();
-            quickShareRoot.authority = null;
-            quickShareRoot.rootId = "quickshare";
-            quickShareRoot.icon = R.drawable.ic_root_bluetooth;
-            quickShareRoot.flags = DocumentsContract.Root.FLAG_LOCAL_ONLY;
-            quickShareRoot.title = getString(R.string.home_quickshare);
-            quickShareRoot.availableBytes = -1;
-            quickShareRoot.deriveFields();
-            shortcutsData.add(CommonInfo.from(quickShareRoot, TYPE_SHORTCUT));
-        }
-        if(isWatch()) {
-            RootInfo rootInfo = new RootInfo();
-            rootInfo.authority = null;
-            rootInfo.rootId = "clean";
-            rootInfo.icon = R.drawable.ic_clean;
-            rootInfo.flags = DocumentsContract.Root.FLAG_LOCAL_ONLY;
-            rootInfo.title = "Clean RAM";
-            rootInfo.availableBytes = -1;
-            rootInfo.deriveFields();
-            shortcutsData.add(CommonInfo.from(rootInfo, TYPE_SHORTCUT));
-        }
 
     }
 
@@ -262,15 +237,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         switch (item.commonInfo.type) {
             case TYPE_MAIN:
             case TYPE_SHORTCUT:
-                if(item.commonInfo.rootInfo.rootId.equals("clean")){
-                    cleanRAM();
-                } else if(item.commonInfo.rootInfo.rootId.equals("quickshare")){
-                    Intent intent = new Intent(getActivity(), QuickShareReceiveActivity.class);
-                    getActivity().startActivity(intent);
-                    AnalyticsManager.logEvent("receive_quickshare_open");
-                } else {
-                    openRoot(item.commonInfo.rootInfo);
-                }
+                openRoot(item.commonInfo.rootInfo);
                 break;
             case TYPE_RECENT:
                 try {
@@ -415,7 +382,7 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                         spanSize = totalSpanSize;
                         break;
                     case TYPE_SHORTCUT:
-                        spanSize = isWatch() ? 1 : shortcutSpanSize;
+                        spanSize = shortcutSpanSize;
                         break;
                     case TYPE_RECENT:
                         spanSize = totalSpanSize;
@@ -424,10 +391,8 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
                 return spanSize;
             }
         });
-        if (!isWatch()) {
-            getListView().addItemDecoration(new ShortcutSpacingDecoration(
-                    getResources().getDimensionPixelSize(R.dimen.home_shortcut_spacing)));
-        }
+        getListView().addItemDecoration(new ShortcutSpacingDecoration(
+                getResources().getDimensionPixelSize(R.dimen.home_shortcut_spacing)));
     }
 
     /**

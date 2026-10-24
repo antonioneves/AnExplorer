@@ -54,8 +54,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 /**
  * Presents a {@link DocumentsContract} view of {MediaProvider} external
@@ -580,9 +578,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, TYPE_IMAGES_ROOT);
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_images));
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
     }
@@ -593,9 +589,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_videos));
 
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
     }
@@ -607,9 +601,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
 
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 
@@ -639,9 +631,7 @@ public class MediaDocumentsProvider extends StorageProvider {
                 cursor.getLong(ImagesBucketQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
         int flags = Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_DIR_PREFERS_LAST_MODIFIED
                 | Document.FLAG_DIR_HIDE_GRID_TITLES | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 
@@ -704,9 +694,7 @@ public class MediaDocumentsProvider extends StorageProvider {
 
         int flags = Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_DIR_PREFERS_LAST_MODIFIED
                 | Document.FLAG_DIR_HIDE_GRID_TITLES | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 
@@ -780,9 +768,7 @@ public class MediaDocumentsProvider extends StorageProvider {
                 cleanUpMediaDisplayName(cursor.getString(AlbumQuery.ALBUM)));
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
         int flags = Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        if(!isWatch()) {
-            flags |= Document.FLAG_DIR_PREFERS_GRID;
-        }
+        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 

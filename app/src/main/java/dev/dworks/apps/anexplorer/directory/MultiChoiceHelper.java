@@ -22,8 +22,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Checkable;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 /**
  * Helper class to reproduce ListView's modal MultiChoice mode with a RecyclerView.
@@ -68,7 +66,7 @@ public class MultiChoiceHelper {
 						return false;
 					}
 					// On TV a long press opens the item's menu; selection starts from there
-					if (isTelevision() && clickListener != null) {
+					if (clickListener != null) {
 						clickListener.onItemLongClick(view, getLayoutPosition());
 						return true;
 					}
@@ -208,11 +206,6 @@ public class MultiChoiceHelper {
 				choiceActionMode.finish();
 			}
 		}
-		if(isWatch()){
-			RootInfo root = ((DocumentsActivity)activity).getCurrentRoot();
-			DocumentInfo cwd = ((DocumentsActivity)activity).getCurrentDirectory();
-			Utils.inflateActionMenu(activity, menuItemClickListener, false, root, cwd);
-		}
 	}
 
 	public void setItemChecked(int position, boolean value, boolean notifyChanged) {
@@ -249,13 +242,6 @@ public class MultiChoiceHelper {
 				multiChoiceModeCallback.onItemCheckedStateChanged(choiceActionMode, position, id, value);
 				if (checkedItemCount == 0) {
 					choiceActionMode.finish();
-				}
-			}
-			if(isWatch()){
-				if (checkedItemCount == 0) {
-					RootInfo root = ((DocumentsActivity)activity).getCurrentRoot();
-					DocumentInfo cwd = ((DocumentsActivity)activity).getCurrentDirectory();
-					Utils.inflateActionMenu(activity, menuItemClickListener, false, root, cwd);
 				}
 			}
 
@@ -310,19 +296,13 @@ public class MultiChoiceHelper {
 	}
 
 	public void startSupportActionModeIfNeeded() {
-	    if(isWatch()){
-			RootInfo root = ((DocumentsActivity)activity).getCurrentRoot();
-			DocumentInfo cwd = ((DocumentsActivity)activity).getCurrentDirectory();
-            Utils.inflateActionMenu(activity, menuItemClickListener, true, root, cwd);
-        } else {
-            if (choiceActionMode == null) {
-                if (multiChoiceModeCallback == null) {
-                    Log.i("MultiChoiceHelper", "No callback set");
-                    return;
-                }
-                choiceActionMode = activity.startSupportActionMode(multiChoiceModeCallback);
-            }
-        }
+	    if (choiceActionMode == null) {
+	        if (multiChoiceModeCallback == null) {
+	            Log.i("MultiChoiceHelper", "No callback set");
+	            return;
+	        }
+	        choiceActionMode = activity.startSupportActionMode(multiChoiceModeCallback);
+	    }
 	}
 
 	public static class SavedState implements Parcelable {

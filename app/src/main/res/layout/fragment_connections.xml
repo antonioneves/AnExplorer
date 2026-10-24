@@ -64,7 +64,6 @@
             app:columnWidth="@dimen/grid_item_width"
             app:type="list" />
 
-        <include layout="@layout/fab_layout_connections" />
 
         <dev.dworks.apps.anexplorer.ui.CompatTextView
             android:id="@android:id/empty"

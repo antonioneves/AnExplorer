@@ -97,7 +97,7 @@ public class AboutActivity extends AboutFlavour implements View.OnClickListener 
 		if(Utils.isOtherBuild()){
 			action_rate.setVisibility(View.GONE);
 			action_support.setVisibility(View.GONE);
-		} else if(DocumentsApplication.isTelevision()){
+		} else {
 			action_share.setVisibility(View.GONE);
 			action_feedback.setVisibility(View.GONE);
 		}

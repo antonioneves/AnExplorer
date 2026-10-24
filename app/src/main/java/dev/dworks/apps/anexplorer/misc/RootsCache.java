@@ -63,7 +63,6 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RootedStorageProvider;
 import dev.dworks.apps.anexplorer.provider.UsbStorageProvider;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isWatch;
 
 /**
  * Cache of known storage backends and their roots.
@@ -226,9 +225,7 @@ public class RootsCache {
             mTaskRoots.put(mHomeRoot.authority, mHomeRoot);
             mTaskRoots.put(mConnectionsRoot.authority, mConnectionsRoot);
             // The application's TV flag isn't set yet on the first load
-            if (Utils.isTelevision(mContext)) {
-                mTaskRoots.put(mQuickShareRoot.authority, mQuickShareRoot);
-            }
+            mTaskRoots.put(mQuickShareRoot.authority, mQuickShareRoot);
             mTaskRoots.put(mRecentsRoot.authority, mRecentsRoot);
 
             final ContentResolver resolver = mContext.getContentResolver();

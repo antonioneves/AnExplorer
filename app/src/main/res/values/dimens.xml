@@ -20,15 +20,13 @@
     <dimen name="grid_icon_size">72dp</dimen>
     <dimen name="root_icon_size">24dp</dimen>
 
-    <bool name="show_as_dialog">false</bool>
-    <bool name="always_show_summary">false</bool>
+    <bool name="always_show_summary">true</bool>
 
-    <dimen name="detail_width">300dp</dimen>
     <dimen name="color_grid_item_size">48dp</dimen>
     <dimen name="color_grid_circle_size">36dp</dimen>
     <dimen name="color_grid_extra_padding">32dp</dimen>
 
-    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_horizontal_margin">64dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
 	<!-- The max limit of file size that the internal editor can open. Default: 4Mb -->
     <integer name="editor_max_file_size">4194304</integer>
@@ -40,9 +38,9 @@
     <dimen name="grid_item_height">176dp</dimen>
     <dimen name="grid_item_padding">4dp</dimen>
 
-    <dimen name="list_item_height">72dp</dimen>
+    <dimen name="list_item_height">64dp</dimen>
     <dimen name="list_item_padding">16dp</dimen>
-    <dimen name="root_item_padding">16dp</dimen>
+    <dimen name="root_item_padding">28dp</dimen>
     <dimen name="grid_mime_icon_size">40dp</dimen>
 
     <dimen name="list_divider_inset">72dp</dimen>
@@ -50,7 +48,7 @@
 
     <dimen name="dir_elevation">8dp</dimen>
 
-    <dimen name="progress_bar_size">70dp</dimen>
+    <dimen name="progress_bar_size">80dp</dimen>
     <dimen name="progress_bar_small_size">60dp</dimen>
     <dimen name="default_stroke_width">4dp</dimen>
     <integer name="default_min_sweep_angle">20</integer>
@@ -60,25 +58,21 @@
 
     <dimen name="scroll_threshold">4dp</dimen>
 
-    <dimen name="second_keyline">72dp</dimen>
     <dimen name="second_keyline_default">72dp</dimen>
     <dimen name="toolbar_h_padding">4dp</dimen>
-    <dimen name="side_navigation_width">304dp</dimen>
+    <dimen name="side_navigation_width">256dp</dimen>
 
     <dimen name="expander_inset">8dp</dimen>
 
     <integer name="recycler_type">2</integer>
     <dimen name="big_spacing">24dp</dimen>
 
-    <dimen name="card_padding">8dp</dimen>
-    <dimen name="header_start_padding">0dp</dimen>
 
     <dimen name="home_padding">0dp</dimen>
     <dimen name="home_item_height">60dp</dimen>
-    <dimen name="home_item_padding">10dp</dimen>
     <integer name="home_span">12</integer>
     <!-- Columns of home_span each shortcut card takes: 2 cards per row -->
-    <integer name="home_shortcut_span">6</integer>
+    <integer name="home_shortcut_span">3</integer>
     <dimen name="home_shortcut_spacing">10dp</dimen>
     <dimen name="card_corner_radius">16dp</dimen>
 </resources>

@@ -70,7 +70,6 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import androidx.annotation.GuardedBy;
 import dev.dworks.apps.anexplorer.setting.SettingsActivity;
 
-import static dev.dworks.apps.anexplorer.DocumentsApplication.isTelevision;
 import static dev.dworks.apps.anexplorer.misc.FileUtils.getTypeForFile;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 import static dev.dworks.apps.anexplorer.provider.UsbStorageProvider.ROOT_ID_USB;
@@ -589,9 +588,7 @@ public class ExternalStorageProvider extends StorageProvider {
             flags |= Document.FLAG_SUPPORTS_BOOKMARK;
             flags |= Document.FLAG_SUPPORTS_EDIT;
 
-            if(isTelevision()) {
-                flags |= Document.FLAG_DIR_PREFERS_GRID;
-            }
+            flags |= Document.FLAG_DIR_PREFERS_GRID;
         }
 
         final String mimeType = isDirectory ? Document.MIME_TYPE_DIR : FileUtils.getTypeForName(displayName);

@@ -16,7 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="title_save" msgid="2433679664882857999">"သို့ သိမ်းပါ"</string>
     <string name="menu_create_dir" msgid="5947289605844398389">"အကန့် တည်ဆောက်ရန်"</string>
     <string name="menu_grid" msgid="6878021334497835259">"ဖယားကွက်မြင်ကွင်း"</string>
     <string name="menu_list" msgid="7279285939892417279">"အစဉ်လိုက်မြင်ကွင်း"</string>
@@ -32,8 +31,6 @@
     <string name="sort_name" msgid="9183560467917256779">"အမည်ဖြင့်"</string>
     <string name="sort_date" msgid="586080032956151448">"ပြင်ဆင်မှု ရက်စွဲဖြင့်"</string>
     <string name="sort_size" msgid="3350681319735474741">"အရွယ်အစားဖြင့်"</string>
-    <string name="drawer_open" msgid="4545466532430226949">"ဖိုဒါကို ဖွင့်လိုက်ပါ"</string>
-    <string name="drawer_close" msgid="7602734368552123318">"ဖိုဒါကို ပိတ်လိုက်ပါ"</string>
     <string name="save_error" msgid="6167009778003223664">"စာရွက်စာတန်း သိမ်းဆည်းမှု မအောင်​မြင်ပါ"</string>
     <string name="create_error" msgid="3735649141335444215">"အကန့်အသစ် ဖန်တီးခြင်း မအောင်မြင်ပါ"</string>
     <string name="query_error" msgid="1222448261663503501">"စာရွက်စာတန်း ရှာဖွေမှု မအောင်မြင်ပါ"</string>

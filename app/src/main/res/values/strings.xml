@@ -19,7 +19,6 @@
 
     <!-- Action bar title prompting user to choose a location to open a document from [CHAR LIMIT=32] -->
     <!-- Action bar title prompting user to choose a location to save a document to [CHAR LIMIT=32] -->
-    <string name="title_save">Save to</string>
 
     <!-- Menu item that creates a new directory/folder at the current location [CHAR LIMIT=24] -->
     <string name="menu_create_dir">Create folder</string>
@@ -68,9 +67,7 @@
     <string name="sort_size">By size</string>
 
     <!-- Accessibility title to open the drawer showing all roots where documents can be stored [CHAR LIMIT=32] -->
-    <string name="drawer_open">Show roots</string>
     <!-- Accessibility title to close the drawer showing all roots where documents can be stored [CHAR LIMIT=32] -->
-    <string name="drawer_close">Hide roots</string>
 
     <!-- Toast shown when saving a document failed with an error [CHAR LIMIT=48] -->
     <string name="save_error">Failed to save document</string>
@@ -118,6 +115,8 @@
     <string name="quickshare_receive_stop">Stop</string>
     <string name="quickshare_receive_start">Start</string>
     <string name="ftp_no_password">None</string>
+    <string name="ftp_show_password">Show password</string>
+    <string name="ftp_hide_password">Hide password</string>
     <string name="ftp_edit">Edit</string>
     <string name="ftp_settings_title">FTP server settings</string>
     <string name="connection_new">New connection</string>
