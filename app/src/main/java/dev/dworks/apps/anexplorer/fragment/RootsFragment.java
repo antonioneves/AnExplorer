@@ -125,7 +125,7 @@ public class RootsFragment extends Fragment {
         title = view.findViewById(android.R.id.title);
         title.setVisibility(View.VISIBLE);
         // App icon before the name, as tall as the title text
-        final Drawable icon = ContextCompat.getDrawable(getActivity(), R.drawable.ic_launcher);
+        final Drawable icon = ContextCompat.getDrawable(getActivity(), R.drawable.ic_app_folder);
         final int iconSize = getResources().getDimensionPixelSize(R.dimen.roots_title_icon_size);
         icon.setBounds(0, 0, iconSize, iconSize);
         ((TextView) title).setCompoundDrawablesRelative(icon, null, null, null);
