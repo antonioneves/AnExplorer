@@ -136,6 +136,10 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         showPassword();
     }
 
+    private String maskedPassword() {
+        return TextUtils.join("", Collections.nCopies(passwordValue.length(), "\u2022"));
+    }
+
     private void showPassword() {
         final boolean hasPassword = !TextUtils.isEmpty(passwordValue);
         if (!hasPassword) {
@@ -144,8 +148,12 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         } else if (passwordShown || null == passwordVisibility) {
             password.setText(passwordValue);
         } else {
-            password.setText(TextUtils.join("", Collections.nCopies(passwordValue.length(), "\u2022")));
+            password.setText(maskedPassword());
         }
+        // As wide shown as hidden, so the eye button beside it stays where it is
+        password.setMinWidth(!hasPassword ? 0 : (int) Math.ceil(Math.max(
+                password.getPaint().measureText(passwordValue),
+                password.getPaint().measureText(maskedPassword()))));
         if (null != passwordVisibility) {
             passwordVisibility.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
             passwordVisibility.setImageResource(passwordShown
