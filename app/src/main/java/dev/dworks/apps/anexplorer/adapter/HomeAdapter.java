@@ -66,6 +66,8 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         mDefaultColor = ThemeColors.getPrimaryColor(context);
         mIconHelper = iconHelper;
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        // Rebuilding the list (e.g. when recent media loads) keeps the same cards, and so focus
+        setHasStableIds(true);
     }
 
     public void setData(List<CommonInfo> storage, List<CommonInfo> library) {
@@ -134,6 +136,15 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.setData(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        final CommonInfo item = mItems.get(position);
+        if (item.rootInfo != null) {
+            return (item.type + ":" + item.rootInfo.authority + ":" + item.rootInfo.rootId).hashCode();
+        }
+        return (item.type + ":" + item.section).hashCode();
     }
 
     @Override

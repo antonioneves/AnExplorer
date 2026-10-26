@@ -294,11 +294,18 @@ public class RootsFragment extends Fragment {
         mList.setItemChecked(index, true);
         // Focus comes back to the list's selected row, so keep it on the checked one unless the
         // user is moving through the list (e.g. after Back returns to Home from a folder)
-        if (!mList.hasFocus() && mList.getChildCount() > 0) {
-            // Keep the row where it is on screen, so the list doesn't scroll its header away
-            final View row = mList.getChildAt(index - mList.getFirstVisiblePosition());
-            mList.setSelectionFromTop(index, null != row ? row.getTop() : 0);
+        if (mList.getChildCount() == 0) {
+            // Not laid out yet, so the app is opening: start on the current root, not the header
+            mList.post(() -> selectInPlace(index));
+        } else if (!mList.hasFocus()) {
+            selectInPlace(index);
         }
+    }
+
+    /** Selects the row where it is on screen, so the list doesn't scroll its header away. */
+    private void selectInPlace(int index) {
+        final View row = mList.getChildAt(index - mList.getFirstVisiblePosition());
+        mList.setSelectionFromTop(index, null != row ? row.getTop() : 0);
     }
 
     private void showAppDetails(ResolveInfo ri) {
