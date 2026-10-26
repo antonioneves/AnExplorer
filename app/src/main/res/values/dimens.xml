@@ -41,6 +41,7 @@
     <dimen name="list_item_height">64dp</dimen>
     <dimen name="list_item_padding">16dp</dimen>
     <dimen name="root_item_padding">28dp</dimen>
+    <dimen name="root_item_padding_start">36dp</dimen>
     <dimen name="grid_mime_icon_size">40dp</dimen>
 
     <dimen name="list_divider_inset">72dp</dimen>

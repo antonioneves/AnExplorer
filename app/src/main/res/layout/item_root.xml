@@ -22,10 +22,10 @@
     android:gravity="center_vertical"
     android:minHeight="48dp"
     android:orientation="horizontal"
-    android:paddingLeft="@dimen/root_item_padding"
+    android:paddingLeft="@dimen/root_item_padding_start"
     android:paddingRight="@dimen/root_item_padding"
     android:paddingEnd="@dimen/root_item_padding"
-    android:paddingStart="@dimen/root_item_padding">
+    android:paddingStart="@dimen/root_item_padding_start">
 
     <FrameLayout
         android:layout_width="@dimen/icon_size"
@@ -59,7 +59,8 @@
             android:singleLine="true"
             android:textAlignment="viewStart"
             android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="16sp" />
 
         <dev.dworks.apps.anexplorer.ui.NumberProgressBar
             android:id="@android:id/progress"
