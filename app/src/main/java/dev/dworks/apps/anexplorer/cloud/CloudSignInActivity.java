@@ -8,7 +8,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,10 +30,6 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.Identity;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 
 import org.json.JSONObject;
 
@@ -45,6 +40,7 @@ import java.security.SecureRandom;
 
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
+import dev.dworks.apps.anexplorer.misc.QrCode;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 
@@ -261,22 +257,7 @@ public class CloudSignInActivity extends ActionBarActivity {
                 .setText(getString(R.string.cloud_device_code_message,
                         url.replaceFirst("^https?://", "")));
         ((TextView) findViewById(R.id.device_user_code)).setText(userCode);
-        ((ImageView) findViewById(R.id.device_qr)).setImageBitmap(qrCode(url, 480));
-    }
-
-    private static Bitmap qrCode(String text, int size) {
-        try {
-            final BitMatrix matrix = new QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size);
-            final int[] pixels = new int[size * size];
-            for (int y = 0; y < size; y++) {
-                for (int x = 0; x < size; x++) {
-                    pixels[y * size + x] = matrix.get(x, y) ? Color.BLACK : Color.WHITE;
-                }
-            }
-            return Bitmap.createBitmap(pixels, size, size, Bitmap.Config.RGB_565);
-        } catch (WriterException e) {
-            return null;
-        }
+        ((ImageView) findViewById(R.id.device_qr)).setImageBitmap(QrCode.encode(url, 480));
     }
 
     // Dropbox and Box

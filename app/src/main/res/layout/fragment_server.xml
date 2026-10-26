@@ -15,30 +15,72 @@
         android:orientation="horizontal"
         android:padding="32dp">
 
+        <!-- The server icon while stopped; while running, a QR code a phone can scan to connect -->
         <FrameLayout
-            android:layout_width="128dp"
-            android:layout_height="128dp">
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
 
-            <dev.dworks.apps.anexplorer.ui.CircleImage
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:background="@color/item_connection_server" />
+            <FrameLayout
+                android:id="@+id/icon_group"
+                android:layout_width="128dp"
+                android:layout_height="128dp"
+                android:layout_gravity="center">
 
-            <ImageView
-                android:id="@+id/icon"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@null"
-                android:padding="34dp"
-                app:srcCompat="@drawable/ic_connection_server"
-                app:tint="@android:color/white" />
+                <dev.dworks.apps.anexplorer.ui.CircleImage
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:background="@color/item_connection_server" />
 
+                <ImageView
+                    android:id="@+id/icon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:padding="34dp"
+                    app:srcCompat="@drawable/ic_connection_server"
+                    app:tint="@android:color/white" />
+
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/qr_group"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.Material3.CardView.Filled"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@android:color/white"
+                    app:cardCornerRadius="@dimen/card_corner_radius"
+                    app:contentPadding="4dp">
+
+                    <ImageView
+                        android:id="@+id/qr"
+                        android:layout_width="168dp"
+                        android:layout_height="168dp"
+                        android:contentDescription="@string/ftp_scan_to_connect" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:layout_width="176dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:text="@string/ftp_scan_to_connect"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
         </FrameLayout>
 
         <LinearLayout
-            android:layout_width="440dp"
+            android:layout_width="400dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="48dp"
+            android:layout_marginStart="40dp"
             android:orientation="vertical">
 
 

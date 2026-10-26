@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.provider.BaseColumns;
 import androidx.appcompat.app.AppCompatActivity;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -32,6 +33,7 @@ import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
+import dev.dworks.apps.anexplorer.misc.QrCode;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
@@ -58,6 +60,10 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private TextView address;
     private Button action;
     private TextView warning;
+    private View iconGroup;
+    private View qrGroup;
+    private ImageView qr;
+    private NetworkConnection connection;
     private RootInfo root;
 
     public static void show(FragmentManager fm, RootInfo root) {
@@ -94,6 +100,9 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         path = (TextView) view.findViewById(R.id.path);
         address = (TextView) view.findViewById(R.id.address);
         warning = (TextView) view.findViewById(R.id.warning);
+        iconGroup = view.findViewById(R.id.icon_group);
+        qrGroup = view.findViewById(R.id.qr_group);
+        qr = (ImageView) view.findViewById(R.id.qr);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
         // Only the TV layout has it
@@ -113,7 +122,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
 
     private void showConnection() {
-        NetworkConnection connection = NetworkConnection.fromRootInfo(getActivity(), root);
+        connection = NetworkConnection.fromRootInfo(getActivity(), root);
         if (null == connection) {
             // An edit changed the path this root was found by
             connection = NetworkConnection.getDefaultServer(getActivity());
@@ -230,6 +239,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
 
     private void setStatus(boolean running){
+        showQrCode(running);
         if(running){
             setText(address, ConnectionUtils.getFTPAddress(getActivity()));
             status.setText(getString(R.string.ftp_status_running));
@@ -241,6 +251,26 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
             action.setText(R.string.start_ftp);
         }
     }
+    /**
+     * While running, the server's address as a QR code, with the user name so the phone only asks
+     * for the password, which stays off the screen
+     */
+    private void showQrCode(boolean running) {
+        final String url = ConnectionUtils.getFTPAddress(getActivity());
+        final boolean show = running && !TextUtils.isEmpty(url);
+        if (show) {
+            String target = url;
+            if (null != connection && !connection.isAnonymousLogin()
+                    && !TextUtils.isEmpty(connection.getUserName())) {
+                target = url.replaceFirst("^ftp://",
+                        "ftp://" + Uri.encode(connection.getUserName()) + "@");
+            }
+            qr.setImageBitmap(QrCode.encode(target, 512));
+        }
+        qrGroup.setVisibility(show ? View.VISIBLE : View.GONE);
+        iconGroup.setVisibility(show ? View.GONE : View.VISIBLE);
+    }
+
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.edit_server) {
