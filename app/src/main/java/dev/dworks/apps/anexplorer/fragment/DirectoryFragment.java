@@ -33,6 +33,7 @@ import android.content.Loader;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import androidx.appcompat.view.ActionMode;
@@ -258,7 +259,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		root = getArguments().getParcelable(EXTRA_ROOT);
 		doc = getArguments().getParcelable(EXTRA_DOC);
 
-		if(null != root && root.isSecondaryStorage() && state.action == ACTION_BROWSE){
+		// Android 10 dropped this access prompt; all-files access covers the drive instead
+		if(null != root && root.isSecondaryStorage() && state.action == ACTION_BROWSE
+				&& Build.VERSION.SDK_INT < Build.VERSION_CODES.Q){
 			if(!doc.isWriteSupported()){
 				SAFManager.takeCardUriPermission(getActivity(), root, doc);
 			}

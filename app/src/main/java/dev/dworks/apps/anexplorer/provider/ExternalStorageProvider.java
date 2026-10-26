@@ -28,6 +28,7 @@ import android.graphics.Point;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.FileObserver;
@@ -48,6 +49,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
@@ -119,6 +121,8 @@ public class ExternalStorageProvider extends StorageProvider {
     private static final String DIR_ROOT = "/";
 
     private Handler mHandler;
+
+    private static final Pattern RESTRICTED_FOLDER = Pattern.compile(":Android/(data|obb)/[^/]+");
 
     private final Object mRootsLock = new Object();
 
@@ -778,6 +782,17 @@ public class ExternalStorageProvider extends StorageProvider {
     public Cursor queryChildDocuments(
             String parentDocumentId, String[] projection, String sortOrder)
             throws FileNotFoundException {
+        // Android 11 and later hide other apps' folders in Android/data and obb, even with
+        // all-files access, so they look missing
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && RESTRICTED_FOLDER.matcher(parentDocumentId).find()) {
+            final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
+            final Bundle extras = new Bundle();
+            extras.putString(DocumentsContract.EXTRA_ERROR,
+                    getContext().getString(R.string.folder_restricted));
+            result.setExtras(extras);
+            return result;
+        }
         if (mArchiveHelper.isArchivedDocument(parentDocumentId) ||
                 DocumentArchiveHelper.isSupportedArchiveType(getDocumentType(parentDocumentId))) {
             return mArchiveHelper.queryChildDocuments(parentDocumentId, projection, sortOrder);
