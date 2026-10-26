@@ -451,7 +451,8 @@ public class ExternalStorageProvider extends StorageProvider {
         if (null == primary) {
             return;
         }
-        // Turned off, it still shows while it holds files, so they can be restored or deleted
+        // Turned off, it still shows while it holds files, so they can be restored or deleted. It
+        // isn't taken away as it empties, while it may be open; the next start drops it.
         if (!AppSettings.isRecycleBinEnabled(getContext()) && isRecycleBinEmpty()) {
             return;
         }
@@ -557,10 +558,6 @@ public class ExternalStorageProvider extends StorageProvider {
     private void notifyRecycleBinChanged() {
         getContext().getContentResolver().notifyChange(
                 DocumentsContract.buildChildDocumentsUri(AUTHORITY, ROOT_ID_RECYCLE_BIN + ':'), null, false);
-        // Turned off, the bin leaves the sidebar once it's empty
-        if (!AppSettings.isRecycleBinEnabled(getContext())) {
-            updateRoots();
-        }
     }
 
     /** Lists the deleted items of every drive, after deleting for good the ones kept long enough */

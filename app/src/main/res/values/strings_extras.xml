@@ -220,7 +220,7 @@
     <string name="settings_recycle_bin_summary">Keep deleted files for 30 days so they can be restored</string>
     <string name="menu_restore">Restore</string>
     <string name="menu_empty_bin">Empty Recycle Bin</string>
-    <string name="delete_to_bin">Move to the Recycle Bin?</string>
+    <string name="moved_to_bin">Moved to the Recycle Bin</string>
     <string name="delete_for_good">Delete for good? This can\'t be undone.</string>
     <string name="empty_bin_confirm">Delete everything in the Recycle Bin for good?</string>
     <string name="toast_failed_restore">Unable to restore some files</string>

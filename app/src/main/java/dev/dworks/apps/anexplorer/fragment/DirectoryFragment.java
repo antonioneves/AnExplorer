@@ -854,10 +854,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		private Dialog progressDialog;
 		private ArrayList<DocumentInfo> docs;
 		private int id;
+		private boolean toRecycleBin;
 
 		public OperationTask(ArrayList<DocumentInfo> docs, int id) {
 			this.docs = docs;
 			this.id = id;
+			toRecycleBin = id == R.id.menu_delete && goToRecycleBin(docs);
 			DialogBuilder builder = new DialogBuilder(getActivity());
 			builder.setCancelable(false);
 			builder.setIndeterminate(true);
@@ -925,6 +927,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				} else if (id == R.id.menu_restore) {
 					Utils.showError(getActivity(), R.string.toast_failed_restore);
 				}
+			} else if (toRecycleBin) {
+				Utils.showSnackBar(getActivity(), getString(R.string.moved_to_bin));
 			}
 
 			if (mType == TYPE_RECENT_OPEN) {
@@ -1213,7 +1217,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private void deleteDocument(ArrayList<DocumentInfo> docs, int type) {
 		Bundle params = new Bundle();
 		params.putInt(FILE_COUNT, docs.size());
-		deleteFiles(docs, type, getString(goToRecycleBin(docs) ? R.string.delete_to_bin : R.string.delete_for_good));
+		// Only deleting for good asks first; the bin can give files back
+		if (goToRecycleBin(docs)) {
+			new OperationTask(docs, type).execute();
+		} else {
+			deleteFiles(docs, type, getString(R.string.delete_for_good));
+		}
 		AnalyticsManager.logEvent("delete", params);
 	}
 
