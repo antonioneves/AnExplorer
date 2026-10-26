@@ -40,7 +40,10 @@ import android.widget.ScrollView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
@@ -54,6 +57,7 @@ import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
+import okhttp3.HttpUrl;
 
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_CONNECTION_ID;
 import static dev.dworks.apps.anexplorer.network.NetworkConnection.CLIENT;
@@ -143,6 +147,14 @@ public class CreateConnectionFragment extends DialogFragment {
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        host.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) {
+                    splitAddress();
+                }
             }
         });
         final String newScheme = null != getArguments() ? getArguments().getString(EXTRA_SCHEME) : null;
@@ -240,6 +252,10 @@ public class CreateConnectionFragment extends DialogFragment {
         } else {
             markIfEmpty(view, R.id.nameLayout, name);
             markIfEmpty(view, R.id.hostLayout, host);
+            if (!TextUtils.isEmpty(host.getText()) && !isValidHost()) {
+                ((TextInputLayout) view.findViewById(R.id.hostLayout)).setError(
+                        getString(R.string.connection_invalid_host));
+            }
             markIfEmpty(view, R.id.portLayout, port);
         }
         if (!anonymous.isChecked()) {
@@ -255,6 +271,10 @@ public class CreateConnectionFragment extends DialogFragment {
 
     /** Saves the form when it's complete; returns false and saves nothing otherwise. */
     private boolean save() {
+        splitAddress();
+        if (!isValidHost()) {
+            return false;
+        }
         final NetworkConnection networkConnection = getNetworkConnection();
         if (!validate(networkConnection)) {
             return false;
@@ -267,7 +287,7 @@ public class CreateConnectionFragment extends DialogFragment {
     private NetworkConnection getNetworkConnection(){
         NetworkConnection networkConnection = new NetworkConnection();
         networkConnection.name = name.getText().toString();
-        networkConnection.host = host.getText().toString();
+        networkConnection.host = host.getText().toString().trim();
         String portNumber = port.getText().toString();
         if(!TextUtils.isEmpty(portNumber)) {
             networkConnection.port = Integer.parseInt(portNumber);
@@ -295,6 +315,53 @@ public class CreateConnectionFragment extends DialogFragment {
             }
         }
         return networkConnection;
+    }
+
+    /**
+     * Fills the form from a whole address typed or pasted into the host field, such as
+     * https://dav.example.com:8443/remote.php/dav, which the clients would take as the host name
+     */
+    private void splitAddress() {
+        final String text = host.getText().toString().trim();
+        if (null != editedServer || !text.contains("://")) {
+            return;
+        }
+        final URI uri;
+        try {
+            uri = new URI(text);
+        } catch (URISyntaxException e) {
+            return;
+        }
+        String given = null != uri.getScheme() ? uri.getScheme().toLowerCase(Locale.ROOT) : "";
+        if ("http".equals(given)) {
+            given = WebDavNetworkClient.SCHEME;
+        } else if ("https".equals(given)) {
+            given = WebDavNetworkClient.SCHEME_SECURE;
+        }
+        final int index = Arrays.asList(schemes).indexOf(given);
+        if (index < 0 || TextUtils.isEmpty(uri.getHost())) {
+            return;
+        }
+        scheme.setSelection(index);
+        host.setText(uri.getHost());
+        port.setText(Integer.toString(uri.getPort() > 0 ? uri.getPort() : defaultPort(given)));
+        final String folder = uri.getPath();
+        if (WebDavNetworkClient.isWebDav(given) && !TextUtils.isEmpty(folder) && !"/".equals(folder)
+                && TextUtils.isEmpty(path.getText())) {
+            path.setText(folder);
+        }
+    }
+
+    /** Whether the WebDAV client can build an address from the host; it throws otherwise */
+    private boolean isValidHost() {
+        final String text = host.getText().toString().trim();
+        if (null != editedServer || TextUtils.isEmpty(text)
+                || !WebDavNetworkClient.isWebDav(schemes[scheme.getSelectedItemPosition()])) {
+            return true;
+        }
+        final HttpUrl url = HttpUrl.parse("http://" + text + "/");
+        return null != url && url.username().isEmpty() && "/".equals(url.encodedPath())
+                && url.port() == 80;
     }
 
     /** WebDAV asks for the server's folder, and each scheme brings its usual port */

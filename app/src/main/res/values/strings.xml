@@ -150,6 +150,7 @@
     <string name="connection_username">Username</string>
     <string name="connection_password">Password</string>
     <string name="connection_required">Required</string>
+    <string name="connection_invalid_host">Not a valid server address</string>
     <string name="ftp_restart_to_apply">Stop and start the server to use the new settings</string>
     <string name="ftp_server_title">FTP server</string>
     <string name="quickshare_receive_not_visible">Not visible to nearby devices</string>
