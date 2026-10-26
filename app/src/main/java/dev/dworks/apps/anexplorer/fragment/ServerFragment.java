@@ -61,6 +61,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private Button action;
     private TextView warning;
     private View iconGroup;
+    private View editButton;
     private View qrGroup;
     private ImageView qr;
     private NetworkConnection connection;
@@ -106,7 +107,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
         // Only the TV layout has it
-        final View editButton = view.findViewById(R.id.edit_server);
+        editButton = view.findViewById(R.id.edit_server);
         if (null != editButton) {
             editButton.setOnClickListener(this);
         }
@@ -248,6 +249,11 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
 
     private void setStatus(boolean running){
         showQrCode(running);
+        // The running server keeps the settings it started with, so they are changed while stopped
+        if (null != editButton) {
+            editButton.setEnabled(!running);
+            editButton.setFocusable(!running);
+        }
         if(running){
             setAddress(ConnectionUtils.getFTPAddress(getActivity()));
             status.setText(getString(R.string.ftp_status_running));
