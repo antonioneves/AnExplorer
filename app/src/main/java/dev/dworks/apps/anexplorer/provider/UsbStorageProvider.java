@@ -28,7 +28,10 @@ import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.CancellationSignal;
+import android.os.Environment;
 import android.os.ParcelFileDescriptor;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.support.provider.DocumentFile;
 import androidx.collection.ArrayMap;
 import android.text.TextUtils;
@@ -439,6 +442,10 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     public void discoverDevices(){
+        // Android mounts USB drives itself, and claiming one here would unmount it
+        if (isRemovableVolumeMounted()) {
+            return;
+        }
         try{
             for (UsbDevice device : usbManager.getDeviceList().values()) {
                 // Skip built-in non-storage devices (TVs wire Wi-Fi/Bluetooth chips over USB)
@@ -456,6 +463,19 @@ public class UsbStorageProvider extends DocumentsProvider {
         }
     }
 
+    private boolean isRemovableVolumeMounted() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return false;
+        }
+        final StorageManager storageManager = getContext().getSystemService(StorageManager.class);
+        for (StorageVolume volume : storageManager.getStorageVolumes()) {
+            if (volume.isRemovable() && Environment.MEDIA_MOUNTED.equals(volume.getState())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isMassStorage(UsbDevice device) {
         for (int i = 0; i < device.getInterfaceCount(); i++) {
             if (device.getInterface(i).getInterfaceClass() == UsbConstants.USB_CLASS_MASS_STORAGE) {
@@ -466,6 +486,9 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     private void discoverDevice(UsbDevice device) {
+        if (isRemovableVolumeMounted()) {
+            return;
+        }
         for (UsbMassStorageDevice massStorageDevice : UsbMassStorageDevice.getMassStorageDevices(getContext())) {
             if (device.equals(massStorageDevice.getUsbDevice())) {
                 if (hasPermission(device)) {
