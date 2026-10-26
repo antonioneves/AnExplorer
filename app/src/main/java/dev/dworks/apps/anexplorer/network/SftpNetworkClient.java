@@ -1,8 +1,11 @@
 package dev.dworks.apps.anexplorer.network;
 
+import android.text.TextUtils;
+
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
@@ -17,6 +20,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -27,7 +31,8 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.LogUtils;
 
 /**
- * A server reached over SSH ("sftp"), opening at the user's home folder. A server's key is
+ * A server reached over SSH ("sftp"), opening at the user's home folder, logging in with a
+ * password or a private key. A server's key is
  * trusted the first time and kept, so a later connection to a changed key is refused.
  */
 public class SftpNetworkClient extends NetworkClient {
@@ -43,16 +48,44 @@ public class SftpNetworkClient extends NetworkClient {
     private final int port;
     private final String username;
     private final String password;
+    private final String privateKey;
 
     private Session session;
     private ChannelSftp channel;
     private String workingDirectory = NetworkFile.separator;
 
     public SftpNetworkClient(String host, int port, String username, String password) {
+        this(host, port, username, password, null);
+    }
+
+    /** @param privateKey a key file's text to log in with, and the password its passphrase */
+    public SftpNetworkClient(String host, int port, String username, String password,
+                             String privateKey) {
         this.host = host;
         this.port = port;
         this.username = username;
         this.password = password == null ? "" : password;
+        this.privateKey = privateKey;
+    }
+
+    public static final int KEY_OK = 0;
+    public static final int KEY_UNREADABLE = 1;
+    public static final int KEY_WRONG_PASSPHRASE = 2;
+
+    /** Whether a key file's text can log in, with the passphrase if it's encrypted */
+    public static int checkPrivateKey(String privateKey, String passphrase) {
+        final KeyPair key;
+        try {
+            key = KeyPair.load(new JSch(), privateKey.getBytes(StandardCharsets.UTF_8), null);
+        } catch (JSchException e) {
+            LogUtils.LOGD(TAG, "Unreadable private key: " + e);
+            return KEY_UNREADABLE;
+        }
+        try {
+            return key.isEncrypted() && !key.decrypt(passphrase) ? KEY_WRONG_PASSPHRASE : KEY_OK;
+        } finally {
+            key.dispose();
+        }
     }
 
     @Override
@@ -99,11 +132,20 @@ public class SftpNetworkClient extends NetworkClient {
         try {
             final JSch jsch = new JSch();
             jsch.setKnownHosts(knownHosts().getAbsolutePath());
+            final boolean withKey = !TextUtils.isEmpty(privateKey);
+            if (withKey) {
+                // The password is the key's passphrase, if it has one
+                jsch.addIdentity(username + "@" + host, privateKey.getBytes(StandardCharsets.UTF_8),
+                        null, password.isEmpty() ? null : password.getBytes(StandardCharsets.UTF_8));
+            }
             session = jsch.getSession(username, host, port);
-            session.setPassword(password);
+            if (!withKey) {
+                session.setPassword(password);
+            }
             session.setUserInfo(new TrustOnFirstUse());
             session.setConfig("StrictHostKeyChecking", "ask");
-            session.setConfig("PreferredAuthentications", "password,keyboard-interactive");
+            session.setConfig("PreferredAuthentications", withKey
+                    ? "publickey" : "password,keyboard-interactive");
             session.setServerAliveInterval(30000);
             session.connect(TIMEOUT);
             channel = (ChannelSftp) session.openChannel("sftp");

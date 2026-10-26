@@ -151,6 +151,15 @@
     <string name="connection_username">Username</string>
     <string name="connection_password">Password</string>
     <string name="connection_required">Required</string>
+    <string name="connection_choose_key">Choose key file</string>
+    <string name="connection_no_key">Password login</string>
+    <string name="connection_saved_key">Saved key</string>
+    <string name="connection_remove_key">Remove</string>
+    <string name="connection_passphrase">Key passphrase (if it has one)</string>
+    <string name="connection_wrong_passphrase">Wrong passphrase</string>
+    <string name="connection_pick_key">Choose your private key</string>
+    <string name="connection_no_key_files">No key files found. Put your private key file (like id_ed25519 or id_rsa) in Download, then try again.</string>
+    <string name="connection_unreadable_key">This file isn\'t a private key the app can use</string>
     <string name="connection_invalid_host">Not a valid server address</string>
     <string name="ftp_restart_to_apply">Stop and start the server to use the new settings</string>
     <string name="ftp_server_title">FTP server</string>

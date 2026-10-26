@@ -44,13 +44,16 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TextView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
@@ -58,6 +61,7 @@ import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.DialogFragment;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
+import dev.dworks.apps.anexplorer.misc.KeyFiles;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
@@ -66,6 +70,7 @@ import dev.dworks.apps.anexplorer.network.SftpNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import okhttp3.HttpUrl;
 
 import static dev.dworks.apps.anexplorer.misc.Utils.EXTRA_CONNECTION_ID;
@@ -98,6 +103,11 @@ public class CreateConnectionFragment extends DialogFragment {
     private NetworkConnection editedServer;
     private String[] schemes;
     private int shownScheme = -1;
+    // SFTP's private key, the key file's text, and how the form names it
+    private String privateKey;
+    private TextView keyName;
+    private View removeKey;
+    private TextInputLayout passwordLayout;
 
     public static void show(FragmentManager fm) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
@@ -150,6 +160,11 @@ public class CreateConnectionFragment extends DialogFragment {
         passwordContainer = view.findViewById(R.id.passwordContainer);
         scheme = (AppCompatSpinner) view.findViewById(R.id.scheme);
         anonymous = (CompoundButton) view.findViewById(R.id.anonymous);
+        passwordLayout = (TextInputLayout) passwordContainer;
+        keyName = (TextView) view.findViewById(R.id.key_name);
+        removeKey = view.findViewById(R.id.remove_key);
+        view.findViewById(R.id.choose_key).setOnClickListener(v -> chooseKey());
+        removeKey.setOnClickListener(v -> setPrivateKey(null, null));
         scheme.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
@@ -197,6 +212,7 @@ public class CreateConnectionFragment extends DialogFragment {
             username.setText(connection.getUserName());
             password.setText(connection.getPassword());
             anonymous.setChecked(connection.isAnonymousLogin());
+            setPrivateKey(connection.getPrivateKey(), getString(R.string.connection_saved_key));
             if(SERVER.equals(connection.getType())){
                 editedServer = connection;
                 hostContainer.setVisibility(View.GONE);
@@ -282,7 +298,12 @@ public class CreateConnectionFragment extends DialogFragment {
         }
         if (!anonymous.isChecked()) {
             markIfEmpty(view, R.id.usernameContainer, username);
-            markIfEmpty(view, R.id.passwordContainer, password);
+            if (!usesKey()) {
+                markIfEmpty(view, R.id.passwordContainer, password);
+            } else if (SftpNetworkClient.checkPrivateKey(privateKey, password.getText().toString())
+                    == SftpNetworkClient.KEY_WRONG_PASSPHRASE) {
+                passwordLayout.setError(getString(R.string.connection_wrong_passphrase));
+            }
         }
     }
 
@@ -371,6 +392,9 @@ public class CreateConnectionFragment extends DialogFragment {
         networkConnection.scheme = schemes[scheme.getSelectedItemPosition()];
         networkConnection.type = CLIENT;
         networkConnection.setAnonymous(anonymous.isChecked());
+        if (usesKey()) {
+            networkConnection.privateKey = privateKey;
+        }
         if (null != editedServer) {
             networkConnection.type = SERVER;
             networkConnection.host = editedServer.getHost();
@@ -464,6 +488,8 @@ public class CreateConnectionFragment extends DialogFragment {
             anonymous.setChecked(false);
         }
         anonymous.setVisibility(sftp ? View.GONE : View.VISIBLE);
+        view.findViewById(R.id.keyContainer).setVisibility(sftp ? View.VISIBLE : View.GONE);
+        showKey();
         ((TextInputLayout) view.findViewById(R.id.pathLayout)).setHint(
                 webDav ? R.string.connection_webdav_folder : R.string.connection_shared_folder);
 
@@ -474,6 +500,59 @@ public class CreateConnectionFragment extends DialogFragment {
             port.setText(Integer.toString(defaultPort(selected)));
         }
         shownScheme = position;
+    }
+
+    /** Whether an SFTP connection is to log in with a key rather than the password */
+    private boolean usesKey() {
+        return null == editedServer && !TextUtils.isEmpty(privateKey) && null != schemes
+                && SftpNetworkClient.SCHEME.equals(schemes[scheme.getSelectedItemPosition()]);
+    }
+
+    private void setPrivateKey(String key, String label) {
+        privateKey = key;
+        keyName.setTag(TextUtils.isEmpty(key) ? null : label);
+        showKey();
+    }
+
+    private void showKey() {
+        final boolean withKey = usesKey();
+        keyName.setText(withKey ? (String) keyName.getTag() : getString(R.string.connection_no_key));
+        removeKey.setVisibility(withKey ? View.VISIBLE : View.GONE);
+        // The password opens the key instead, when the key is locked with one
+        passwordLayout.setHint(withKey ? R.string.connection_passphrase : R.string.connection_password);
+        passwordLayout.setError(null);
+    }
+
+    /**
+     * Offers the key files in the usual places. A TV has no file picker to lend, and this one
+     * is already open, so the user puts the key in Download (or gets it by Quick Share).
+     */
+    private void chooseKey() {
+        final List<File> keys = KeyFiles.find(getActivity());
+        if (keys.isEmpty()) {
+            new MaterialAlertDialogBuilder(getActivity())
+                    .setMessage(R.string.connection_no_key_files)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
+        final String[] labels = new String[keys.size()];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = AppSettings.getFolderLabel(getActivity(), keys.get(i));
+        }
+        new MaterialAlertDialogBuilder(getActivity())
+                .setTitle(R.string.connection_pick_key)
+                .setItems(labels, (d, which) -> {
+                    final File file = keys.get(which);
+                    final String key = KeyFiles.read(file);
+                    if (null == key || SftpNetworkClient.checkPrivateKey(key, "")
+                            == SftpNetworkClient.KEY_UNREADABLE) {
+                        Utils.showError(getActivity(), R.string.connection_unreadable_key);
+                        return;
+                    }
+                    setPrivateKey(key, file.getName());
+                })
+                .show();
     }
 
     private static int defaultPort(String scheme) {
@@ -503,9 +582,14 @@ public class CreateConnectionFragment extends DialogFragment {
             if (TextUtils.isEmpty(networkConnection.username)) {
                 return false;
             }
-            if (TextUtils.isEmpty(networkConnection.password)) {
+            // A key may have no passphrase
+            if (TextUtils.isEmpty(networkConnection.password) && !usesKey()) {
                 return false;
             }
+        }
+        if (usesKey() && SftpNetworkClient.checkPrivateKey(privateKey, networkConnection.password)
+                != SftpNetworkClient.KEY_OK) {
+            return false;
         }
         return isValid;
     }

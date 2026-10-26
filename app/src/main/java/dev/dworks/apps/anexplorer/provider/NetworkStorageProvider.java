@@ -523,6 +523,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
         contentValues.put(ConnectionColumns.USERNAME, connection.getUserName());
         contentValues.put(ConnectionColumns.PASSWORD, connection.getPassword());
         contentValues.put(ConnectionColumns.ANONYMOUS_LOGIN, connection.isAnonymousLogin());
+        contentValues.put(ConnectionColumns.PRIVATE_KEY, connection.getPrivateKey());
         Uri uri = null;
         int updated_id = 0;
         if(id == 0) {

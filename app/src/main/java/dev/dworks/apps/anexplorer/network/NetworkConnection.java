@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.TextUtils;
 import android.provider.BaseColumns;
 import androidx.annotation.NonNull;
 import android.util.Log;
@@ -50,6 +51,8 @@ public class NetworkConnection  implements Durable, Parcelable {
     public String path;
     public NetworkFile file;
     public boolean isAnonymousLogin = false;
+    /** An SFTP connection's private key, the key file's text; the password is then its passphrase */
+    public String privateKey;
     private boolean isLoggedIn;
     public NetworkClient client;
 
@@ -200,6 +203,10 @@ public class NetworkConnection  implements Durable, Parcelable {
         return password;
     }
 
+    public String getPrivateKey() {
+        return privateKey;
+    }
+
     public String getHost() {
         return host;
     }
@@ -301,6 +308,11 @@ public class NetworkConnection  implements Durable, Parcelable {
         networkConnection.type = getCursorString(cursor, ConnectionColumns.TYPE);
         networkConnection.path = getCursorString(cursor, ConnectionColumns.PATH);
         networkConnection.setAnonymous(getCursorBolean(cursor, ConnectionColumns.ANONYMOUS_LOGIN));
+        networkConnection.privateKey = getCursorString(cursor, ConnectionColumns.PRIVATE_KEY);
+        if (SftpNetworkClient.SCHEME.equals(scheme) && !TextUtils.isEmpty(networkConnection.privateKey)) {
+            networkConnection.client = new SftpNetworkClient(host, port, username, password,
+                    networkConnection.privateKey);
+        }
         if (WebDavNetworkClient.isWebDav(scheme)) {
             // Opens at the saved folder, and an anonymous share gets no login at all
             final boolean anonymous = networkConnection.isAnonymousLogin;
@@ -442,6 +454,7 @@ public class NetworkConnection  implements Durable, Parcelable {
         path = null;
         file = null;
         isAnonymousLogin = false;
+        privateKey = null;
         isLoggedIn = false;
         client = null;
     }

@@ -58,6 +58,8 @@ public class ExplorerProvider extends ContentProvider {
         public static final String USERNAME = "username";
         public static final String PASSWORD = "password";
         public static final String ANONYMOUS_LOGIN = "anonymous_login";
+        /** The private key an SFTP connection logs in with, as the key file's text */
+        public static final String PRIVATE_KEY = "private_key";
     }
 
     public static Uri buildBookmark() {
@@ -78,9 +80,10 @@ public class ExplorerProvider extends ContentProvider {
         private final Context mContext;
         private static final int VERSION_INIT = 5;
         private static final int VERSION_CONNECTIONS = 6;
+        private static final int VERSION_PRIVATE_KEY = 7;
 
         public DatabaseHelper(Context context) {
-            super(context, DB_NAME, null, VERSION_CONNECTIONS);
+            super(context, DB_NAME, null, VERSION_PRIVATE_KEY);
             mContext = context;
         }
 
@@ -88,6 +91,7 @@ public class ExplorerProvider extends ContentProvider {
         public void onCreate(SQLiteDatabase db) {
             createTablesV1(db);
             createTablesV2(db);
+            addPrivateKey(db);
         }
 
         @Override
@@ -97,6 +101,9 @@ public class ExplorerProvider extends ContentProvider {
                 switch (upgradeTo) {
                     case VERSION_CONNECTIONS:
                         createTablesV2(db);
+                        break;
+                    case VERSION_PRIVATE_KEY:
+                        addPrivateKey(db);
                         break;
                 }
                 upgradeTo++;
@@ -125,6 +132,11 @@ public class ExplorerProvider extends ContentProvider {
             contentValues.put(ConnectionColumns.ANONYMOUS_LOGIN, connection.isAnonymousLogin());
             db.insert(TABLE_CONNECTION, null, contentValues);
 
+        }
+
+        private void addPrivateKey(SQLiteDatabase db) {
+            db.execSQL("ALTER TABLE " + TABLE_CONNECTION + " ADD COLUMN "
+                    + ConnectionColumns.PRIVATE_KEY + " TEXT");
         }
 
         private void createTablesV1(SQLiteDatabase db) {
