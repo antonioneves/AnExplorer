@@ -241,11 +241,11 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private void setStatus(boolean running){
         showQrCode(running);
         if(running){
-            setText(address, ConnectionUtils.getFTPAddress(getActivity()));
+            setAddress(ConnectionUtils.getFTPAddress(getActivity()));
             status.setText(getString(R.string.ftp_status_running));
             action.setText(R.string.stop_ftp);
         } else {
-            setText(address, "");
+            setAddress("");
             setText(warning, "");
             status.setText(getString(R.string.ftp_status_not_running));
             action.setText(R.string.start_ftp);
@@ -267,7 +267,8 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
             }
             qr.setImageBitmap(QrCode.encode(target, 512));
         }
-        qrGroup.setVisibility(show ? View.VISIBLE : View.GONE);
+        // Hidden rather than gone, so the screen keeps its size whether or not the server runs
+        qrGroup.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         iconGroup.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
@@ -307,7 +308,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
             else{
                 stopServer();
                 setStatus(false);
-                setText(address, "");
+                setAddress("");
                 setText(warning, getString(R.string.ftp_no_wifi));
             }
         }
@@ -333,6 +334,12 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private void setTintedImage(ImageView imageview, int resourceId){
         imageview.setImageDrawable(IconUtils.applyTintAttr(getActivity(), resourceId,
                 android.R.attr.textColorPrimary));
+    }
+
+    /** Keeps its line while empty, so the details below don't move when the server starts */
+    private void setAddress(String text) {
+        address.setText(text);
+        address.setVisibility(TextUtils.isEmpty(text) ? View.INVISIBLE : View.VISIBLE);
     }
 
     private void setText(TextView textView, String text){

@@ -48,7 +48,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:visibility="gone"
+                android:visibility="invisible"
                 tools:visibility="visible">
 
                 <com.google.android.material.card.MaterialCardView
@@ -100,7 +100,7 @@
                 android:textAppearance="?attr/textAppearanceTitleLarge"
                 android:textColor="?attr/colorPrimary"
                 android:textIsSelectable="false"
-                android:visibility="gone"
+                android:visibility="invisible"
                 tools:text="ftp://192.168.1.101:2211"
                 tools:visibility="visible" />
 
