@@ -1318,6 +1318,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                         || keyCode == KeyEvent.KEYCODE_ENTER)) {
                     showSearchKeyboard(v);
                 }
+                // Left and right leave the field instead of walking the cursor letter by letter
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        final View next = v.focusSearch(keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                                ? View.FOCUS_LEFT : View.FOCUS_RIGHT);
+                        if (next != null) {
+                            next.requestFocus();
+                        }
+                    }
+                    return true;
+                }
                 return false;
             });
             queryText.setOnClickListener(this::showSearchKeyboard);
