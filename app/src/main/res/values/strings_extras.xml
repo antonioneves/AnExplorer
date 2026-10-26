@@ -168,17 +168,26 @@
     <string name="ftp_notif_text">at %s</string>
     <string name="ftp_notif_stop_server">STOP</string>
 
-    <string-array name="connection_types">
+    <!-- The dialog offers the kinds of one family: FTP from the FTP item, WebDAV from WebDAV -->
+    <string-array name="ftp_connection_types" translatable="false">
         <item>FTP</item>
         <item>FTPS</item>
+        <item>SFTP</item>
+    </string-array>
+
+    <!-- The schemes saved for ftp_connection_types, in the same order -->
+    <string-array name="ftp_connection_schemes" translatable="false">
+        <item>ftp</item>
+        <item>ftps</item>
+        <item>sftp</item>
+    </string-array>
+
+    <string-array name="webdav_connection_types" translatable="false">
         <item>WebDAV</item>
         <item>WebDAVS</item>
     </string-array>
 
-    <!-- The schemes saved for connection_types, in the same order -->
-    <string-array name="connection_schemes" translatable="false">
-        <item>ftp</item>
-        <item>ftps</item>
+    <string-array name="webdav_connection_schemes" translatable="false">
         <item>webdav</item>
         <item>webdavs</item>
     </string-array>

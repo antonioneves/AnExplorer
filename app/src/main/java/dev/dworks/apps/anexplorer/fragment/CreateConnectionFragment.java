@@ -32,6 +32,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
@@ -54,6 +55,7 @@ import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.SftpNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
@@ -116,7 +118,6 @@ public class CreateConnectionFragment extends DialogFragment {
         if(null != args){
             connection_id = args.getInt(EXTRA_CONNECTION_ID);
         }
-        schemes = getResources().getStringArray(R.array.connection_schemes);
     }
 
     @Override
@@ -158,6 +159,9 @@ public class CreateConnectionFragment extends DialogFragment {
             }
         });
         final String newScheme = null != getArguments() ? getArguments().getString(EXTRA_SCHEME) : null;
+        final NetworkConnection connection = connection_id != 0
+                ? NetworkConnection.fromConnectionId(getActivity(), connection_id) : null;
+        showSchemes(context, null != connection ? connection.getScheme() : newScheme);
         if (null != newScheme) {
             scheme.setSelection(Math.max(0, Arrays.asList(schemes).indexOf(newScheme)));
         }
@@ -173,10 +177,7 @@ public class CreateConnectionFragment extends DialogFragment {
             }
         });
 
-        if(connection_id != 0){
-            NetworkConnection connection =
-                    NetworkConnection.fromConnectionId(getActivity(), connection_id);
-
+        if(null != connection){
             scheme.setSelection(Math.max(0, Arrays.asList(schemes).indexOf(connection.getScheme())));
 
             name.setText(connection.getName());
@@ -364,6 +365,18 @@ public class CreateConnectionFragment extends DialogFragment {
                 && url.port() == 80;
     }
 
+    /** The kinds of the scheme's family, so the FTP dialog offers FTP, FTPS and SFTP */
+    private void showSchemes(Context context, String given) {
+        final boolean webDav = WebDavNetworkClient.isWebDav(given);
+        schemes = getResources().getStringArray(webDav
+                ? R.array.webdav_connection_schemes : R.array.ftp_connection_schemes);
+        final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(context,
+                webDav ? R.array.webdav_connection_types : R.array.ftp_connection_types,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        scheme.setAdapter(adapter);
+    }
+
     /** WebDAV asks for the server's folder, and each scheme brings its usual port */
     private void onSchemeSelected(View view, int position) {
         if (null != editedServer) {
@@ -372,6 +385,12 @@ public class CreateConnectionFragment extends DialogFragment {
         final String selected = schemes[position];
         final boolean webDav = WebDavNetworkClient.isWebDav(selected);
         pathContainer.setVisibility(webDav ? View.VISIBLE : View.GONE);
+        // SSH always logs in as someone
+        final boolean sftp = SftpNetworkClient.SCHEME.equals(selected);
+        if (sftp) {
+            anonymous.setChecked(false);
+        }
+        anonymous.setVisibility(sftp ? View.GONE : View.VISIBLE);
         ((TextInputLayout) view.findViewById(R.id.pathLayout)).setHint(
                 webDav ? R.string.connection_webdav_folder : R.string.connection_shared_folder);
 
@@ -385,6 +404,9 @@ public class CreateConnectionFragment extends DialogFragment {
     }
 
     private static int defaultPort(String scheme) {
+        if (SftpNetworkClient.SCHEME.equals(scheme)) {
+            return SftpNetworkClient.DEFAULT_PORT;
+        }
         return WebDavNetworkClient.isWebDav(scheme) ? WebDavNetworkClient.defaultPort(scheme) : 21;
     }
 

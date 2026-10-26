@@ -68,6 +68,8 @@ public abstract class NetworkClient{
             return new FTPNetworkClient(host, port, userName, password);
         } else if(scheme.compareTo("ftps") == 0){
             return new FTPSNetworkClient(host, port, userName, password);
+        } else if(SftpNetworkClient.SCHEME.equals(scheme)){
+            return new SftpNetworkClient(host, port, userName, password);
         }
         return null;
     }

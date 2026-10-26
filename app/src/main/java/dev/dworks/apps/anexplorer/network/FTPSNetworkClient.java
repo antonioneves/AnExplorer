@@ -5,6 +5,7 @@ import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.apache.commons.net.ftp.FTPSClient;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -25,8 +26,11 @@ public class FTPSNetworkClient extends NetworkClient {
     public String username;
     public String password;
 
+    /** The port servers use for implicit FTPS, which starts with TLS instead of asking for it */
+    public static final int IMPLICIT_PORT = 990;
+
     public FTPSNetworkClient(final String host, final int port){
-        client = new FTPSClient();
+        client = new FTPSClient(port == IMPLICIT_PORT);
         this.host = host;
         this.port = port;
         this.username = "anonymous";
@@ -34,7 +38,7 @@ public class FTPSNetworkClient extends NetworkClient {
     }
 
     public FTPSNetworkClient(final String host, final int port, final String userName, final String password){
-        client = new FTPSClient();
+        client = new FTPSClient(port == IMPLICIT_PORT);
         this.host = host;
         this.port = port;
         this.username = userName;
@@ -73,21 +77,55 @@ public class FTPSNetworkClient extends NetworkClient {
 
     @Override
     public boolean connectClient() throws IOException {
-        boolean isLoggedIn = true;
+        return login(client);
+    }
+
+    /** Logs in and encrypts the transfers too, which many servers insist on */
+    private boolean login(FTPSClient client) throws IOException {
         client.setAutodetectUTF8(true);
         client.setControlEncoding("UTF-8");
         client.connect(host, port);
-        client.setFileType(FTP.BINARY_FILE_TYPE);
-        client.enterLocalPassiveMode();
         client.login(username, password);
         int reply = client.getReplyCode();
         if (!FTPReply.isPositiveCompletion(reply)) {
             client.disconnect();
             LogUtils.LOGD(TAG, "Negative reply form FTP server, aborting, id was {}:"+ reply);
-            //throw new IOException("failed to connect to FTP server");
-            isLoggedIn = false;
+            return false;
         }
-        return isLoggedIn;
+        client.execPBSZ(0);
+        client.execPROT("P");
+        client.setFileType(FTP.BINARY_FILE_TYPE);
+        client.enterLocalPassiveMode();
+        return true;
+    }
+
+    /**
+     * On a connection of its own, so that browsing goes on while the file is read; Java
+     * can't open ftps:// addresses the way it opens ftp:// ones
+     */
+    @Override
+    public InputStream openInputStream(String path) throws IOException {
+        final FTPSClient reader = new FTPSClient(port == IMPLICIT_PORT);
+        if (!login(reader)) {
+            throw new IOException("FTPS server refused the login");
+        }
+        final InputStream stream = reader.retrieveFileStream(path);
+        if (null == stream) {
+            reader.disconnect();
+            throw new IOException("Can't read " + path + ": " + reader.getReplyString());
+        }
+        return new FilterInputStream(stream) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                    reader.completePendingCommand();
+                    reader.logout();
+                } finally {
+                    reader.disconnect();
+                }
+            }
+        };
     }
 
     @Override

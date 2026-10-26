@@ -104,3 +104,5 @@
 # or have been blown up by ProGuard in the past
 
 ## ---------------- End Project specifics ---------------- ##
+# JSch (SFTP) loads its ciphers and key exchanges by class name
+-keep class com.jcraft.jsch.** { *; }
