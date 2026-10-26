@@ -9,15 +9,21 @@
     android:background="?android:attr/windowBackground"
     android:fillViewport="true">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
         android:paddingStart="48dp"
         android:paddingTop="32dp"
         android:paddingEnd="48dp"
         android:paddingBottom="32dp">
+
+    <!-- The two columns start at the same height, and sit together in the middle of the screen -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -28,14 +34,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/quickshare_receive_channel"
-                android:textAppearance="?attr/textAppearanceDisplayMedium"
-                android:textColor="?attr/colorOnSurface" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
                 android:layout_marginStart="12dp"
                 android:text="@string/quickshare_receive_appear_as"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
@@ -189,4 +187,5 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </LinearLayout>
+    </FrameLayout>
 </ScrollView>
