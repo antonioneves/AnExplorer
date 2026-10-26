@@ -129,7 +129,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         ((TextView) view.findViewById(R.id.device_name)).setText(deviceName);
         folder = (TextView) view.findViewById(R.id.folder);
         showFolder();
-        view.findViewById(R.id.change_folder).setOnClickListener(v ->
+        view.findViewById(R.id.folder_row).setOnClickListener(v ->
                 FolderPickerDialog.show(getActivity(), AppSettings.getQuickShareFolder(getActivity()), picked -> {
                     AppSettings.setQuickShareFolder(getActivity(), picked);
                     showFolder();
@@ -141,7 +141,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     }
 
     private void showFolder() {
-        folder.setText(getString(R.string.quickshare_receive_saves_to, folderLabel()));
+        folder.setText(folderLabel());
     }
 
     @Override

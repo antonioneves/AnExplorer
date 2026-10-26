@@ -12,6 +12,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:paddingStart="48dp"
         android:paddingTop="32dp"
         android:paddingEnd="48dp"
@@ -23,6 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:baselineAligned="false"
+        android:clipChildren="false"
         android:orientation="horizontal">
 
         <!-- As tall as the card beside it, so the buttons line up with the card's bottom -->
@@ -30,6 +33,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:clipChildren="false"
             android:orientation="vertical">
 
             <TextView
@@ -92,15 +96,65 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/folder"
-                android:layout_width="wrap_content"
+            <!-- Where received files go; OK opens the folder picker -->
+            <LinearLayout
+                android:id="@+id/folder_row"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginTop="16dp"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="Files are saved to Download/Quick Share" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/settings_row_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="72dp"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="10dp">
+
+                <FrameLayout
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/settings_icon_background">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_root_folder"
+                        android:tint="?attr/colorOnSecondaryContainer" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pref_quickshare_folder"
+                        android:textAlignment="viewStart"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/folder"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="start"
+                        android:singleLine="true"
+                        android:textAlignment="viewStart"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Download/Quick Share" />
+                </LinearLayout>
+            </LinearLayout>
 
             <Space
                 android:layout_width="match_parent"
@@ -109,11 +163,10 @@
                 android:minHeight="24dp" />
 
             <!-- Material buttons leave room under their shape; the offset puts their edge on the card's -->
-            <LinearLayout
+            <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="-6dp"
-                android:orientation="horizontal">
+                android:layout_marginBottom="-6dp">
 
                 <Button
                     android:id="@+id/action"
@@ -121,16 +174,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="112dp"
                     tools:text="Stop" />
-
-                <Button
-                    android:id="@+id/change_folder"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:maxLines="1"
-                    android:text="@string/quickshare_receive_change_folder" />
-            </LinearLayout>
+            </FrameLayout>
         </LinearLayout>
 
         <LinearLayout
