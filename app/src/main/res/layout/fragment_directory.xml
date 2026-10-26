@@ -70,17 +70,47 @@
 
         </FrameLayout>
 
-        <dev.dworks.apps.anexplorer.ui.CompatTextView
-            android:id="@android:id/empty"
-            style="@style/TextAppearance.AppCompat.Subhead"
+        <!-- An empty folder, or one that couldn't be opened and why -->
+        <LinearLayout
+            android:id="@+id/empty_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:gravity="center"
-            android:paddingTop="10dp"
-            android:text="@string/empty"
-            android:visibility="gone"
-            app:drawableTop="@drawable/ic_empty_file" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/empty_icon"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:alpha="0.6"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_folder_empty"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@android:id/empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="@string/empty"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <TextView
+                android:id="@+id/empty_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:maxWidth="420dp"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone" />
+        </LinearLayout>
     </FrameLayout>
 
 </dev.dworks.apps.anexplorer.ui.DirectoryView>

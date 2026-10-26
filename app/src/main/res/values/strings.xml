@@ -192,5 +192,8 @@
     <string name="quickshare_receive_permission_needed">Quick Share needs the Nearby devices permission to be found by phones</string>
     <string name="local_network_permission_needed">Allow local network access to connect to devices on your network</string>
     <string name="root_analyze">Storage settings</string>
-    <string name="folder_restricted">Android doesn\'t let apps open this folder</string>
+    <string name="folder_restricted">Android keeps each app\'s folder here private to that app</string>
+    <string name="folder_open_failed">Can\'t open this folder</string>
+    <string name="folder_open_failed_reason">It may have been moved or deleted, or its drive removed</string>
+    <string name="server_connect_failed">Couldn\'t connect to the server</string>
 </resources>

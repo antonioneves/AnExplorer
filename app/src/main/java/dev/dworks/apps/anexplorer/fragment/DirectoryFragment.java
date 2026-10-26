@@ -91,7 +91,6 @@ import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.StateColumns;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
-import dev.dworks.apps.anexplorer.ui.CompatTextView;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
@@ -124,7 +123,10 @@ import static dev.dworks.apps.anexplorer.ui.RecyclerViewPlus.TYPE_LIST;
 public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMenuItemClickListener {
 
 	private static final String KEY_ADAPTER = "key_adapter";
-	private CompatTextView mEmptyView;
+	private View mEmptyGroup;
+	private ImageView mEmptyIcon;
+	private TextView mEmptyView;
+	private TextView mEmptyMessage;
 
 	public static final int TYPE_NORMAL = 1;
 	public static final int TYPE_SEARCH = 2;
@@ -229,7 +231,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		super.onViewCreated(view, savedInstanceState);
 
 		mProgressBar = (MaterialProgressBar) view.findViewById(R.id.progressBar);
-		mEmptyView = (CompatTextView)view.findViewById(android.R.id.empty);
+		mEmptyGroup = view.findViewById(R.id.empty_group);
+		mEmptyIcon = (ImageView) view.findViewById(R.id.empty_icon);
+		mEmptyView = (TextView) view.findViewById(android.R.id.empty);
+		mEmptyMessage = (TextView) view.findViewById(R.id.empty_message);
 		getListView().setRecyclerListener(mRecycleListener);
 		// Reuse the previous folder's rows: inflating a card costs ~20ms on a TV
 		getListView().setRecycledViewPool(mActivity.getDirectoryViewPool());
@@ -922,20 +927,28 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
     }
 
 	private void setEmptyState() {
-		boolean isEmpty = mAdapter.isEmpty();
-		if (isEmpty) {
-			mEmptyView.setVisibility(View.VISIBLE);
-			if(null == root){
-				return;
-			}
-			if(root.isNetworkStorage()){
-				mEmptyView.setText("Couldnt connect to the server!");
-			} else  {
-				mEmptyView.setText(R.string.empty);
-			}
-		} else {
-			mEmptyView.setVisibility(View.GONE);
+		if (!mAdapter.isEmpty()) {
+			mEmptyGroup.setVisibility(View.GONE);
+			return;
 		}
+		mEmptyGroup.setVisibility(View.VISIBLE);
+		final String error = mAdapter.getError();
+		int icon = R.drawable.ic_folder_empty;
+		int title = R.string.empty;
+		String message = null;
+		if (error != null) {
+			final boolean restricted = error.equals(getString(R.string.folder_restricted));
+			icon = restricted ? R.drawable.ic_settings_lock : R.drawable.ic_dialog_alert;
+			title = R.string.folder_open_failed;
+			message = restricted ? error : getString(R.string.folder_open_failed_reason);
+		} else if (null != root && root.isNetworkStorage()) {
+			icon = R.drawable.ic_dialog_alert;
+			title = R.string.server_connect_failed;
+		}
+		mEmptyIcon.setImageResource(icon);
+		mEmptyView.setText(title);
+		mEmptyMessage.setText(message);
+		mEmptyMessage.setVisibility(message != null ? View.VISIBLE : View.GONE);
 	}
 
 	public boolean isDocumentEnabled(String docMimeType, int docFlags) {

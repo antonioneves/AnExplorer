@@ -35,6 +35,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
     private int mCursorCount;
 
     private ArrayList<Footer> mFooters = new ArrayList<>();
+    private String mError;
     private final Environment mEnv;
     private final OnItemClickListener mOnItemClickListener;
 
@@ -50,6 +51,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         DocumentsApplication.getFolderSizes().clear();
         DocumentsApplication.getFolderCounts().clear();
         mFooters.clear();
+        mError = null;
 
         final Bundle extras = mCursor != null ? mCursor.getExtras() : null;
         if (extras != null) {
@@ -59,7 +61,7 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
             }
             final String error = extras.getString(DocumentsContract.EXTRA_ERROR);
             if (error != null) {
-                mFooters.add(new MessageFooter(mEnv,ITEM_TYPE_ERROR, R.drawable.ic_dialog_alert, error));
+                addError(error);
             }
             if (extras.getBoolean(DocumentsContract.EXTRA_LOADING, false)) {
                 mFooters.add(new LoadingFooter(mEnv, ITEM_TYPE_LOADING));
@@ -67,12 +69,26 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         }
 
         if (result != null && result.exception != null) {
-            mFooters.add(new MessageFooter(mEnv,ITEM_TYPE_ERROR, R.drawable.ic_dialog_alert, getString(R.string.query_error)));
+            addError(getString(R.string.query_error));
         }
 
         mEnv.setEmptyState();
 
         notifyDataSetChanged();
+    }
+
+    /** With nothing listed the error takes the whole screen, otherwise it follows the items */
+    private void addError(String error) {
+        if (mCursorCount == 0) {
+            mError = error;
+        } else {
+            mFooters.add(new MessageFooter(mEnv, ITEM_TYPE_ERROR, R.drawable.ic_dialog_alert, error));
+        }
+    }
+
+    /** Why nothing could be listed, or null */
+    public String getError() {
+        return mError;
     }
 
     private String getString(int resId){
