@@ -26,8 +26,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -203,7 +208,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         String deviceName = incoming.getString(QuickShareReceiveService.EXTRA_DEVICE_NAME);
         incomingDialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(String.format(Locale.US, getString(R.string.quickshare_receive_incoming), deviceName))
-                .setMessage(incoming.getString(QuickShareReceiveService.EXTRA_SUMMARY))
+                .setMessage(incomingMessage(incoming))
                 .setCancelable(false)
                 .setPositiveButton(R.string.quickshare_receive_accept, (dialog, which) -> {
                     QuickShareReceiveService.respond(context, transferId, true);
@@ -212,6 +217,21 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
                 .setNegativeButton(R.string.quickshare_receive_decline, (dialog, which) ->
                         QuickShareReceiveService.respond(context, transferId, false))
                 .show();
+    }
+
+    /** The summary, then the PIN large enough to compare with the phone from the sofa */
+    private CharSequence incomingMessage(Bundle incoming) {
+        final String summary = incoming.getString(QuickShareReceiveService.EXTRA_SUMMARY);
+        final String pin = incoming.getString(QuickShareReceiveService.EXTRA_PIN);
+        if (pin == null) {
+            return summary;
+        }
+        final SpannableStringBuilder message = new SpannableStringBuilder(summary).append("\n\n");
+        final int start = message.length();
+        message.append(getString(R.string.quickshare_receive_pin, pin));
+        message.setSpan(new RelativeSizeSpan(2f), start, message.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        message.setSpan(new StyleSpan(Typeface.BOLD), start, message.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return message;
     }
 
     private void dismissIncoming() {

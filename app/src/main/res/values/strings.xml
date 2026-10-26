@@ -154,6 +154,7 @@
     <string name="quickshare_receive_accept">Accept</string>
     <string name="quickshare_receive_decline">Decline</string>
     <string name="quickshare_receive_incoming">%1$s wants to send files</string>
+    <string name="quickshare_receive_pin">PIN %1$s</string>
     <string name="quickshare_receive_nfiles">%1$d files</string>
     <string name="quickshare_receive_channel">Quick Share</string>
     <string name="quickshare_receive_channel_desc">Incoming Quick Share transfers</string>

@@ -90,6 +90,7 @@ public class QuickShareReceiveService extends Service {
     public static final String EXTRA_TRANSFER_ID = "transferId";
     public static final String EXTRA_DEVICE_NAME = "deviceName";
     public static final String EXTRA_SUMMARY = "summary";
+    public static final String EXTRA_PIN = "pin";
     public static final String EXTRA_COUNT = "count";
     public static final String EXTRA_TEXT = "text";
 
@@ -225,11 +226,29 @@ public class QuickShareReceiveService extends Service {
                 });
     }
 
+    /**
+     * The four digits the sender shows, from the connection's authentication token, the way
+     * Quick Share derives them, so the user can tell it is talking to their phone.
+     */
+    static String pinCode(byte[] authToken) {
+        if (authToken == null) {
+            return null;
+        }
+        int hash = 0;
+        int multiplier = 1;
+        for (byte b : authToken) {
+            hash = (hash + b * multiplier) % 9973;
+            multiplier = (multiplier * 31) % 9973;
+        }
+        return String.format(Locale.US, "%04d", Math.abs(hash));
+    }
+
     private final ConnectionLifecycleCallback lifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo info) {
             TransferSession session = new TransferSession(QuickShareReceiveService.this,
-                    transferIdCounter++, endpointId, senderName(info.getEndpointInfo()));
+                    transferIdCounter++, endpointId, senderName(info.getEndpointInfo()),
+                    pinCode(info.getRawAuthenticationToken()));
             sessions.put(endpointId, session);
             transfers.put(session.transferId, session);
             // Consent comes later, once the sender says what it is sending
@@ -323,6 +342,8 @@ public class QuickShareReceiveService extends Service {
     }
 
     private void showIncomingNotification(TransferSession session, String deviceName, String fileSummary) {
+        String notificationText = session.pin == null ? fileSummary
+                : fileSummary + "\n" + getString(R.string.quickshare_receive_pin, session.pin);
         Intent acceptIntent = new Intent(this, QuickShareReceiveService.class);
         acceptIntent.setAction(ACTION_START);
         acceptIntent.putExtra(EXTRA_ACCEPT, true);
@@ -340,7 +361,8 @@ public class QuickShareReceiveService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(String.format(Locale.US,
                         getString(R.string.quickshare_receive_incoming), deviceName))
-                .setContentText(fileSummary)
+                .setContentText(notificationText)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(notificationText))
                 .setSmallIcon(R.drawable.ic_stat_server)
                 .setContentIntent(openDocumentsPendingIntent())
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
@@ -357,6 +379,7 @@ public class QuickShareReceiveService extends Service {
         incoming.putInt(EXTRA_TRANSFER_ID, session.transferId);
         incoming.putString(EXTRA_DEVICE_NAME, deviceName);
         incoming.putString(EXTRA_SUMMARY, fileSummary);
+        incoming.putString(EXTRA_PIN, session.pin);
         sPendingIncoming = incoming;
         broadcast(new Intent(ACTION_QUICKSHARE_INCOMING).putExtras(incoming));
     }
@@ -473,6 +496,8 @@ public class QuickShareReceiveService extends Service {
         private final int transferId;
         private final String endpointId;
         private final String deviceName;
+        /** What the sender shows; null if Nearby gave no token */
+        private final String pin;
         private final SecureRandom random = new SecureRandom();
         private State state = State.CONNECTING;
         private Protocol.IntroductionFrame pendingIntroduction;
@@ -489,11 +514,12 @@ public class QuickShareReceiveService extends Service {
         private boolean rejected;
 
         TransferSession(QuickShareReceiveService service, int transferId, String endpointId,
-                        String deviceName) {
+                        String deviceName, String pin) {
             this.service = service;
             this.transferId = transferId;
             this.endpointId = endpointId;
             this.deviceName = deviceName;
+            this.pin = pin;
         }
 
         final PayloadCallback payloadCallback = new PayloadCallback() {
@@ -535,7 +561,7 @@ public class QuickShareReceiveService extends Service {
         };
 
         void onConnected() {
-            Log.i(TAG, "Connected to " + deviceName);
+            Log.i(TAG, "Connected to " + deviceName + ", PIN " + pin);
             // We have no certificates to offer; the sender carries on without them
             state = State.SENT_PAIRED_ENCRYPTION;
             sendFrame(Protocol.V1Frame.newBuilder()
