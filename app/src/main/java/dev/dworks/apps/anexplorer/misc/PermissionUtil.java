@@ -78,7 +78,7 @@ public class PermissionUtil {
 
     /**
      * Android 17+ (when targeting API 37) requires ACCESS_LOCAL_NETWORK to talk to devices on
-     * the LAN: FTP connections, the Transfer to PC server and Quick Share receive.
+     * the LAN: FTP connections, the FTP server and Quick Share receive.
      */
     public static boolean hasLocalNetworkPermission(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {

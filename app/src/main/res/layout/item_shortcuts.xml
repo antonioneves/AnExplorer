@@ -52,7 +52,7 @@
             android:textAlignment="viewStart"
             android:textAppearance="?attr/textAppearanceTitleSmall"
             android:textColor="?attr/colorOnSurface"
-            tools:text="Transfer to PC" />
+            tools:text="FTP server" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

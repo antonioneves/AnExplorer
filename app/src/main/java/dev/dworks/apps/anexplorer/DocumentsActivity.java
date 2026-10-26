@@ -544,7 +544,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             }
             else{
             	RootInfo root = getCurrentRoot();
-                if(null == root){
+                // Home and the other screens of the app's own have no documents to open
+                if(null == root || null == root.authority){
                     return null;
                 }
                 final Uri uri = DocumentsContract.buildDocumentUri(root.authority, root.documentId);
@@ -1685,7 +1686,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         DocumentInfo cwd = getCurrentDirectory();
 
         //TODO : this has to be done nicely
-        if(cwd == null && (null != root && !root.isServerStorage())){
+        if(cwd == null && (null != root && null != root.authority && !root.isServerStorage())){
 	        final Uri uri = DocumentsContract.buildDocumentUri(
 	                root.authority, root.documentId);
 	        DocumentInfo result;

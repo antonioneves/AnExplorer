@@ -13,6 +13,7 @@ import android.os.Environment;
 import android.provider.BaseColumns;
 
 import dev.dworks.apps.anexplorer.BuildConfig;
+import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 
@@ -112,7 +113,7 @@ public class ExplorerProvider extends ContentProvider {
 
         private void addDefaultServer(SQLiteDatabase db){
             NetworkConnection connection = new NetworkConnection();
-            connection.name = "Transfer to PC";
+            connection.name = mContext.getString(R.string.ftp_server_title);
             connection.host = "";
             connection.port = 2211;
             connection.scheme = "ftp";

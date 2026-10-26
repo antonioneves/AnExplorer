@@ -24,6 +24,7 @@ public abstract class DialogCommonBuilder {
     protected String mNegativeButtonText;
     protected DialogInterface.OnClickListener mNegativeButtonListener;
     protected boolean mCancelable = true;
+    protected boolean mShowNegativeButton = true;
     protected boolean mindeterminate;
 
     public DialogCommonBuilder(Context context){
@@ -93,6 +94,12 @@ public abstract class DialogCommonBuilder {
         return this;
     }
 
+    /** Only OK, for a dialog that tells something and asks nothing */
+    public DialogCommonBuilder withoutNegativeButton() {
+        this.mShowNegativeButton = false;
+        return this;
+    }
+
     public DialogCommonBuilder setCancelable(boolean cancelable) {
         this.mCancelable = cancelable;
         return this;
@@ -126,15 +133,17 @@ public abstract class DialogCommonBuilder {
                 }
             }
         });
-        builder.setNegativeButton(mNegativeButtonText, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                if (null != mNegativeButtonListener) {
-                    mNegativeButtonListener.onClick(dialog, which);
+        if (mShowNegativeButton) {
+            builder.setNegativeButton(mNegativeButtonText, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    if (null != mNegativeButtonListener) {
+                        mNegativeButtonListener.onClick(dialog, which);
+                    }
                 }
-            }
-        });
+            });
+        }
         if (!TextUtils.isEmpty(mTitle)) {
             builder.setTitle(mTitle);
         }

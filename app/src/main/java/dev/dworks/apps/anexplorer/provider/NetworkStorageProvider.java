@@ -140,7 +140,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 // These columns are required
                 row.add(Root.COLUMN_ROOT_ID, root.getKey());
                 row.add(Root.COLUMN_DOCUMENT_ID, documentId);
-                // TV names the built-in server for what it is; the stored name is "Transfer to PC"
+                // Named for what it is, whatever it was stored as ("Transfer to PC" on older installs)
                 row.add(Root.COLUMN_TITLE, isServer
                         ? getContext().getString(R.string.ftp_server_title) : networkConnection.name);
                 row.add(Root.COLUMN_FLAGS, flags);

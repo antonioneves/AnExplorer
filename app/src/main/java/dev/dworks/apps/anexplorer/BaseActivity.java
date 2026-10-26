@@ -271,7 +271,8 @@ public abstract class BaseActivity extends ActionBarActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             mAllFilesAccessAsked = false;
                         }
-                    });
+                    })
+                    .withoutNegativeButton();
             builder.showDialog();
             return;
         }
