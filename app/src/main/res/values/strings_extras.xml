@@ -85,6 +85,7 @@
     <!-- Folder picker: the first row, which goes to the parent folder -->
     <string name="folder_picker_up">Up one level</string>
     <string name="folder_picker_title">Choose a folder</string>
+    <string name="folder_picker_empty">No folders inside</string>
     <string name="folder_picker_use">Use this folder</string>
     <string name="folder_picker_default">Default</string>
     <string name="pref_title_pin_enable">PIN protection</string>

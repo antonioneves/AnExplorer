@@ -1,28 +1,29 @@
 package dev.dworks.apps.anexplorer.setting;
 
-import androidx.appcompat.app.AlertDialog;
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.os.Environment;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.misc.Utils;
+import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+
+import static dev.dworks.apps.anexplorer.common.DialogFragment.tintButtons;
 
 /**
  * Picks a folder of internal storage with the remote: OK opens a folder (or goes up), and
- * the dialog's buttons choose the folder shown in the title, or go back to the default one.
+ * the dialog's buttons choose the folder it is in, or go back to the default one.
  */
 public class FolderPickerDialog {
 
@@ -34,9 +35,11 @@ public class FolderPickerDialog {
     private final Context mContext;
     private final Callback mCallback;
     private final File mRoot = Environment.getExternalStorageDirectory();
-    private final List<File> mEntries = new ArrayList<>();
-    private ArrayAdapter<File> mAdapter;
-    private ListView mList;
+    private LayoutInflater mInflater;
+    private TextView mPath;
+    private ScrollView mScroll;
+    private ViewGroup mFolders;
+    private View mEmpty;
     private AlertDialog mDialog;
     private File mCurrent;
 
@@ -59,37 +62,33 @@ public class FolderPickerDialog {
             folder = mRoot;
         }
 
-        mAdapter = new ArrayAdapter<File>(mContext,
-                com.google.android.material.R.layout.mtrl_alert_select_dialog_item, android.R.id.text1, mEntries) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                final TextView view = (TextView) super.getView(position, convertView, parent);
-                final File entry = getItem(position);
-                final boolean up = entry.equals(mCurrent.getParentFile());
-                view.setText(up ? mContext.getString(R.string.folder_picker_up) : entry.getName());
-                view.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                        up ? R.drawable.ic_folder_up : R.drawable.ic_root_folder, 0, 0, 0);
-                view.setCompoundDrawablePadding(Utils.dpToPx(20));
-                view.setCompoundDrawableTintList(ColorStateList.valueOf(view.getCurrentTextColor()));
-                return view;
-            }
-        };
-        mList = new ListView(mContext);
-        mList.setAdapter(mAdapter);
-        mList.setDivider(null);
-        mList.setOnItemClickListener((parent, view, position, id) -> open(mEntries.get(position)));
+        final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(mContext);
+        mInflater = LayoutInflater.from(builder.getContext());
+        final View view = mInflater.inflate(R.layout.dialog_folder_picker, null, false);
+        mPath = (TextView) view.findViewById(R.id.path);
+        mScroll = (ScrollView) view.findViewById(R.id.scroll);
+        mFolders = (ViewGroup) view.findViewById(R.id.folders);
+        mEmpty = view.findViewById(android.R.id.empty);
 
-        mDialog = new MaterialAlertDialogBuilder(mContext)
+        mDialog = builder
                 .setTitle(R.string.folder_picker_title)
-                .setView(mList)
+                .setView(view)
                 .setPositiveButton(R.string.folder_picker_use, (dialog, which) ->
                         mCallback.onFolderPicked(mCurrent))
                 .setNeutralButton(R.string.folder_picker_default, (dialog, which) ->
                         mCallback.onFolderPicked(null))
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
+        final File first = folder;
+        mDialog.setOnShowListener(dialog -> {
+            try {
+                tintButtons(mDialog);
+            } catch (Exception e) {
+                CrashReportingManager.logException(e);
+            }
+            open(first);
+        });
         mDialog.show();
-        open(folder);
     }
 
     private boolean isInRoot(File folder) {
@@ -100,23 +99,44 @@ public class FolderPickerDialog {
 
     private void open(File folder) {
         mCurrent = folder;
-        mDialog.setTitle(AppSettings.getFolderLabel(mContext, folder));
-        mEntries.clear();
+        mPath.setText(AppSettings.getFolderLabel(mContext, folder));
+        mFolders.removeAllViews();
         if (!folder.equals(mRoot)) {
-            mEntries.add(folder.getParentFile());
+            final File parent = folder.getParentFile();
+            addRow(parent, R.drawable.ic_folder_up, mContext.getString(R.string.folder_picker_up),
+                    AppSettings.getFolderLabel(mContext, parent));
         }
         final File[] children = folder.listFiles(child -> child.isDirectory() && !child.isHidden());
         if (children != null) {
             Arrays.sort(children, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-            mEntries.addAll(Arrays.asList(children));
+            for (File child : children) {
+                addRow(child, R.drawable.ic_root_folder, child.getName(), null);
+            }
         }
-        mAdapter.notifyDataSetChanged();
-        mList.setSelection(0);
-        // An empty folder leaves nothing to open, so the remote goes to the buttons
-        if (mEntries.isEmpty()) {
-            mDialog.getButton(AlertDialog.BUTTON_POSITIVE).requestFocus();
+        mEmpty.setVisibility(children == null || children.length == 0 ? View.VISIBLE : View.GONE);
+        mScroll.scrollTo(0, 0);
+
+        // The D-pad stops at the top row instead of leaving the list
+        final View top = mFolders.getChildAt(0);
+        if (top != null) {
+            top.setId(View.generateViewId());
+            top.setNextFocusUpId(top.getId());
+            top.requestFocus();
         } else {
-            mList.requestFocus();
+            mDialog.getButton(AlertDialog.BUTTON_POSITIVE).requestFocus();
         }
+    }
+
+    private void addRow(File folder, int iconId, String title, String summary) {
+        final View row = mInflater.inflate(R.layout.item_folder_picker, mFolders, false);
+        ((ImageView) row.findViewById(android.R.id.icon)).setImageResource(iconId);
+        ((TextView) row.findViewById(android.R.id.title)).setText(title);
+        if (summary != null) {
+            final TextView summaryView = (TextView) row.findViewById(android.R.id.summary);
+            summaryView.setText(summary);
+            summaryView.setVisibility(View.VISIBLE);
+        }
+        row.setOnClickListener(v -> open(folder));
+        mFolders.addView(row);
     }
 }
