@@ -22,15 +22,22 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatSpinner;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -69,8 +76,11 @@ import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
  * Dialog to create a new connection.
  */
 public class CreateConnectionFragment extends DialogFragment {
+
     private static final String TAG = "create_connection";
     private static final String EXTRA_SCHEME = "scheme";
+    /** How much of the screen a TV keyboard covers, which it doesn't say */
+    private static final float TV_KEYBOARD_SHARE = 0.45f;
     private AppCompatEditText name;
     private AppCompatEditText host;
     private AppCompatEditText port;
@@ -221,11 +231,22 @@ public class CreateConnectionFragment extends DialogFragment {
         buttonParams.topMargin = 0;
         buttonParams.bottomMargin = view.getPaddingBottom();
         content.addView(buttons, buttonParams);
+        // A narrow margin above and below, so the dialog has room above a keyboard
+        final int margin = getResources().getDimensionPixelSize(R.dimen.connection_dialog_margin);
         final AlertDialog dialog = new MaterialAlertDialogBuilder(context)
+                .setBackgroundInsetTop(margin)
+                .setBackgroundInsetBottom(margin)
                 .setTitle(isServer ? R.string.ftp_settings_title
                         : connection_id == 0 ? R.string.connection_new : R.string.connection_edit)
                 .setView(content)
                 .create();
+        keepAboveKeyboard(dialog);
+        clearErrorOnEdit(view, R.id.nameLayout, name);
+        clearErrorOnEdit(view, R.id.hostLayout, host);
+        clearErrorOnEdit(view, R.id.portLayout, port);
+        clearErrorOnEdit(view, R.id.pathLayout, path);
+        clearErrorOnEdit(view, R.id.usernameContainer, username);
+        clearErrorOnEdit(view, R.id.passwordContainer, password);
         final Button saveButton = (Button) buttons.findViewById(R.id.dialog_save);
         saveButton.setText(connection_id == 0 ? R.string.connection_add : R.string.connection_save);
         saveButton.setOnClickListener(new View.OnClickListener() {
@@ -263,6 +284,58 @@ public class CreateConnectionFragment extends DialogFragment {
             markIfEmpty(view, R.id.usernameContainer, username);
             markIfEmpty(view, R.id.passwordContainer, password);
         }
+    }
+
+    /**
+     * Moves the dialog to the top and shrinks it above the keyboard while one is up, so the
+     * field being typed in scrolls into view. Asking for the window to resize does nothing now
+     * that windows reach the screen's edges, and a TV keyboard lies over the screen, telling
+     * only that it's up and not how tall it is.
+     */
+    private static void keepAboveKeyboard(final AlertDialog dialog) {
+        final Window window = dialog.getWindow();
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
+        ViewCompat.setOnApplyWindowInsetsListener(window.getDecorView(), (v, insets) -> {
+            final int screenHeight = v.getResources().getDisplayMetrics().heightPixels;
+            int keyboard = 0;
+            if (insets.isVisible(WindowInsetsCompat.Type.ime())) {
+                keyboard = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+                if (keyboard == 0) {
+                    keyboard = (int) (screenHeight * TV_KEYBOARD_SHARE);
+                }
+            }
+            final WindowManager.LayoutParams params = window.getAttributes();
+            final int gravity = keyboard > 0 ? Gravity.TOP | Gravity.CENTER_HORIZONTAL : Gravity.CENTER;
+            final int height = keyboard > 0
+                    ? screenHeight - keyboard : WindowManager.LayoutParams.WRAP_CONTENT;
+            if (params.gravity != gravity || params.height != height) {
+                params.gravity = gravity;
+                params.height = height;
+                window.setAttributes(params);
+            }
+            return ViewCompat.onApplyWindowInsets(v, insets);
+        });
+    }
+
+    /** A field marked missing stops saying so once something is typed in it */
+    private static void clearErrorOnEdit(View view, int layoutId, AppCompatEditText field) {
+        final TextInputLayout layout = (TextInputLayout) view.findViewById(layoutId);
+        field.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (null != layout.getError()) {
+                    layout.setError(null);
+                }
+            }
+        });
     }
 
     private void markIfEmpty(View view, int layoutId, AppCompatEditText field) {
