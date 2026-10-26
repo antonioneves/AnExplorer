@@ -38,6 +38,7 @@ import android.util.TypedValue;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
+import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_BOX;
@@ -347,15 +348,21 @@ public class IconUtils {
         }
     }
 
-    public static Drawable loadSchemeIcon(Context context, String type) {
+    public static Drawable loadSchemeIcon(Context context, String type, String scheme) {
 
         if (SERVER.equals(type)) {
             return ContextCompat.getDrawable(context, R.drawable.ic_connection_server);
         } else if (CLIENT.equals(type)) {
-            return ContextCompat.getDrawable(context, R.drawable.ic_connection_network);
+            return ContextCompat.getDrawable(context, WebDavNetworkClient.isWebDav(scheme)
+                    ? R.drawable.ic_connection_webdav : R.drawable.ic_connection_ftp);
         } else {
             return ContextCompat.getDrawable(context, R.drawable.ic_connection_server);
         }
+    }
+
+    /** The sidebar icon of a connection: a server for FTP, FTPS and SFTP, the web for WebDAV */
+    public static int schemeIcon(String scheme) {
+        return WebDavNetworkClient.isWebDav(scheme) ? R.drawable.ic_root_webdav : R.drawable.ic_root_ftp;
     }
 
     public static Drawable loadCloudIcon(Context context, String type) {

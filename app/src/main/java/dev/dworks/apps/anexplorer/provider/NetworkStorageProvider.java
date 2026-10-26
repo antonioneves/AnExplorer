@@ -25,6 +25,7 @@ import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.MimeTypes;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
@@ -142,6 +143,9 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 row.add(Root.COLUMN_TITLE, isServer
                         ? getContext().getString(R.string.ftp_server_title) : networkConnection.name);
                 row.add(Root.COLUMN_FLAGS, flags);
+                if (!isServer) {
+                    row.add(Root.COLUMN_ICON, IconUtils.schemeIcon(networkConnection.getScheme()));
+                }
 
                 // These columns are optional
                 row.add(Root.COLUMN_SUMMARY, isServer ? networkConnection.getPath() : networkConnection.getSummary());

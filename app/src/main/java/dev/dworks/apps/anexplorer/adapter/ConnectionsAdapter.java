@@ -112,7 +112,8 @@ public class ConnectionsAdapter extends CursorRecyclerViewAdapter<ConnectionsAda
                 iconMimeBackground.setVisibility(View.VISIBLE);
                 iconMimeBackground.setBackgroundColor(
                         IconColorUtils.loadSchmeColor(mContext, networkConnection.getType()));
-                iconMime.setImageDrawable(IconUtils.loadSchemeIcon(mContext, networkConnection.type));
+                iconMime.setImageDrawable(IconUtils.loadSchemeIcon(mContext, networkConnection.type,
+                        networkConnection.getScheme()));
             }
         }
     }

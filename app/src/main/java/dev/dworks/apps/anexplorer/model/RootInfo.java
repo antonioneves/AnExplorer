@@ -276,7 +276,8 @@ public class RootInfo implements Durable, Parcelable {
             derivedColor = R.color.item_connection_server;
             derivedTag = "server";
         } else if (isNetworkStorage()) {
-            derivedIcon = R.drawable.ic_root_network;
+            // The provider names the protocol's icon
+            derivedIcon = icon != 0 ? icon : R.drawable.ic_root_network;
             derivedColor = R.color.item_connection_client;
             derivedTag = "network";
         } else if (isCloudStorage()) {
