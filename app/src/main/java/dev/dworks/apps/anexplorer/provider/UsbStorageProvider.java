@@ -442,8 +442,9 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     public void discoverDevices(){
-        // Android mounts USB drives itself, and claiming one here would unmount it
-        if (isRemovableVolumeMounted()) {
+        // Android mounts USB drives itself, and claiming one here would unmount it. An ejected
+        // drive is still Android's until it is unplugged
+        if (hasRemovableVolume()) {
             return;
         }
         try{
@@ -463,13 +464,16 @@ public class UsbStorageProvider extends DocumentsProvider {
         }
     }
 
-    private boolean isRemovableVolumeMounted() {
+    /** Whether Android has a drive plugged in, mounted, being checked or ejected */
+    private boolean hasRemovableVolume() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
             return false;
         }
         final StorageManager storageManager = getContext().getSystemService(StorageManager.class);
         for (StorageVolume volume : storageManager.getStorageVolumes()) {
-            if (volume.isRemovable() && Environment.MEDIA_MOUNTED.equals(volume.getState())) {
+            final String state = volume.getState();
+            if (volume.isRemovable() && !Environment.MEDIA_REMOVED.equals(state)
+                    && !Environment.MEDIA_BAD_REMOVAL.equals(state)) {
                 return true;
             }
         }
@@ -486,7 +490,7 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     private void discoverDevice(UsbDevice device) {
-        if (isRemovableVolumeMounted()) {
+        if (hasRemovableVolume()) {
             return;
         }
         for (UsbMassStorageDevice massStorageDevice : UsbMassStorageDevice.getMassStorageDevices(getContext())) {
