@@ -266,11 +266,18 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             icon.setImageDrawable(commonInfo.rootInfo.loadDrawerIcon(mContext));
             title.setText(commonInfo.rootInfo.title);
             int drawableId = -1;
-            if (commonInfo.rootInfo.isStorage() && !commonInfo.rootInfo.isSecondaryStorage()) {
+            int descriptionId = -1;
+            if (commonInfo.rootInfo.isSecondaryStorage()) {
+                // Ejecting is done in the system's storage settings, which this opens
+                drawableId = R.drawable.ic_eject;
+                descriptionId = R.string.root_eject;
+            } else if (commonInfo.rootInfo.isStorage()) {
                 drawableId = R.drawable.ic_analyze;
+                descriptionId = R.string.root_analyze;
             }
             if(drawableId != -1) {
                 action.setImageDrawable(IconUtils.applyTint(mContext, drawableId, accentColor));
+                action.setContentDescription(mContext.getString(descriptionId));
                 action_layout.setVisibility(View.VISIBLE);
             } else {
                 action.setImageDrawable(null);

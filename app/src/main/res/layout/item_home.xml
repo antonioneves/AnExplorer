@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The D-pad doesn't find the action button on its own: it sits inside the card, flush
+     with its right edge, so the card and the button point at each other -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/card_view"
@@ -12,6 +14,7 @@
     android:descendantFocusability="beforeDescendants"
     android:focusable="true"
     android:foreground="?selectableItemBackground"
+    android:nextFocusRight="@+id/action"
     style="@style/Widget.Material3.CardView.Filled"
     app:cardCornerRadius="@dimen/card_corner_radius">
 
@@ -90,6 +93,7 @@
             <ImageButton
                 android:id="@+id/action"
                 style="@style/ButtonAppTheme"
+                android:nextFocusLeft="@id/card_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:contentDescription="action" />
