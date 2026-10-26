@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Quick Share: a ring broken by two arrows passing each other -->
+<!-- Quick Share: Google's own symbol (gs_quick_share), as Play services draws it -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="960"
+    android:viewportHeight="960">
     <path
-        android:pathData="M5.39,7.5A8,8 0,0 1,19.86 13.5M18.61,16.5A8,8 0,0 1,4.14 10.5"
-        android:strokeColor="#000000"
-        android:strokeLineCap="round"
-        android:strokeWidth="2" />
-    <path
-        android:pathData="M2,9H14.5M12,6.5L14.5,9L12,11.5M22,15H9.5M12,12.5L9.5,15L12,17.5"
-        android:strokeColor="#000000"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="2" />
+        android:fillColor="#FF000000"
+        android:pathData="M480,880q-155,0-268-102T82,525q-2-18 10-31.5T122,480q15,0 26.5,10T162,515q13,121 103,203t215,82q100,0 180-54.5T776,600H572l19,19q9,9 9,21t-9,21t-21.5,9T548,661l-80-80q-9-9-9-21t9-21l80-80q9-9 21.5-9t21.5,9t9,21t-9,21l-19,19H831q20,0 32,15t7,34Q838,707 730,793.5T480,880Zm0-800q155,0 267.5,102T877,435q2,18-10,31.5T837,480q-15,0-26-10t-13-25Q785,324 695,242T480,160q-100,0-180.5,54.5T183,360H388l-19-19q-9-9-9-21t9-21t21-9t21,9l80,80q9,9 9,21t-9,21l-80,80q-9,9-21,9t-21-9t-9-21t9-21l19-19H129q-20,0-32-15t-7-34q32-138 140-224.5T480,80Z" />
 </vector>
