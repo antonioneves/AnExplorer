@@ -21,11 +21,14 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.graphics.Point;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.CancellationSignal;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
@@ -110,6 +113,18 @@ public class MediaDocumentsProvider extends StorageProvider {
 
     @Override
     public boolean onCreate() {
+        // MediaProvider calls onMediaStoreInsert() for the system's own copy of this provider,
+        // never for ours, so watch the media store for the first image, video or song instead
+        getContext().getContentResolver().registerContentObserver(
+                MediaStore.Files.getContentUri("external"), true,
+                new ContentObserver(new Handler(Looper.getMainLooper())) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        if (sReturnedImagesEmpty || sReturnedVideosEmpty || sReturnedAudioEmpty) {
+                            notifyRootsChanged(getContext());
+                        }
+                    }
+                });
         return super.onCreate();
     }
 
@@ -530,9 +545,9 @@ public class MediaDocumentsProvider extends StorageProvider {
 
     private void includeImagesRoot(MatrixCursor result) {
         int flags = Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_RECENTS;
-        if (isEmpty(Images.Media.EXTERNAL_CONTENT_URI)) {
+        sReturnedImagesEmpty = isEmpty(Images.Media.EXTERNAL_CONTENT_URI);
+        if (sReturnedImagesEmpty) {
             flags |= Root.FLAG_EMPTY;
-            sReturnedImagesEmpty = true;
         }
 
         final RowBuilder row = result.newRow();
@@ -545,9 +560,9 @@ public class MediaDocumentsProvider extends StorageProvider {
 
     private void includeVideosRoot(MatrixCursor result) {
         int flags = Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_RECENTS;
-        if (isEmpty(Video.Media.EXTERNAL_CONTENT_URI)) {
+        sReturnedVideosEmpty = isEmpty(Video.Media.EXTERNAL_CONTENT_URI);
+        if (sReturnedVideosEmpty) {
             flags |= Root.FLAG_EMPTY;
-            sReturnedVideosEmpty = true;
         }
 
         final RowBuilder row = result.newRow();
@@ -560,9 +575,9 @@ public class MediaDocumentsProvider extends StorageProvider {
 
     private void includeAudioRoot(MatrixCursor result) {
         int flags = Root.FLAG_LOCAL_ONLY;
-        if (isEmpty(Audio.Media.EXTERNAL_CONTENT_URI)) {
+        sReturnedAudioEmpty = isEmpty(Audio.Media.EXTERNAL_CONTENT_URI);
+        if (sReturnedAudioEmpty) {
             flags |= Root.FLAG_EMPTY;
-            sReturnedAudioEmpty = true;
         }
 
         final RowBuilder row = result.newRow();

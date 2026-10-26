@@ -28,6 +28,7 @@ import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.provider.Settings;
 
 import androidx.annotation.Nullable;
@@ -94,6 +95,25 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         }
     };
 
+    // New photos, videos or music (e.g. from Quick Share) change the recent media while Home is
+    // showing; the media store sends a burst of changes per file, so reload once they settle
+    private final Handler mRecentsHandler = new Handler(Looper.getMainLooper());
+    private final Runnable mReloadRecents = new Runnable() {
+        @Override
+        public void run() {
+            if (isResumed()) {
+                getRecentsData();
+            }
+        }
+    };
+    private final ContentObserver mMediaObserver = new ContentObserver(mRecentsHandler) {
+        @Override
+        public void onChange(boolean selfChange) {
+            mRecentsHandler.removeCallbacks(mReloadRecents);
+            mRecentsHandler.postDelayed(mReloadRecents, 1000);
+        }
+    };
+
     public static void show(FragmentManager fm) {
         final HomeFragment fragment = new HomeFragment();
         final FragmentTransaction ft = fm.beginTransaction();
@@ -133,6 +153,8 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         super.onResume();
         getActivity().getContentResolver().registerContentObserver(
                 RootsCache.sNotificationUri, false, mRootsObserver);
+        getActivity().getContentResolver().registerContentObserver(
+                MediaStore.Files.getContentUri("external"), true, mMediaObserver);
         showData();
     }
 
@@ -140,6 +162,8 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     public void onPause() {
         super.onPause();
         getActivity().getContentResolver().unregisterContentObserver(mRootsObserver);
+        getActivity().getContentResolver().unregisterContentObserver(mMediaObserver);
+        mRecentsHandler.removeCallbacks(mReloadRecents);
     }
 
     public void showData(){
