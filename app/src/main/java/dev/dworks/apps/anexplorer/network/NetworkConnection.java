@@ -158,12 +158,30 @@ public class NetworkConnection  implements Durable, Parcelable {
      * @throws IOException on error
      */
     public final boolean connectClient() throws IOException {
-        if (!client.isConnected()) {
+        if (!isLoggedIn || !client.isConnected()) {
+            // A connection left half made, by a refused login or a failed handshake, can't be reused
+            dropClient();
             isLoggedIn = getClient().connectClient();
             path = getClient().getWorkingDirectory();
             file = new NetworkFile(path, getRootId());
         }
         return isLoggedIn;
+    }
+
+    /** Forgets the connection, so the next request makes a new one */
+    public final void reconnect() {
+        isLoggedIn = false;
+        dropClient();
+    }
+
+    private void dropClient() {
+        try {
+            if (client.isConnected()) {
+                client.disconnect();
+            }
+        } catch (IOException e) {
+            LogUtils.LOGD(TAG, "Error closing connection: " + e);
+        }
     }
 
     public final boolean isLoggedIn(){
@@ -221,7 +239,7 @@ public class NetworkConnection  implements Durable, Parcelable {
     }
 
     public NetworkClient getConnectedClient() throws IOException {
-        if (!isLoggedIn()) {
+        if (!isLoggedIn() || !client.isConnected()) {
             connectClient();
         }
         return client;

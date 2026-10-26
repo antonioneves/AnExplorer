@@ -173,15 +173,30 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 DocumentsContract.buildChildDocumentsUri(AUTHORITY, parentDocumentId));
         final NetworkFile parent = getFileForDocId(parentDocumentId);
         final NetworkConnection connection = getNetworkConnection(parentDocumentId);
+        FTPFile[] files;
         try {
-            connection.getConnectedClient().changeWorkingDirectory(parent.getPath());
-            for (FTPFile file : connection.getConnectedClient().listFiles()) {
-                includeFile(result, null, new NetworkFile(parent, file));
-            }
+            files = listFiles(connection, parent);
         } catch (IOException e) {
-            CrashReportingManager.logException(e);
+            // The server may have dropped a connection that still looks open, so try once more
+            connection.reconnect();
+            try {
+                files = listFiles(connection, parent);
+            } catch (IOException again) {
+                CrashReportingManager.logException(again);
+                files = new FTPFile[0];
+            }
+        }
+        for (FTPFile file : files) {
+            includeFile(result, null, new NetworkFile(parent, file));
         }
         return result;
+    }
+
+    private static FTPFile[] listFiles(NetworkConnection connection, NetworkFile folder)
+            throws IOException {
+        final NetworkClient client = connection.getConnectedClient();
+        client.changeWorkingDirectory(folder.getPath());
+        return client.listFiles();
     }
 
     @Override
