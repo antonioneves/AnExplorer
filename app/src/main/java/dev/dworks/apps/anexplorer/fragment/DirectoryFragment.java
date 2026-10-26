@@ -1129,6 +1129,15 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return handleMenuAction(item, docs);
 	}
 
+	/** Unselects everything; false when nothing was selected */
+	public boolean clearSelection() {
+		if (mMultiChoiceHelper == null || mMultiChoiceHelper.getCheckedItemCount() == 0) {
+			return false;
+		}
+		mMultiChoiceHelper.clearChoices();
+		return true;
+	}
+
 	private ArrayList<DocumentInfo> getCheckedDocuments() {
 		final SparseBooleanArray checked = mAdapter.getCheckedItemPositions();
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();

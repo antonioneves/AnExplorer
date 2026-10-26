@@ -84,9 +84,8 @@ public class MultiChoiceHelper {
 			final boolean isChecked = multiChoiceHelper.isItemChecked(position);
 			if (itemView instanceof Checkable) {
 				((Checkable) itemView).setChecked(isChecked);
-			} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-				itemView.setActivated(isChecked);
 			}
+			itemView.setActivated(isChecked);
 		}
 
 		public void setOnClickListener(OnItemClickListener clickListener) {

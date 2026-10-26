@@ -22,6 +22,10 @@
     android:layout_height="wrap_content"
     android:focusable="true"
     android:foreground="?selectableItemBackground"
+    android:checkable="true"
+    app:checkedIconGravity="TOP_START"
+    app:checkedIconMargin="6dp"
+    app:checkedIconSize="20dp"
     app:cardCornerRadius="@dimen/card_corner_radius"
     app:strokeColor="@color/doc_card_stroke"
     app:strokeWidth="3dp">

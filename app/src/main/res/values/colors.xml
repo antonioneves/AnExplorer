@@ -65,7 +65,6 @@
     <color name="item_doc_grid_text">#DE000000</color>
     <color name="item_doc_grid_protect_background_light">#0a000000</color>
 
-    <color name="item_doc_grid_overlay_activated">#88000000</color>
     <color name="item_doc_grid_overlay_disabled">#88ffffff</color>
 
     <!-- 10% alpha of material_deep_teal_500 -->

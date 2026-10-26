@@ -22,6 +22,7 @@ import android.content.DialogInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import com.google.android.material.snackbar.Snackbar;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.content.ContextCompat;
 import android.support.provider.DocumentFile;
 import androidx.appcompat.app.AlertDialog;
@@ -70,6 +71,13 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Android 16 no longer calls onBackPressed() for apps targeting it
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                checkUnsavedChanges();
+            }
+        });
         setContentView(R.layout.activity_note);
 
         mInput = (EditText) findViewById(R.id.input);
@@ -103,11 +111,6 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
         if (getIntent().getData() != null) {
             new SaveContent(getIntent().getData(), exitAfter).execute();
         }
-    }
-
-    @Override
-    public void onBackPressed() {
-        checkUnsavedChanges();
     }
 
     private void checkUnsavedChanges() {

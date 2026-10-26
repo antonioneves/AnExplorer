@@ -37,6 +37,7 @@ import android.view.MenuInflater;
 import android.graphics.Color;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.view.ActionMode;
 import android.content.res.Resources;
@@ -236,6 +237,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 				.build())x;
 */
         super.onCreate(icicle);
+        // Android 16 no longer calls onBackPressed() for apps targeting it
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (!handleBack()) {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
 
 		mRoots = DocumentsApplication.getRootsCache(this);
 
@@ -1386,39 +1398,44 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         });
     }
 
-    @Override
-    public void onBackPressed() {
+    /** Steps back inside the app; false when Back should leave it */
+    private boolean handleBack() {
         if (null != mToolbarActionMode) {
             mToolbarActionMode.finish();
-            return;
+            return true;
+        }
+        // Back clears a selection before it leaves the folder
+        final Fragment directory = DirectoryFragment.get(getFragmentManager());
+        if (directory instanceof DirectoryFragment && ((DirectoryFragment) directory).clearSelection()) {
+            return true;
         }
         if (mSearchExpanded && null != mSearchView && TextUtils.isEmpty(mSearchView.getQuery())) {
             if (mSearchMenuItem != null && mSearchMenuItem.collapseActionView()) {
-                return;
+                return true;
             }
         }
         if (mShowingSettings) {
             closeSettings();
-            return;
+            return true;
         }
         if (mState.stackTouched && mState.stack.size() > 1) {
             mState.stack.pop();
             onCurrentDirectoryChanged(ANIM_UP);
-            return;
+            return true;
         }
         if (null != mParentRoot) {
             onRootPicked(mParentRoot, true);
             mParentRoot = null;
-            return;
+            return true;
         }
         // Back goes to Home first, and only leaves the app from there
         final RootInfo root = getCurrentRoot();
         final RootInfo home = mRoots.getHomeRoot();
         if (null != root && !root.isHome() && null != home) {
             onRootPicked(home, true);
-            return;
+            return true;
         }
-        super.onBackPressed();
+        return false;
     }
 
     @Override

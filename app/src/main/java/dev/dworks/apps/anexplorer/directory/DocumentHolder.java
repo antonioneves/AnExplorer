@@ -101,10 +101,9 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
         final boolean isChecked = multiChoiceHelper.isItemChecked(position);
         if (itemView instanceof Checkable) {
             ((Checkable) itemView).setChecked(isChecked);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            itemView.setActivated(isChecked);
-            setSelected(isChecked, true);
         }
+        // The list row tints itself from the activated state
+        setSelected(isChecked, true);
     }
 
     public boolean isMultiChoiceActive() {
