@@ -20,19 +20,16 @@
         android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="Download/Quick Share" />
 
-    <!-- The fading edges also keep the focused row clear of the list's top and bottom -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="216dp"
         android:layout_marginTop="12dp">
 
-        <ScrollView
+        <dev.dworks.apps.anexplorer.ui.FocusMarginScrollView
             android:id="@+id/scroll"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:fadingEdgeLength="16dp"
-            android:requiresFadingEdge="vertical"
             android:paddingStart="12dp"
             android:paddingTop="8dp"
             android:paddingEnd="12dp"
@@ -44,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
-        </ScrollView>
+        </dev.dworks.apps.anexplorer.ui.FocusMarginScrollView>
 
         <!-- Under the Up row, when there is nothing to open -->
         <TextView
