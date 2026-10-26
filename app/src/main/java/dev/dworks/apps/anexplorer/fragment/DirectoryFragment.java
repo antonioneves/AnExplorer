@@ -145,6 +145,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private String mStateKey;
 	// Set when the folder was picked from the sidebar, so the user can keep moving through it
 	private boolean mKeepSidebarFocus;
+	// The row to focus once the selection bar closes and the files load again; -1 for none
+	private int mRefocusPosition = -1;
+	private int mLastCheckedPosition = -1;
 
 	private int mLastMode = MODE_UNKNOWN;
 	private int mLastSortOrder = SORT_ORDER_UNKNOWN;
@@ -369,7 +372,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				mLastSortOrder = state.derivedSortOrder;
 				// Don't take focus from the search field while the user is typing, or from the
 				// sidebar while the user is moving through it
-				if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus) {
+				if (mRefocusPosition >= 0) {
+					// The files changed after the selection bar closed, deleted ones gone
+					focusRow();
+					mRefocusPosition = -1;
+				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus) {
 					getListView().requestFocus();
 				}
 			}
@@ -385,6 +392,48 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
 
 		updateDisplayState();
+	}
+
+	/**
+	 * Focuses the row at mRefocusPosition, or the last one when fewer are left, once the list
+	 * has laid out what it holds now; before that the rows on screen may be ones just deleted
+	 */
+	private void focusRow() {
+		if (!isAdded() || mRefocusPosition < 0) {
+			return;
+		}
+		final int wanted = mRefocusPosition;
+		final RecyclerView list = getListView();
+		list.post(() -> {
+			if (!isAdded()) {
+				return;
+			}
+			final int count = mAdapter.getItemCount();
+			if (count == 0) {
+				list.requestFocus();
+				return;
+			}
+			final int position = Math.min(wanted, count - 1);
+			final View row = list.getLayoutManager().findViewByPosition(position);
+			if (null != row) {
+				row.requestFocus();
+				return;
+			}
+			list.scrollToPosition(position);
+			list.post(() -> {
+				final View shown = list.getLayoutManager().findViewByPosition(position);
+				(null != shown ? shown : list).requestFocus();
+			});
+		});
+	}
+
+	private boolean isInList(View view) {
+		for (View v = view; v != null; v = v.getParent() instanceof View ? (View) v.getParent() : null) {
+			if (v == getListView()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean isInSidebar(View view) {
@@ -679,6 +728,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		public void onDestroyActionMode(ActionMode mode) {
             selectAll = true;
 			final Context context = getActivity();
+			// The bar's buttons go with it, and focus would fall to the first thing on screen, the
+			// sidebar; it goes back to the files instead, where the selection was
+			final View focus = null != context ? getActivity().getCurrentFocus() : null;
+			if (null != focus && !isInSidebar(focus) && !isInList(focus)) {
+				mRefocusPosition = Math.max(mLastCheckedPosition, 0);
+				focusRow();
+			}
 			if(null != context){
 				final BaseActivity activity = (BaseActivity) context;
 				activity.setActionMode(false);
@@ -689,6 +745,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		@Override
 		public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
 			if (checked) {
+				mLastCheckedPosition = position;
 				// Directories and footer items cannot be checked
 				boolean valid = false;
 
