@@ -25,9 +25,10 @@
         android:baselineAligned="false"
         android:orientation="horizontal">
 
+        <!-- As tall as the card beside it, so the buttons line up with the card's bottom -->
         <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -101,10 +102,17 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 tools:text="Files are saved to Download/Quick Share" />
 
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="24dp" />
+
+            <!-- Material buttons leave room under their shape; the offset puts their edge on the card's -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginBottom="-6dp"
                 android:orientation="horizontal">
 
                 <Button
