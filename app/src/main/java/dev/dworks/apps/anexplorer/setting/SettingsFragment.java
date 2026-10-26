@@ -103,6 +103,24 @@ public class SettingsFragment extends Fragment {
         });
         updatePinSetRow();
 
+        section = addSection(inflater, R.string.pref_header_quickshare);
+        final View folderRow = addRow(inflater, section, R.drawable.ic_root_quickshare,
+                R.string.pref_quickshare_folder, 0);
+        final TextView folderSummary = (TextView) folderRow.findViewById(android.R.id.summary);
+        folderSummary.setText(AppSettings.getFolderLabel(context, AppSettings.getQuickShareFolder(context)));
+        folderRow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AppSettings.logSettingEvent(AppSettings.KEY_QUICKSHARE_FOLDER);
+                FolderPickerDialog.show(getActivity(), AppSettings.getQuickShareFolder(getActivity()),
+                        folder -> {
+                            AppSettings.setQuickShareFolder(getActivity(), folder);
+                            folderSummary.setText(AppSettings.getFolderLabel(getActivity(),
+                                    AppSettings.getQuickShareFolder(getActivity())));
+                        });
+            }
+        });
+
         section = addSection(inflater, R.string.pref_header_advanced);
         addSwitch(inflater, section, KEY_ADVANCED_DEVICES, R.drawable.ic_root_hdd, R.string.pref_advanced_devices,
                 R.string.settings_advanced_devices_summary, AppSettings.getDisplayAdvancedDevices(context));

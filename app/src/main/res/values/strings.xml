@@ -148,7 +148,8 @@
     <string name="ftp_restart_to_apply">Stop and start the server to use the new settings</string>
     <string name="ftp_server_title">FTP server</string>
     <string name="quickshare_receive_not_visible">Not visible to nearby devices</string>
-    <string name="quickshare_receive_saves_to">Files are saved to Download/Quick Share</string>
+    <string name="quickshare_receive_saves_to">Files are saved to %1$s</string>
+    <string name="quickshare_receive_change_folder">Change folder</string>
     <string name="quickshare_receive_appear_as">You\'ll appear as</string>
     <string name="quickshare_receive_sharing_with_you">Sharing with you</string>
     <string name="quickshare_receive_ready">Ready to receive</string>
@@ -180,7 +181,7 @@
     <string name="quickshare_receive_channel">Quick Share</string>
     <string name="quickshare_receive_channel_desc">Incoming Quick Share transfers</string>
     <string name="quickshare_receive_from">From %1$s</string>
-    <string name="quickshare_receive_saved">%1$d file(s) saved to Download/Quick Share</string>
+    <string name="quickshare_receive_saved">%1$d file(s) saved to %2$s</string>
     <string name="quickshare_receive_hint">On your phone, tap Share, then Quick Share, and pick %1$s. Keep this screen open.</string>
     <string name="quickshare_receive_receiving">Receiving…</string>
     <string name="quickshare_receive_failed">Transfer didn\'t complete</string>

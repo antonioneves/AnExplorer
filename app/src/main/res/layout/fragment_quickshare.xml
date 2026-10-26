@@ -99,17 +99,32 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_marginTop="16dp"
-                android:text="@string/quickshare_receive_saves_to"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Files are saved to Download/Quick Share" />
 
-            <Button
-                android:id="@+id/action"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:minWidth="160dp"
-                tools:text="Stop" />
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="112dp"
+                    tools:text="Stop" />
+
+                <Button
+                    android:id="@+id/change_folder"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:maxLines="1"
+                    android:text="@string/quickshare_receive_change_folder" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout

@@ -9,6 +9,7 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -57,6 +58,7 @@ import java.util.concurrent.Executors;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.protocol.EndpointInfo;
 
 /**
@@ -413,7 +415,8 @@ public class QuickShareReceiveService extends Service {
         if (fileCount == 0) {
             return;
         }
-        String text = String.format(Locale.US, getString(R.string.quickshare_receive_saved), fileCount);
+        String text = getString(R.string.quickshare_receive_saved, fileCount,
+                AppSettings.getFolderLabel(this, AppSettings.getQuickShareFolder(this)));
         showResultNotification(session.transferId,
                 String.format(Locale.US, getString(R.string.quickshare_receive_from), deviceName), text);
         broadcast(new Intent(ACTION_QUICKSHARE_RECEIVED)
@@ -759,10 +762,7 @@ public class QuickShareReceiveService extends Service {
         }
 
         private File getDestinationDir() {
-            return new File(
-                    android.os.Environment.getExternalStoragePublicDirectory(
-                            android.os.Environment.DIRECTORY_DOWNLOADS),
-                    "Quick Share");
+            return AppSettings.getQuickShareFolder(service);
         }
 
         private void prepareDestinations() {
@@ -788,7 +788,10 @@ public class QuickShareReceiveService extends Service {
         }
 
         private Uri createMediaStoreEntry(String name, String mimeType) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // MediaStore only places downloads under Download; a folder picked elsewhere is
+            // written directly, which all-files access allows
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                    || !AppSettings.isDefaultQuickShareFolder(service)) {
                 return null;
             }
             ContentValues values = new ContentValues();
@@ -813,7 +816,7 @@ public class QuickShareReceiveService extends Service {
             }
         }
 
-        /** Moves a received file from where Nearby put it to its place in Download/Quick Share */
+        /** Moves a received file from where Nearby put it to its place in the Quick Share folder */
         private boolean saveFile(long payloadId, Payload payload) {
             Payload.File file = payload.asFile();
             if (file == null) {
@@ -864,6 +867,11 @@ public class QuickShareReceiveService extends Service {
         private void finalizeFile(long payloadId) {
             Uri uri = uris.get(payloadId);
             if (uri == null) {
+                // Written directly, so media apps learn of it from the scanner
+                File dest = destinations.get(payloadId);
+                if (dest != null) {
+                    MediaScannerConnection.scanFile(service, new String[]{dest.getAbsolutePath()}, null, null);
+                }
                 return;
             }
             ContentValues values = new ContentValues();

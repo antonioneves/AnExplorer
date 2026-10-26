@@ -46,6 +46,8 @@ import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.service.QuickShareReceiveService;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
+import dev.dworks.apps.anexplorer.setting.FolderPickerDialog;
 
 /**
  * Receives files with Quick Share. Shown in the main screen on TV, where stopping leaves the
@@ -59,6 +61,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
 
     private TextView status;
     private TextView visibility;
+    private TextView folder;
     private Button action;
     private Dialog incomingDialog;
     private int incomingTransferId = -1;
@@ -83,8 +86,8 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_INCOMING.equals(receivedAction)) {
                 showIncoming(intent.getExtras());
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_RECEIVED.equals(receivedAction)) {
-                status.setText(String.format(Locale.US, getString(R.string.quickshare_receive_saved),
-                        intent.getIntExtra(QuickShareReceiveService.EXTRA_COUNT, 0)));
+                status.setText(getString(R.string.quickshare_receive_saved,
+                        intent.getIntExtra(QuickShareReceiveService.EXTRA_COUNT, 0), folderLabel()));
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_FAILED.equals(receivedAction)) {
                 dismissIncoming();
                 status.setText(R.string.quickshare_receive_failed);
@@ -124,6 +127,21 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         ((TextView) view.findViewById(R.id.hint)).setText(getString(R.string.quickshare_receive_hint,
                 deviceName));
         ((TextView) view.findViewById(R.id.device_name)).setText(deviceName);
+        folder = (TextView) view.findViewById(R.id.folder);
+        showFolder();
+        view.findViewById(R.id.change_folder).setOnClickListener(v ->
+                FolderPickerDialog.show(getActivity(), AppSettings.getQuickShareFolder(getActivity()), picked -> {
+                    AppSettings.setQuickShareFolder(getActivity(), picked);
+                    showFolder();
+                }));
+    }
+
+    private String folderLabel() {
+        return AppSettings.getFolderLabel(getActivity(), AppSettings.getQuickShareFolder(getActivity()));
+    }
+
+    private void showFolder() {
+        folder.setText(getString(R.string.quickshare_receive_saves_to, folderLabel()));
     }
 
     @Override

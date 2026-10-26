@@ -22,7 +22,10 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.preference.PreferenceManager;
 import androidx.core.content.ContextCompat;
+import android.os.Environment;
 import android.text.TextUtils;
+
+import java.io.File;
 
 import dev.dworks.apps.anexplorer.BaseActivity.State;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
@@ -49,6 +52,7 @@ public class AppSettings {
     public static final String KEY_FOLDER_ANIMATIONS = "folderAnimations";
     public static final String KEY_RECENT_MEDIA = "recentMedia";
     public static final String KEY_VIEW_MODE = "viewMode";
+    public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
 
     private AppSettings() {
     }
@@ -89,6 +93,45 @@ public class AppSettings {
 
     public static void setViewMode(Context context, int mode) {
         prefs(context).edit().putInt(KEY_VIEW_MODE, mode).apply();
+    }
+
+    /** Where Quick Share saves what it receives, Download/Quick Share unless picked otherwise */
+    public static File getQuickShareFolder(Context context) {
+        final String path = prefs(context).getString(KEY_QUICKSHARE_FOLDER, null);
+        return TextUtils.isEmpty(path) ? getDefaultQuickShareFolder() : new File(path);
+    }
+
+    public static File getDefaultQuickShareFolder() {
+        return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "Quick Share");
+    }
+
+    public static boolean isDefaultQuickShareFolder(Context context) {
+        return getDefaultQuickShareFolder().equals(getQuickShareFolder(context));
+    }
+
+    /** Null goes back to the default folder */
+    public static void setQuickShareFolder(Context context, File folder) {
+        final SharedPreferences.Editor editor = prefs(context).edit();
+        if (folder == null || folder.equals(getDefaultQuickShareFolder())) {
+            editor.remove(KEY_QUICKSHARE_FOLDER);
+        } else {
+            editor.putString(KEY_QUICKSHARE_FOLDER, folder.getAbsolutePath());
+        }
+        editor.apply();
+    }
+
+    /** A folder as the user knows it: its path inside internal storage, like Download/Quick Share */
+    public static String getFolderLabel(Context context, File folder) {
+        final String root = Environment.getExternalStorageDirectory().getAbsolutePath();
+        final String path = folder.getAbsolutePath();
+        if (path.equals(root)) {
+            return context.getString(R.string.root_internal_storage);
+        }
+        if (path.startsWith(root + "/")) {
+            return path.substring(root.length() + 1);
+        }
+        return path;
     }
 
     public static int getPrimaryColor(Context context) {

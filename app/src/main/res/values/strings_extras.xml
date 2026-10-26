@@ -80,6 +80,13 @@
     <string name="pref_header_security">Security</string>
     <string name="pref_header_theme">Appearance</string>
     <string name="pref_header_advanced">Advanced</string>
+    <string name="pref_header_quickshare">Quick Share</string>
+    <string name="pref_quickshare_folder">Save received files to</string>
+    <!-- Folder picker: the first row, which goes to the parent folder -->
+    <string name="folder_picker_up">Up one level</string>
+    <string name="folder_picker_title">Choose a folder</string>
+    <string name="folder_picker_use">Use this folder</string>
+    <string name="folder_picker_default">Default</string>
     <string name="pref_title_pin_enable">PIN protection</string>
     <string name="pref_description_pin_enable">Ask for a PIN when the app opens</string>
     <string name="pref_title_pin_set">Set PIN</string>
