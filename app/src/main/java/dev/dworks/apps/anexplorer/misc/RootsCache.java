@@ -466,8 +466,7 @@ public class RootsCache {
 
     public RootInfo getRootInfo(NetworkConnection connection){
         for (RootInfo root : mRoots.get(NetworkStorageProvider.AUTHORITY)) {
-            if (root.rootId.equals(connection.getHost())
-                    && root.path.equals(connection.getPath())) {
+            if (root.rootId.equals(connection.getRootId())) {
                 return root;
             }
         }

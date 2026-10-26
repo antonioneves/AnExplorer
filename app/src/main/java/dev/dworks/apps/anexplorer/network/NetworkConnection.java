@@ -39,6 +39,7 @@ public class NetworkConnection  implements Durable, Parcelable {
     public static final String SERVER = "server";
     public static final String CLIENT = "client";
 
+    public int id;
     public String name;
     public String scheme;
     public String type;
@@ -91,7 +92,7 @@ public class NetworkConnection  implements Durable, Parcelable {
     private void setDefaults() {
         this.client =  NetworkClient.create(scheme, host, port, username, password);
         this.path = ROOT;
-        this.file = new NetworkFile(path, host);
+        this.file = new NetworkFile(path, getRootId());
     }
 
     public void setAnonymous(boolean anonymous) {
@@ -160,7 +161,7 @@ public class NetworkConnection  implements Durable, Parcelable {
         if (!client.isConnected()) {
             isLoggedIn = getClient().connectClient();
             path = getClient().getWorkingDirectory();
-            file = new NetworkFile(path, getHost());
+            file = new NetworkFile(path, getRootId());
         }
         return isLoggedIn;
     }
@@ -183,6 +184,11 @@ public class NetworkConnection  implements Durable, Parcelable {
 
     public String getHost() {
         return host;
+    }
+
+    /** Saved connections are told apart by their row, as several can share a host */
+    public String getRootId() {
+        return 0 != id ? Integer.toString(id) : host;
     }
 
     public int getPort() {
@@ -271,6 +277,8 @@ public class NetworkConnection  implements Durable, Parcelable {
 
         NetworkConnection networkConnection
                 = NetworkConnection.create(scheme, host, port, username, password);
+        networkConnection.id = getCursorInt(cursor, BaseColumns._ID);
+        networkConnection.file = new NetworkFile(ROOT, networkConnection.getRootId());
         networkConnection.name = getCursorString(cursor, ConnectionColumns.NAME);
         networkConnection.type = getCursorString(cursor, ConnectionColumns.TYPE);
         networkConnection.path = getCursorString(cursor, ConnectionColumns.PATH);
@@ -290,9 +298,8 @@ public class NetworkConnection  implements Durable, Parcelable {
         try {
             cursor = context.getContentResolver()
                     .query(ExplorerProvider.buildConnection(), null,
-                            ConnectionColumns.HOST + "=? AND "
-                                    + ConnectionColumns.PATH + "=? "
-                            , new String[]{root.rootId, root.path}, null);
+                            BaseColumns._ID + "=? "
+                            , new String[]{root.rootId}, null);
             if (null != cursor && cursor.moveToFirst()) {
                 networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
             }
@@ -406,6 +413,7 @@ public class NetworkConnection  implements Durable, Parcelable {
 
     @Override
     public void reset() {
+        id = 0;
         name = null;
         scheme = null;
         type = null;

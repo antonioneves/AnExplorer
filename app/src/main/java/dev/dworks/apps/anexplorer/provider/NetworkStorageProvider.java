@@ -91,9 +91,8 @@ public class NetworkStorageProvider extends DocumentsProvider {
             cursor = getContext().getContentResolver().query(ExplorerProvider.buildConnection(),
                     null, mSelectionClause, mSelectionArgs, null);
             while (cursor.moveToNext()) {
-                int id = getCursorInt(cursor, BaseColumns._ID);
                 NetworkConnection networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
-                mRoots.put(networkConnection.getHost(), networkConnection);
+                mRoots.put(networkConnection.getRootId(), networkConnection);
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to load some roots from " + ExplorerProvider.AUTHORITY + ": " + e);
@@ -330,9 +329,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
             for (int i = 0; i < mRoots.size(); i++) {
                 final String rootId = mRoots.keyAt(i);
                 final String rootPath = mRoots.valueAt(i).file.getPath();
-                final String rootHost = mRoots.valueAt(i).file.getHost();
-                if (host.startsWith(rootHost) && (mostSpecificPath == null
-                        || rootHost.length() > mostSpecificPath.length())) {
+                if (host.equals(rootId)) {
                     mostSpecificId = rootId;
                     mostSpecificPath = rootPath;
                 }
