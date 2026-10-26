@@ -324,10 +324,10 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         // single file
         cursor = resolver.query(FILE_URI,
                 FileQuery.PROJECTION, FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" + NOT_IN_RECYCLE_BIN, null,
-                FileQuery.DATE_MODIFIED + " DESC");
+                FileColumns.DATE_ADDED + " DESC");
         copyNotificationUri(result, FILE_URI);
         while (cursor.moveToNext() && result.getCount() < 64) {
-            includeFile(result, cursor, TYPE_DOCUMENT);
+            includeFile(result, cursor, TYPE_DOCUMENT, true);
         }
     }
 
@@ -486,7 +486,8 @@ public class NonMediaDocumentsProvider extends StorageProvider {
                 FileColumns.MIME_TYPE,
                 FileColumns.SIZE,
                 FileColumns.DATA,
-                FileColumns.DATE_MODIFIED };
+                FileColumns.DATE_MODIFIED,
+                FileColumns.DATE_ADDED };
 
         int _ID = 0;
         int TITLE = 1;
@@ -494,9 +495,18 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         int SIZE = 3;
         int DATA = 4;
         int DATE_MODIFIED = 5;
+        int DATE_ADDED = 6;
     }
 
     private void includeFile(MatrixCursor result, Cursor cursor, String type) {
+        includeFile(result, cursor, type, false);
+    }
+
+    /**
+     * @param recent dated by when it arrived, if later than its last change: newest arrivals
+     *               come first in Recents, since a file copied or received keeps an old date
+     */
+    private void includeFile(MatrixCursor result, Cursor cursor, String type, boolean recent) {
         final long id = cursor.getLong(FileQuery._ID);
         final String docId = getDocIdForIdent(type, id);
 
@@ -506,8 +516,10 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_SIZE, cursor.getLong(FileQuery.SIZE));
         row.add(Document.COLUMN_MIME_TYPE, cursor.getString(FileQuery.MIME_TYPE));
         row.add(Document.COLUMN_PATH, cursor.getString(FileQuery.DATA));
-        row.add(Document.COLUMN_LAST_MODIFIED,
-                cursor.getLong(FileQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
+        final long modified = cursor.getLong(FileQuery.DATE_MODIFIED);
+        row.add(Document.COLUMN_LAST_MODIFIED, (recent
+                ? Math.max(modified, cursor.getLong(FileQuery.DATE_ADDED)) : modified)
+                * DateUtils.SECOND_IN_MILLIS);
         row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
     }
 

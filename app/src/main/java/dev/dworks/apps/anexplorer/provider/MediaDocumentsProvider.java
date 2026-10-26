@@ -424,21 +424,23 @@ public class MediaDocumentsProvider extends StorageProvider {
         final long token = Binder.clearCallingIdentity();
         Cursor cursor = null;
         try {
+            // Newest arrivals first: a file copied or received keeps the date it was last
+            // changed, often long ago, but is new on the TV
             if (TYPE_IMAGES_ROOT.equals(rootId)) {
                 // include all unique buckets
                 cursor = resolver.query(Images.Media.EXTERNAL_CONTENT_URI,
-                        ImageQuery.PROJECTION, null, null, ImageColumns.DATE_MODIFIED + " DESC");
+                        ImageQuery.PROJECTION, null, null, ImageColumns.DATE_ADDED + " DESC");
                 copyNotificationUri(result, Images.Media.EXTERNAL_CONTENT_URI);
                 while (cursor.moveToNext() && result.getCount() < 64) {
-                    includeImage(result, cursor);
+                    includeImage(result, cursor, true);
                 }
             } else if (TYPE_VIDEOS_ROOT.equals(rootId)) {
                 // include all unique buckets
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
-                        VideoQuery.PROJECTION, null, null, VideoColumns.DATE_MODIFIED + " DESC");
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DATE_ADDED + " DESC");
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
                 while (cursor.moveToNext() && result.getCount() < 64) {
-                    includeVideo(result, cursor);
+                    includeVideo(result, cursor, true);
                 }
             } else {
                 throw new UnsupportedOperationException("Unsupported root " + rootId);
@@ -660,7 +662,8 @@ public class MediaDocumentsProvider extends StorageProvider {
                 ImageColumns.MIME_TYPE,
                 ImageColumns.SIZE,
                 ImageColumns.DATA,
-                ImageColumns.DATE_MODIFIED };
+                ImageColumns.DATE_MODIFIED,
+                ImageColumns.DATE_ADDED };
 
         int _ID = 0;
         int DISPLAY_NAME = 1;
@@ -668,9 +671,15 @@ public class MediaDocumentsProvider extends StorageProvider {
         int SIZE = 3;
         int DATA = 4;
         int DATE_MODIFIED = 5;
+        int DATE_ADDED = 6;
     }
 
     private void includeImage(MatrixCursor result, Cursor cursor) {
+        includeImage(result, cursor, false);
+    }
+
+    /** @param recent dated by when it arrived, if later than its last change (see queryRecentDocuments) */
+    private void includeImage(MatrixCursor result, Cursor cursor, boolean recent) {
         final long id = cursor.getLong(ImageQuery._ID);
         final String docId = getDocIdForIdent(TYPE_IMAGE, id);
 
@@ -680,8 +689,10 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_SIZE, cursor.getLong(ImageQuery.SIZE));
         row.add(Document.COLUMN_MIME_TYPE, cursor.getString(ImageQuery.MIME_TYPE));
         row.add(Document.COLUMN_PATH, cursor.getString(ImageQuery.DATA));
-        row.add(Document.COLUMN_LAST_MODIFIED,
-                cursor.getLong(ImageQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
+        final long modified = cursor.getLong(ImageQuery.DATE_MODIFIED);
+        row.add(Document.COLUMN_LAST_MODIFIED, (recent
+                ? Math.max(modified, cursor.getLong(ImageQuery.DATE_ADDED)) : modified)
+                * DateUtils.SECOND_IN_MILLIS);
         row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
     }
 
@@ -723,7 +734,8 @@ public class MediaDocumentsProvider extends StorageProvider {
                 VideoColumns.MIME_TYPE,
                 VideoColumns.SIZE,
                 VideoColumns.DATA,
-                VideoColumns.DATE_MODIFIED };
+                VideoColumns.DATE_MODIFIED,
+                VideoColumns.DATE_ADDED };
 
         int _ID = 0;
         int DISPLAY_NAME = 1;
@@ -731,9 +743,15 @@ public class MediaDocumentsProvider extends StorageProvider {
         int SIZE = 3;
         int DATA = 4;
         int DATE_MODIFIED = 5;
+        int DATE_ADDED = 6;
     }
 
     private void includeVideo(MatrixCursor result, Cursor cursor) {
+        includeVideo(result, cursor, false);
+    }
+
+    /** @param recent dated by when it arrived, if later than its last change (see queryRecentDocuments) */
+    private void includeVideo(MatrixCursor result, Cursor cursor, boolean recent) {
         final long id = cursor.getLong(VideoQuery._ID);
         final String docId = getDocIdForIdent(TYPE_VIDEO, id);
 
@@ -743,8 +761,10 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_SIZE, cursor.getLong(VideoQuery.SIZE));
         row.add(Document.COLUMN_MIME_TYPE, cursor.getString(VideoQuery.MIME_TYPE));
         row.add(Document.COLUMN_PATH, cursor.getString(VideoQuery.DATA));
-        row.add(Document.COLUMN_LAST_MODIFIED,
-                cursor.getLong(VideoQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
+        final long modified = cursor.getLong(VideoQuery.DATE_MODIFIED);
+        row.add(Document.COLUMN_LAST_MODIFIED, (recent
+                ? Math.max(modified, cursor.getLong(VideoQuery.DATE_ADDED)) : modified)
+                * DateUtils.SECOND_IN_MILLIS);
         row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
     }
 
