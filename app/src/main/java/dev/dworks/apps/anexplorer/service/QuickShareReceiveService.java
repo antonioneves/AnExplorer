@@ -1,46 +1,56 @@
 package dev.dworks.apps.anexplorer.service;
 
+import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.ActivityManager;
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.net.nsd.NsdManager;
-import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.Process;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.util.Base64;
+import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
+import com.google.android.gms.nearby.Nearby;
+import com.google.android.gms.nearby.connection.AdvertisingOptions;
+import com.google.android.gms.nearby.connection.ConnectionInfo;
+import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback;
+import com.google.android.gms.nearby.connection.ConnectionResolution;
+import com.google.android.gms.nearby.connection.ConnectionsClient;
+import com.google.android.gms.nearby.connection.Payload;
+import com.google.android.gms.nearby.connection.PayloadCallback;
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
+import com.google.android.gms.nearby.connection.Strategy;
 import com.google.android.gms.nearby.sharing.Protocol;
+import com.google.protobuf.ByteString;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -48,16 +58,16 @@ import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.protocol.EndpointInfo;
-import dev.dworks.apps.anexplorer.protocol.InboundConnection;
 
 /**
- * In-process Quick Share / Nearby Share receiver. Advertises over mDNS in the
- * Nearby Connections format ({@code _FC9F5ED42C8A._tcp.}) and accepts the
- * encrypted Quick Share connection over TCP, running {@link InboundConnection}.
+ * In-process Quick Share / Nearby Share receiver.
  *
- * <p>Clean-room: protocol behavior derived from the public wire format
- * (Apache-2.0 Google protos), Google's Apache-2.0 {@code ukey2} library, and
- * the public-domain NearDrop implementation.
+ * <p>Advertises through Play services' Nearby Connections under Quick Share's own service id,
+ * so phones find the TV the way they find each other: over Bluetooth as well as Wi-Fi, and
+ * move the files over whatever link suits (Wi-Fi Direct, hotspot, the local network). Recent
+ * Pixels leave Wi-Fi while Quick Share is open, so a receiver reachable only on the local
+ * network is never found. Nearby Connections handles the connection and its encryption; this
+ * service speaks the sharing frames on top (public Apache-2.0 protos, as in NearDrop).
  */
 public class QuickShareReceiveService extends Service {
 
@@ -86,24 +96,20 @@ public class QuickShareReceiveService extends Service {
     /** The transfer awaiting consent, so a screen opened later can still ask (TV has no notification actions). */
     private static volatile Bundle sPendingIncoming;
 
+    private static final String TAG = "QuickShareReceive";
     private static final String CHANNEL_ID = "quickshare_receive";
-    private static final String SERVICE_TYPE = "_FC9F5ED42C8A._tcp.";
-    private static final byte[] SERVICE_ID_HASH = new byte[]{(byte) 0xFC, (byte) 0x9F, (byte) 0x5E};
-    private static final String ENDPOINT_ALPHABET =
-            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    /** Quick Share's Nearby Connections service */
+    private static final String SERVICE_ID = "NearbySharing";
     private static final int NOTIFICATION_ID = 917;
 
-    private HandlerThread serverThread;
-    /** Runs the blocking accept loop; nothing else can be queued on it. */
-    private Handler serverHandler;
-    /** Notifications, broadcasts and session bookkeeping. */
+    /** Notifications, broadcasts, Nearby callbacks and session bookkeeping. */
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    /** Consent answers write to the socket, which isn't allowed on the main thread. */
-    private final ExecutorService consentExecutor = Executors.newSingleThreadExecutor();
-    private NsdManager nsdManager;
-    private NsdManager.RegistrationListener registrationListener;
-    private volatile ServerSocket serverSocket;
-    private String endpointId;
+    /** Copies received files into place, off the main thread. */
+    private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private ConnectionsClient connectionsClient;
+    private boolean advertising;
+    /** Sessions by Nearby endpoint id, and by the transfer id the screens and notifications use */
+    private final Map<String, TransferSession> sessions = new HashMap<>();
     private final Map<Integer, TransferSession> transfers = new HashMap<>();
     private int transferIdCounter = 1;
 
@@ -158,11 +164,7 @@ public class QuickShareReceiveService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        serverThread = new HandlerThread("quickshare-receive", Process.THREAD_PRIORITY_BACKGROUND);
-        serverThread.start();
-        serverHandler = new Handler(serverThread.getLooper());
-        nsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
-        endpointId = generateEndpointId();
+        connectionsClient = Nearby.getConnectionsClient(this);
         startForeground(NOTIFICATION_ID, buildForegroundNotification(
                 getString(R.string.quickshare_receive_title),
                 getString(R.string.quickshare_receive_waiting)));
@@ -179,115 +181,99 @@ public class QuickShareReceiveService extends Service {
         if (intent != null && intent.hasExtra(EXTRA_ACCEPT)) {
             int transferId = intent.getIntExtra(EXTRA_TRANSFER_ID, -1);
             boolean accept = intent.getBooleanExtra(EXTRA_ACCEPT, false);
-            TransferSession session;
-            synchronized (transfers) {
-                session = transfers.get(transferId);
-            }
+            TransferSession session = transfers.get(transferId);
             Bundle pending = sPendingIncoming;
             if (pending != null && pending.getInt(EXTRA_TRANSFER_ID) == transferId) {
                 sPendingIncoming = null;
             }
             cancelIncomingNotification(transferId);
             if (session != null) {
-                final TransferSession target = session;
-                consentExecutor.execute(accept ? target::accept : target::reject);
+                Log.i(TAG, "User " + (accept ? "accepted" : "declined") + " transfer " + transferId);
+                if (accept) {
+                    session.accept();
+                } else {
+                    session.reject();
+                }
             }
             return START_STICKY;
         }
-        startServer();
+        startAdvertising();
         return START_STICKY;
     }
 
-    private void startServer() {
-        serverHandler.post(() -> {
-            if (serverSocket != null && !serverSocket.isClosed()) {
+    private void startAdvertising() {
+        if (advertising) {
+            return;
+        }
+        advertising = true;
+        byte[] endpointInfo = EndpointInfo.serialize(getDeviceName(), EndpointInfo.DeviceType.LAPTOP);
+        connectionsClient.startAdvertising(endpointInfo, SERVICE_ID, lifecycleCallback,
+                        new AdvertisingOptions.Builder()
+                                .setStrategy(Strategy.P2P_POINT_TO_POINT)
+                                .build())
+                .addOnSuccessListener(unused -> {
+                    updateForegroundNotification(getString(R.string.quickshare_receive_title),
+                            getString(R.string.quickshare_receive_visible));
+                    broadcast(new Intent(ACTION_QUICKSHARE_VISIBLE));
+                })
+                .addOnFailureListener(e -> {
+                    // Usually a missing Nearby devices permission
+                    Log.w(TAG, "Advertising failed", e);
+                    CrashReportingManager.logException(e);
+                    advertising = false;
+                    stopSelf();
+                });
+    }
+
+    private final ConnectionLifecycleCallback lifecycleCallback = new ConnectionLifecycleCallback() {
+        @Override
+        public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo info) {
+            TransferSession session = new TransferSession(QuickShareReceiveService.this,
+                    transferIdCounter++, endpointId, senderName(info.getEndpointInfo()));
+            sessions.put(endpointId, session);
+            transfers.put(session.transferId, session);
+            // Consent comes later, once the sender says what it is sending
+            connectionsClient.acceptConnection(endpointId, session.payloadCallback)
+                    .addOnFailureListener(e -> session.fail(e));
+        }
+
+        @Override
+        public void onConnectionResult(@NonNull String endpointId, @NonNull ConnectionResolution result) {
+            TransferSession session = sessions.get(endpointId);
+            if (session == null) {
                 return;
             }
-            try {
-                serverSocket = new ServerSocket(0);
-                int port = serverSocket.getLocalPort();
-                registerMdns(port);
-                acceptLoop();
-            } catch (IOException e) {
-                CrashReportingManager.logException(e, true);
-                stopSelf();
-            }
-        });
-    }
-
-    private void acceptLoop() {
-        while (serverSocket != null && !serverSocket.isClosed()) {
-            try {
-                Socket socket = serverSocket.accept();
-                int transferId;
-                synchronized (transfers) {
-                    transferId = transferIdCounter++;
-                }
-                TransferSession session = new TransferSession(this, transferId, socket);
-                synchronized (transfers) {
-                    transfers.put(transferId, session);
-                }
-                session.start();
-            } catch (IOException e) {
-                break;
+            if (result.getStatus().isSuccess()) {
+                session.onConnected();
+            } else {
+                session.fail(new IOException("Connection failed: " + result.getStatus()));
             }
         }
-    }
 
-    @android.annotation.TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void registerMdns(int port) {
-        String serviceName = makeServiceName(endpointId);
-        NsdServiceInfo serviceInfo = new NsdServiceInfo();
-        serviceInfo.setServiceName(serviceName);
-        serviceInfo.setServiceType(SERVICE_TYPE);
-        serviceInfo.setPort(port);
-        byte[] endpointInfo = EndpointInfo.serialize(getDeviceName(), EndpointInfo.DeviceType.LAPTOP);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            serviceInfo.setAttribute("n",
-                    Base64.encode(endpointInfo, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING));
+        @Override
+        public void onDisconnected(@NonNull String endpointId) {
+            TransferSession session = sessions.get(endpointId);
+            if (session != null) {
+                session.onDisconnected();
+            }
         }
+    };
 
-        registrationListener = new NsdManager.RegistrationListener() {
-            @Override
-            public void onServiceRegistered(NsdServiceInfo info) {
-                mainHandler.post(() -> updateForegroundNotification(
-                        getString(R.string.quickshare_receive_title),
-                        getString(R.string.quickshare_receive_visible)));
-                broadcast(new Intent(ACTION_QUICKSHARE_VISIBLE));
-            }
-
-            @Override
-            public void onRegistrationFailed(NsdServiceInfo info, int errorCode) {
-                CrashReportingManager.logException(new RuntimeException("mDNS registration failed: " + errorCode));
-            }
-
-            @Override
-            public void onServiceUnregistered(NsdServiceInfo info) {
-            }
-
-            @Override
-            public void onUnregistrationFailed(NsdServiceInfo info, int errorCode) {
-            }
-        };
+    /** The sender's name from its endpoint info; phones hide it unless the TV is a contact */
+    private String senderName(byte[] endpointInfo) {
         try {
-            nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener);
-        } catch (IllegalArgumentException e) {
-            CrashReportingManager.logException(e);
+            String name = EndpointInfo.parse(endpointInfo).getDeviceName();
+            if (name != null && !name.trim().isEmpty()) {
+                return name;
+            }
+        } catch (IllegalArgumentException ignored) {
         }
+        return getString(R.string.quickshare_receive_unknown_device);
     }
 
     private void broadcast(Intent intent) {
         intent.setPackage(getPackageName());
         sendBroadcast(intent);
-    }
-
-    private static String makeServiceName(String endpointId) {
-        byte[] nameBytes = new byte[10];
-        nameBytes[0] = 0x23;
-        byte[] endpointBytes = endpointId.getBytes(StandardCharsets.US_ASCII);
-        System.arraycopy(endpointBytes, 0, nameBytes, 1, 4);
-        System.arraycopy(SERVICE_ID_HASH, 0, nameBytes, 5, 3);
-        return Base64.encodeToString(nameBytes, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
     private String getDeviceName() {
@@ -301,15 +287,6 @@ public class QuickShareReceiveService extends Service {
             name = Build.MODEL;
         }
         return name == null ? "Android TV" : name;
-    }
-
-    private static String generateEndpointId() {
-        SecureRandom random = new SecureRandom();
-        StringBuilder sb = new StringBuilder(4);
-        for (int i = 0; i < 4; i++) {
-            sb.append(ENDPOINT_ALPHABET.charAt(random.nextInt(ENDPOINT_ALPHABET.length())));
-        }
-        return sb.toString();
     }
 
     private void createNotificationChannel() {
@@ -408,17 +385,8 @@ public class QuickShareReceiveService extends Service {
         nm.cancel(NOTIFICATION_ID + transferId);
     }
 
-    private void onSessionFinished(int transferId) {
-        synchronized (transfers) {
-            transfers.remove(transferId);
-        }
-        Bundle pending = sPendingIncoming;
-        if (pending != null && pending.getInt(EXTRA_TRANSFER_ID) == transferId) {
-            sPendingIncoming = null;
-        }
-    }
-
-    private void onTransferReceived(TransferSession session, String deviceName, int fileCount) {
+    private void onTransferReceived(TransferSession session, int fileCount) {
+        String deviceName = session.deviceName;
         if (fileCount == 0) {
             return;
         }
@@ -430,7 +398,8 @@ public class QuickShareReceiveService extends Service {
                 .putExtra(EXTRA_COUNT, fileCount));
     }
 
-    private void onTextReceived(TransferSession session, String deviceName, String text) {
+    private void onTextReceived(TransferSession session, String text) {
+        String deviceName = session.deviceName;
         showResultNotification(session.transferId,
                 String.format(Locale.US, getString(R.string.quickshare_receive_from), deviceName), text);
         broadcast(new Intent(ACTION_QUICKSHARE_TEXT)
@@ -438,7 +407,8 @@ public class QuickShareReceiveService extends Service {
                 .putExtra(EXTRA_TEXT, text));
     }
 
-    private void onTransferFailed(TransferSession session, String deviceName) {
+    private void onTransferFailed(TransferSession session) {
+        String deviceName = session.deviceName;
         showResultNotification(session.transferId,
                 String.format(Locale.US, getString(R.string.quickshare_receive_from), deviceName),
                 getString(R.string.quickshare_receive_failed));
@@ -462,112 +432,293 @@ public class QuickShareReceiveService extends Service {
         return file;
     }
 
+    private void onSessionFinished(TransferSession session) {
+        sessions.remove(session.endpointId);
+        transfers.remove(session.transferId);
+        Bundle pending = sPendingIncoming;
+        if (pending != null && pending.getInt(EXTRA_TRANSFER_ID) == session.transferId) {
+            sPendingIncoming = null;
+            cancelIncomingNotification(session.transferId);
+        }
+    }
+
     @Override
     public void onDestroy() {
-        // Closing the socket unblocks accept() and ends the loop on serverThread
-        try {
-            if (serverSocket != null) {
-                serverSocket.close();
-                serverSocket = null;
-            }
-        } catch (IOException ignored) {
+        if (advertising) {
+            connectionsClient.stopAdvertising();
+            advertising = false;
         }
-        if (registrationListener != null) {
-            try {
-                nsdManager.unregisterService(registrationListener);
-            } catch (IllegalArgumentException ignored) {
-            }
-            registrationListener = null;
+        for (TransferSession session : new ArrayList<>(sessions.values())) {
+            session.onDisconnected();
         }
-        serverThread.quitSafely();
-        consentExecutor.shutdown();
+        connectionsClient.stopAllEndpoints();
+        fileExecutor.shutdown();
         sPendingIncoming = null;
         broadcast(new Intent(ACTION_QUICKSHARE_STOPPED));
         super.onDestroy();
     }
 
-    /** A single inbound Quick Share transfer session. */
+    /**
+     * One incoming transfer: the sharing handshake (paired key frames, which we can't verify and
+     * answer with UNABLE as other open receivers do), the introduction listing what is coming,
+     * the user's answer, then the files and texts. Runs on the main thread, except file copies.
+     */
     private static final class TransferSession {
+        private enum State {
+            CONNECTING, SENT_PAIRED_ENCRYPTION, SENT_PAIRED_RESULT, AWAIT_INTRODUCTION,
+            AWAIT_CONSENT, RECEIVING, DONE
+        }
+
         private final QuickShareReceiveService service;
         private final int transferId;
-        private final Socket socket;
-        private Thread thread;
-        private InboundConnection connection;
-        private final Map<Long, OutputStream> writers = new HashMap<>();
+        private final String endpointId;
+        private final String deviceName;
+        private final SecureRandom random = new SecureRandom();
+        private State state = State.CONNECTING;
+        private Protocol.IntroductionFrame pendingIntroduction;
+        /** Announced files and texts not yet fully received, by payload id */
+        private final Set<Long> pendingFiles = new HashSet<>();
+        private final Map<Long, Protocol.TextMetadata> pendingTexts = new HashMap<>();
+        /** File payloads as they arrive; their content is ready once the transfer succeeds */
+        private final Map<Long, Payload> filePayloads = new HashMap<>();
         private final Map<Long, File> destinations = new HashMap<>();
         private final Map<Long, Uri> uris = new HashMap<>();
         /** MediaStore entries not yet complete; deleted if the transfer fails. */
         private final List<Uri> pendingUris = new ArrayList<>();
-        private volatile String deviceName = "";
-        private volatile boolean rejected;
         private int receivedFiles;
-        private Protocol.IntroductionFrame pendingIntroduction;
+        private boolean rejected;
 
-        TransferSession(QuickShareReceiveService service, int transferId, Socket socket) {
+        TransferSession(QuickShareReceiveService service, int transferId, String endpointId,
+                        String deviceName) {
             this.service = service;
             this.transferId = transferId;
-            this.socket = socket;
+            this.endpointId = endpointId;
+            this.deviceName = deviceName;
         }
 
-        void start() {
-            thread = new Thread(this::run, "quickshare-transfer-" + transferId);
-            thread.start();
+        final PayloadCallback payloadCallback = new PayloadCallback() {
+            @Override
+            public void onPayloadReceived(@NonNull String endpointId, @NonNull Payload payload) {
+                if (payload.getType() == Payload.Type.FILE) {
+                    if (state != State.RECEIVING || !pendingFiles.contains(payload.getId())) {
+                        service.connectionsClient.cancelPayload(payload.getId());
+                        return;
+                    }
+                    filePayloads.put(payload.getId(), payload);
+                } else if (payload.getType() == Payload.Type.BYTES) {
+                    onBytes(payload.getId(), payload.asBytes());
+                }
+            }
+
+            @Override
+            public void onPayloadTransferUpdate(@NonNull String endpointId,
+                                                @NonNull PayloadTransferUpdate update) {
+                long payloadId = update.getPayloadId();
+                if (!pendingFiles.contains(payloadId)) {
+                    return;
+                }
+                int status = update.getStatus();
+                if (status == PayloadTransferUpdate.Status.SUCCESS) {
+                    Payload payload = filePayloads.remove(payloadId);
+                    if (payload != null) {
+                        service.fileExecutor.execute(() -> {
+                            boolean saved = saveFile(payloadId, payload);
+                            service.mainHandler.post(() -> onFileSaved(payloadId, saved));
+                        });
+                    }
+                } else if (status == PayloadTransferUpdate.Status.FAILURE
+                        || status == PayloadTransferUpdate.Status.CANCELED) {
+                    fail(new IOException("File transfer " + (status == PayloadTransferUpdate.Status.CANCELED
+                            ? "cancelled" : "failed")));
+                }
+            }
+        };
+
+        void onConnected() {
+            Log.i(TAG, "Connected to " + deviceName);
+            // We have no certificates to offer; the sender carries on without them
+            state = State.SENT_PAIRED_ENCRYPTION;
+            sendFrame(Protocol.V1Frame.newBuilder()
+                    .setType(Protocol.V1Frame.FrameType.PAIRED_KEY_ENCRYPTION)
+                    .setPairedKeyEncryption(Protocol.PairedKeyEncryptionFrame.newBuilder()
+                            .setSecretIdHash(ByteString.copyFrom(randomBytes(6)))
+                            .setSignedData(ByteString.copyFrom(randomBytes(72)))));
         }
 
-        private void run() {
+        private void onBytes(long payloadId, byte[] body) {
+            if (body == null) {
+                return;
+            }
+            Protocol.TextMetadata text = pendingTexts.remove(payloadId);
+            if (text != null) {
+                Log.i(TAG, "Text from " + deviceName + (state == State.RECEIVING ? "" : " before consent"));
+                if (state == State.RECEIVING) {
+                    String content = new String(body, StandardCharsets.UTF_8);
+                    service.mainHandler.post(() -> service.onTextReceived(this, content));
+                    completeIfDone();
+                }
+                return;
+            }
             try {
-                InputStream in = socket.getInputStream();
-                OutputStream out = socket.getOutputStream();
-                connection = new InboundConnection(in, out, new InboundConnection.Listener() {
-                    @Override
-                    public void onConnectionRequested(String name, EndpointInfo.DeviceType deviceType) {
-                        deviceName = name == null ? "" : name;
-                    }
-
-                    @Override
-                    public void onTransferIntroduced(Protocol.IntroductionFrame introduction) {
-                        pendingIntroduction = introduction;
-                        service.mainHandler.post(() -> service.showIncomingNotification(
-                                TransferSession.this, deviceName, summarize(introduction)));
-                    }
-
-                    @Override
-                    public void onPayloadChunk(long payloadId, byte[] body, int flags, long offset) {
-                        writeChunk(payloadId, body, flags);
-                    }
-
-                    @Override
-                    public void onTextReceived(Protocol.TextMetadata metadata, String text) {
-                        service.mainHandler.post(() -> service.onTextReceived(
-                                TransferSession.this, deviceName, text));
-                    }
-
-                    @Override
-                    public void onTransferComplete() {
-                        closeFiles();
-                        service.mainHandler.post(() -> service.onTransferReceived(
-                                TransferSession.this, deviceName, receivedFiles));
-                    }
-
-                    @Override
-                    public void onConnectionClosed(Throwable error) {
-                        finish(error);
-                    }
-                });
-                connection.run();
+                onFrame(Protocol.Frame.parseFrom(body));
             } catch (IOException e) {
-                finish(e);
+                Log.w(TAG, "Unreadable frame from " + deviceName, e);
             }
         }
 
-        private void finish(Throwable error) {
-            closeFiles();
-            closeSocket();
-            if (error != null && !rejected) {
-                deletePendingEntries();
-                service.mainHandler.post(() -> service.onTransferFailed(TransferSession.this, deviceName));
+        private void onFrame(Protocol.Frame frame) {
+            if (!frame.hasV1()) {
+                return;
             }
-            service.mainHandler.post(() -> service.onSessionFinished(transferId));
+            Protocol.V1Frame v1 = frame.getV1();
+            if (v1.getType() == Protocol.V1Frame.FrameType.CANCEL) {
+                fail(new IOException("Transfer cancelled by sender"));
+                return;
+            }
+            switch (state) {
+                case SENT_PAIRED_ENCRYPTION:
+                    if (v1.getType() == Protocol.V1Frame.FrameType.PAIRED_KEY_ENCRYPTION) {
+                        state = State.SENT_PAIRED_RESULT;
+                        sendFrame(Protocol.V1Frame.newBuilder()
+                                .setType(Protocol.V1Frame.FrameType.PAIRED_KEY_RESULT)
+                                .setPairedKeyResult(Protocol.PairedKeyResultFrame.newBuilder()
+                                        .setStatus(Protocol.PairedKeyResultFrame.Status.UNABLE)));
+                    }
+                    break;
+                case SENT_PAIRED_RESULT:
+                    if (v1.getType() == Protocol.V1Frame.FrameType.PAIRED_KEY_RESULT) {
+                        state = State.AWAIT_INTRODUCTION;
+                    }
+                    break;
+                case AWAIT_INTRODUCTION:
+                    if (v1.getType() == Protocol.V1Frame.FrameType.INTRODUCTION) {
+                        Protocol.IntroductionFrame introduction = v1.getIntroduction();
+                        for (Protocol.FileMetadata file : introduction.getFileMetadataList()) {
+                            pendingFiles.add(file.getPayloadId());
+                        }
+                        for (Protocol.TextMetadata text : introduction.getTextMetadataList()) {
+                            pendingTexts.put(text.getPayloadId(), text);
+                        }
+                        pendingIntroduction = introduction;
+                        Log.i(TAG, deviceName + " offers " + introduction.getFileMetadataCount()
+                                + " files and " + introduction.getTextMetadataCount() + " texts");
+                        state = State.AWAIT_CONSENT;
+                        service.showIncomingNotification(this, deviceName, summarize(introduction));
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        void accept() {
+            if (state != State.AWAIT_CONSENT) {
+                return;
+            }
+            state = State.RECEIVING;
+            // MediaStore entries are made off the main thread, before the answer goes out
+            service.fileExecutor.execute(() -> {
+                prepareDestinations();
+                service.mainHandler.post(() -> {
+                    if (state != State.RECEIVING) {
+                        return;
+                    }
+                    sendFrame(Protocol.V1Frame.newBuilder()
+                            .setType(Protocol.V1Frame.FrameType.RESPONSE)
+                            .setConnectionResponse(Protocol.ConnectionResponseFrame.newBuilder()
+                                    .setStatus(Protocol.ConnectionResponseFrame.Status.ACCEPT)));
+                    service.updateForegroundNotification(service.getString(R.string.quickshare_receive_title),
+                            service.getString(R.string.quickshare_receive_receiving));
+                    // Nothing announced means nothing to wait for
+                    completeIfDone();
+                });
+            });
+        }
+
+        void reject() {
+            if (state != State.AWAIT_CONSENT) {
+                return;
+            }
+            rejected = true;
+            sendFrame(Protocol.V1Frame.newBuilder()
+                    .setType(Protocol.V1Frame.FrameType.RESPONSE)
+                    .setConnectionResponse(Protocol.ConnectionResponseFrame.newBuilder()
+                            .setStatus(Protocol.ConnectionResponseFrame.Status.REJECT)));
+            disconnectSoon();
+        }
+
+        private void onFileSaved(long payloadId, boolean saved) {
+            if (state == State.DONE) {
+                return;
+            }
+            if (!saved) {
+                fail(new IOException("Couldn't save a received file"));
+                return;
+            }
+            pendingFiles.remove(payloadId);
+            receivedFiles++;
+            completeIfDone();
+        }
+
+        private void completeIfDone() {
+            if (state != State.RECEIVING || !pendingFiles.isEmpty() || !pendingTexts.isEmpty()) {
+                return;
+            }
+            state = State.DONE;
+            Log.i(TAG, "Received " + receivedFiles + " files from " + deviceName);
+            service.onTransferReceived(this, receivedFiles);
+            service.updateForegroundNotification(service.getString(R.string.quickshare_receive_title),
+                    service.getString(R.string.quickshare_receive_visible));
+            disconnectSoon();
+            service.onSessionFinished(this);
+        }
+
+        /** Gives the last frames time to reach the sender before hanging up */
+        private void disconnectSoon() {
+            state = State.DONE;
+            service.mainHandler.postDelayed(() ->
+                    service.connectionsClient.disconnectFromEndpoint(endpointId), 1000);
+            service.onSessionFinished(this);
+        }
+
+        void fail(Exception error) {
+            if (state == State.DONE) {
+                return;
+            }
+            Log.w(TAG, "Transfer from " + deviceName + " failed", error);
+            boolean announced = state == State.RECEIVING || state == State.AWAIT_CONSENT;
+            state = State.DONE;
+            service.connectionsClient.disconnectFromEndpoint(endpointId);
+            service.fileExecutor.execute(this::deletePendingEntries);
+            if (announced) {
+                service.onTransferFailed(this);
+            }
+            service.onSessionFinished(this);
+        }
+
+        /** The sender went away, or the receiver stopped */
+        void onDisconnected() {
+            if (state == State.DONE) {
+                return;
+            }
+            Log.i(TAG, deviceName + " disconnected in state " + state);
+            boolean wasReceiving = state == State.RECEIVING || state == State.AWAIT_CONSENT;
+            state = State.DONE;
+            service.fileExecutor.execute(this::deletePendingEntries);
+            if (wasReceiving && !rejected) {
+                service.onTransferFailed(this);
+            }
+            service.onSessionFinished(this);
+        }
+
+        private void sendFrame(Protocol.V1Frame.Builder v1) {
+            byte[] body = Protocol.Frame.newBuilder()
+                    .setVersion(Protocol.Frame.Version.V1)
+                    .setV1(v1)
+                    .build()
+                    .toByteArray();
+            service.connectionsClient.sendPayload(endpointId, Payload.fromBytes(body))
+                    .addOnFailureListener(this::fail);
         }
 
         private String summarize(Protocol.IntroductionFrame introduction) {
@@ -636,26 +787,43 @@ public class QuickShareReceiveService extends Service {
             }
         }
 
-        private synchronized void writeChunk(long payloadId, byte[] body, int flags) {
-            try {
-                OutputStream out = writers.get(payloadId);
-                if (out == null) {
-                    out = openWriter(payloadId);
-                    if (out == null) {
-                        return;
-                    }
-                    writers.put(payloadId, out);
-                }
-                out.write(body);
-                if ((flags & 1) == 1) {
-                    out.close();
-                    writers.remove(payloadId);
-                    finalizeFile(payloadId);
-                    receivedFiles++;
-                }
-            } catch (IOException e) {
-                CrashReportingManager.logException(e);
+        /** Moves a received file from where Nearby put it to its place in Download/Quick Share */
+        private boolean saveFile(long payloadId, Payload payload) {
+            Payload.File file = payload.asFile();
+            if (file == null) {
+                return false;
             }
+            Uri sourceUri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? file.asUri() : null;
+            File sourceFile = sourceUri == null ? file.asJavaFile() : null;
+            try (InputStream in = sourceUri != null
+                    ? service.getContentResolver().openInputStream(sourceUri)
+                    : sourceFile != null ? new FileInputStream(sourceFile)
+                    : new ParcelFileDescriptor.AutoCloseInputStream(file.asParcelFileDescriptor());
+                 OutputStream out = openWriter(payloadId)) {
+                if (in == null || out == null) {
+                    return false;
+                }
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+            } catch (IOException | SecurityException e) {
+                CrashReportingManager.logException(e);
+                return false;
+            } finally {
+                // Nearby's own copy is no longer needed
+                try {
+                    if (sourceUri != null) {
+                        service.getContentResolver().delete(sourceUri, null, null);
+                    } else if (sourceFile != null) {
+                        sourceFile.delete();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            finalizeFile(payloadId);
+            return true;
         }
 
         private OutputStream openWriter(long payloadId) throws IOException {
@@ -696,39 +864,10 @@ public class QuickShareReceiveService extends Service {
             }
         }
 
-        private synchronized void closeFiles() {
-            for (OutputStream out : writers.values()) {
-                try {
-                    out.close();
-                } catch (IOException ignored) {
-                }
-            }
-            writers.clear();
-        }
-
-        private void closeSocket() {
-            try {
-                socket.close();
-            } catch (IOException ignored) {
-            }
-        }
-
-        void accept() {
-            prepareDestinations();
-            InboundConnection conn = connection;
-            if (conn != null) {
-                conn.accept();
-            }
-        }
-
-        void reject() {
-            rejected = true;
-            InboundConnection conn = connection;
-            if (conn != null) {
-                conn.reject();
-            }
-            // The receive loop is blocked reading; closing the socket ends it.
-            closeSocket();
+        private byte[] randomBytes(int length) {
+            byte[] bytes = new byte[length];
+            random.nextBytes(bytes);
+            return bytes;
         }
     }
 }

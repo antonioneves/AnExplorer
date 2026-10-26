@@ -16,6 +16,7 @@
 
 package dev.dworks.apps.anexplorer.fragment;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
@@ -24,6 +25,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -31,13 +33,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.common.ActionBarActivity;
 import dev.dworks.apps.anexplorer.service.QuickShareReceiveService;
 
 /**
@@ -56,6 +58,8 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     private int incomingTransferId = -1;
     private boolean standalone;
     // Off once the user stopped receiving, so coming back here doesn't start it again
+    private static final int REQUEST_NEARBY = 49;
+
     private boolean wantReceiving = true;
 
     private final BroadcastReceiver mStateReceiver = new BroadcastReceiver() {
@@ -79,6 +83,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
                 dismissIncoming();
                 status.setText(R.string.quickshare_receive_failed);
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_TEXT.equals(receivedAction)) {
+                status.setText(R.string.quickshare_receive_visible);
                 showText(intent.getStringExtra(QuickShareReceiveService.EXTRA_DEVICE_NAME),
                         intent.getStringExtra(QuickShareReceiveService.EXTRA_TEXT));
             }
@@ -225,24 +230,50 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
                 .show();
     }
 
+    /** Bluetooth and Wi-Fi Direct, which phones use to find and reach the TV */
+    private static String[] nearbyPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return new String[]{Manifest.permission.BLUETOOTH_ADVERTISE,
+                    Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.NEARBY_WIFI_DEVICES};
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return new String[]{Manifest.permission.BLUETOOTH_ADVERTISE,
+                    Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN};
+        }
+        return new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+    }
+
+    private boolean hasNearbyPermissions() {
+        for (String permission : nearbyPermissions()) {
+            if (getActivity().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void startReceiving() {
-        ((ActionBarActivity) getActivity()).runWithLocalNetwork(new Runnable() {
-            @Override
-            public void run() {
-                if (isAdded()) {
-                    QuickShareReceiveService.start(getActivity());
-                }
-            }
-        }, new Runnable() {
-            @Override
-            public void run() {
-                // Receiving can't work without it; don't ask again on every resume
-                wantReceiving = false;
-                if (isAdded()) {
-                    onStopped();
-                }
-            }
-        });
+        if (hasNearbyPermissions()) {
+            QuickShareReceiveService.start(getActivity());
+        } else {
+            requestPermissions(nearbyPermissions(), REQUEST_NEARBY);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode != REQUEST_NEARBY || !isAdded() || grantResults.length == 0) {
+            return;
+        }
+        if (hasNearbyPermissions()) {
+            QuickShareReceiveService.start(getActivity());
+        } else {
+            // Receiving can't work without it; don't ask again on every resume
+            wantReceiving = false;
+            Toast.makeText(getActivity(), R.string.quickshare_receive_permission_needed,
+                    Toast.LENGTH_LONG).show();
+            onStopped();
+        }
     }
 
     @Override

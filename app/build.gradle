@@ -82,6 +82,7 @@ dependencies {
     implementation 'commons-net:commons-net:3.13.0'
     implementation 'com.zsoltsafrany:needle:1.0.0'
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
+    implementation 'com.google.android.gms:play-services-nearby:19.3.0'
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.cardview:cardview:1.0.0'
