@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"ترتیبات"</string>
     <string name="menu_open" msgid="432922957274920903">"کھولیں"</string>
     <string name="menu_save" msgid="2394743337684426338">"محفوظ کریں"</string>
-    <string name="menu_share" msgid="3075149983979628146">"اشتراک کریں"</string>
     <string name="menu_delete" msgid="8138799623850614177">"حذف کریں"</string>
     <string name="menu_select" msgid="8711270657353563424">"\"<xliff:g id="DIRECTORY">^1</xliff:g>\" منتخب کریں"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> کو منتخب کیا گیا"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"کوئی آئٹمز نہيں ہیں"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"فائل نہيں کھول سکتے ہیں"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"کچھ دستاویزات کو حذف کرنے سے قاصر"</string>
-    <string name="share_via" msgid="8966594246261344259">"اشتراک کریں بذریعہ"</string>
 </resources>

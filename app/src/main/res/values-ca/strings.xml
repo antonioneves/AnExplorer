@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"Configuració"</string>
     <string name="menu_open" msgid="432922957274920903">"Obre"</string>
     <string name="menu_save" msgid="2394743337684426338">"Desa"</string>
-    <string name="menu_share" msgid="3075149983979628146">"Comparteix"</string>
     <string name="menu_delete" msgid="8138799623850614177">"Suprimeix"</string>
     <string name="menu_select" msgid="8711270657353563424">"Selecciona \"<xliff:g id="DIRECTORY">^1</xliff:g>\""</string>
     <string name="mode_selected_count" msgid="459111894725594625">"Seleccionats: <xliff:g id="COUNT">%1$d</xliff:g>"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"Sense elements"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"No es pot obrir el fitxer."</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"No es poden suprimir alguns documents."</string>
-    <string name="share_via" msgid="8966594246261344259">"Comparteix mitjançant"</string>
 </resources>

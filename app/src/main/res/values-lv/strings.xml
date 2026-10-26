@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"Iestatījumi"</string>
     <string name="menu_open" msgid="432922957274920903">"Atvērt"</string>
     <string name="menu_save" msgid="2394743337684426338">"Saglabāt"</string>
-    <string name="menu_share" msgid="3075149983979628146">"Kopīgot"</string>
     <string name="menu_delete" msgid="8138799623850614177">"Dzēst"</string>
     <string name="menu_select" msgid="8711270657353563424">"Atlasīt “<xliff:g id="DIRECTORY">^1</xliff:g>”"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"Atlasīts: <xliff:g id="COUNT">%1$d</xliff:g>"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"Nav vienumu"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"Nevar atvērt failu."</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Nevar dzēst dažus dokumentus."</string>
-    <string name="share_via" msgid="8966594246261344259">"Kopīgot, izmantojot"</string>
 </resources>

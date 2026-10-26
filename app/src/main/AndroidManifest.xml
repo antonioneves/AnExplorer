@@ -35,14 +35,10 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
-    <!-- To offer Share only when some app takes the files -->
+    <!-- To offer Open with only when some app opens the file -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.SEND" />
-            <data android:mimeType="*/*" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="*/*" />
         </intent>
     </queries>

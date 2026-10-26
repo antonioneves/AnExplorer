@@ -2215,7 +2215,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         // Bar order: open, then edit actions, then sharing, then details; Delete always goes last
         private final int[] ACTION_ORDER = {
                 R.id.menu_open, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_rename,
-                R.id.menu_compress, R.id.menu_share, R.id.menu_quickshare, R.id.menu_bookmark, R.id.menu_info,
+                R.id.menu_compress, R.id.menu_open_with, R.id.menu_quickshare, R.id.menu_bookmark, R.id.menu_info,
         };
         private final ActionMode.Callback callback;
         private CharSequence title;

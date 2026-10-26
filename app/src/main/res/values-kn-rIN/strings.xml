@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"ಸೆಟ್ಟಿಂಗ್‌ಗಳು"</string>
     <string name="menu_open" msgid="432922957274920903">"ತೆರೆ"</string>
     <string name="menu_save" msgid="2394743337684426338">"ಉಳಿಸು"</string>
-    <string name="menu_share" msgid="3075149983979628146">"ಹಂಚು"</string>
     <string name="menu_delete" msgid="8138799623850614177">"ಅಳಿಸು"</string>
     <string name="menu_select" msgid="8711270657353563424">"\"<xliff:g id="DIRECTORY">^1</xliff:g>\" ಆಯ್ಕೆಮಾಡಿ"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"ಯಾವುದೇ ಐಟಂಗಳಿಲ್ಲ"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"ಫೈಲ್ ತೆರೆಯಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"ಕೆಲವು ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳನ್ನು ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ"</string>
-    <string name="share_via" msgid="8966594246261344259">"ಈ ಮೂಲಕ ಹಂಚಿಕೊಳ್ಳಿ"</string>
 </resources>

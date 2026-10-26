@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"ക്രമീകരണങ്ങൾ"</string>
     <string name="menu_open" msgid="432922957274920903">"തുറക്കുക"</string>
     <string name="menu_save" msgid="2394743337684426338">"സംരക്ഷിക്കുക"</string>
-    <string name="menu_share" msgid="3075149983979628146">"പങ്കിടുക"</string>
     <string name="menu_delete" msgid="8138799623850614177">"ഇല്ലാതാക്കുക"</string>
     <string name="menu_select" msgid="8711270657353563424">"\"<xliff:g id="DIRECTORY">^1</xliff:g>\" തിരഞ്ഞെടുക്കുക"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> തിരഞ്ഞെടുത്തു"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"ഇനങ്ങളൊന്നുമില്ല"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"ഫയൽ തുറക്കാനായില്ല"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"ചില പ്രമാണങ്ങൾ ഇല്ലാതാക്കാനായില്ല"</string>
-    <string name="share_via" msgid="8966594246261344259">"ഇതുവഴി പങ്കിടുക"</string>
 </resources>

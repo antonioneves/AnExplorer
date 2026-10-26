@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"Налаштування"</string>
     <string name="menu_open" msgid="432922957274920903">"Відкрити"</string>
     <string name="menu_save" msgid="2394743337684426338">"Зберегти"</string>
-    <string name="menu_share" msgid="3075149983979628146">"Поділитися"</string>
     <string name="menu_delete" msgid="8138799623850614177">"Видалити"</string>
     <string name="menu_select" msgid="8711270657353563424">"Вибрати каталог \"<xliff:g id="DIRECTORY">^1</xliff:g>\""</string>
     <string name="mode_selected_count" msgid="459111894725594625">"Вибрано <xliff:g id="COUNT">%1$d</xliff:g>"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"Немає елементів"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"Не вдалося відкрити файл"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Не вдалося видалити деякі документи"</string>
-    <string name="share_via" msgid="8966594246261344259">"Надіслати через"</string>
 </resources>

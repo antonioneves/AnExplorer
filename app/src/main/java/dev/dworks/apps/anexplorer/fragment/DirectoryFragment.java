@@ -154,8 +154,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private final int mLoaderId = 42;
 	private RootInfo root;
 	private DocumentInfo doc;
-	/** Android TV's placeholder for apps it lacks, e.g. email; it can't share anything */
-	private static final String SHARE_STUB_PACKAGE = "com.android.tv.frameworkpackagestubs";
+	/** Android TV's placeholder for apps it lacks, e.g. email; it can't open anything */
+	private static final String STUB_PACKAGE = "com.android.tv.frameworkpackagestubs";
     private int mDefaultColor;
     private MaterialProgressBar mProgressBar;
     private boolean isOperationSupported;
@@ -592,7 +592,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final State state = getDisplayState(DirectoryFragment.this);
 
 			final MenuItem open = menu.findItem(R.id.menu_open);
-			final MenuItem share = menu.findItem(R.id.menu_share);
+			final MenuItem openWith = menu.findItem(R.id.menu_open_with);
 			final MenuItem delete = menu.findItem(R.id.menu_delete);
 			final MenuItem rename = menu.findItem(R.id.menu_rename);
 
@@ -600,7 +600,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final boolean canDelete = doc != null && doc.isDeleteSupported();
 			final boolean canRename = doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
-			share.setVisible(manageMode && canShare(getCheckedDocuments()));
+			openWith.setVisible(manageMode && canOpenWith(getCheckedDocuments()));
 			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode);
@@ -671,7 +671,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			int count = mAdapter.getCheckedItemCount();
 			mode.setTitle(getResources().getString(R.string.mode_selected_count, count));
-			// What can be shared depends on every file in the selection
+			// Open with is for a single file, so the bar changes with the count
 			mode.invalidate();
 		}
 	};
@@ -718,84 +718,35 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	/**
-	 * Whether some app takes these files. A TV often has none: only a system stub that answers
-	 * every share with "not supported", which doesn't count.
+	 * Whether some app can open this one file. Android TV registers a stub for apps it lacks,
+	 * which only says "not supported", so it doesn't count.
 	 */
-	private boolean canShare(ArrayList<DocumentInfo> docs) {
-		if (docs.isEmpty()) {
+	private boolean canOpenWith(ArrayList<DocumentInfo> docs) {
+		if (docs.size() != 1 || Utils.isDir(docs.get(0).mimeType)) {
 			return false;
 		}
-		final ArrayList<String> mimeTypes = new ArrayList<>();
-		for (DocumentInfo doc : docs) {
-			mimeTypes.add(doc.mimeType);
-		}
-		final String mimeType = docs.size() == 1 ? docs.get(0).mimeType : findCommonMimeType(mimeTypes);
-		final Intent intent = new Intent(docs.size() == 1 ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE);
-		intent.setType(mimeType == null || MimePredicate.mimeMatches(MimePredicate.SHARE_SKIP_MIMES, mimeType)
-				? MimeTypes.ALL_MIME_TYPES : mimeType);
-		for (ResolveInfo info : getActivity().getPackageManager().queryIntentActivities(intent, 0)) {
-			if (!SHARE_STUB_PACKAGE.equals(info.activityInfo.packageName)) {
+		for (ResolveInfo info : getActivity().getPackageManager().queryIntentActivities(viewIntent(docs.get(0)), 0)) {
+			if (!STUB_PACKAGE.equals(info.activityInfo.packageName)) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	private void onShareDocuments(ArrayList<DocumentInfo> docs) {
-		Intent intent;
-		if (docs.size() == 1) {
-			final DocumentInfo doc = docs.get(0);
+	/** Offers every app that can open or play the file, even when one is the default */
+	private void onOpenWith(DocumentInfo doc) {
+		final Intent intent = viewIntent(doc);
+		Bundle params = new Bundle();
+		params.putString(FILE_TYPE, IconUtils.getTypeNameFromMimeType(doc.mimeType));
+		AnalyticsManager.logEvent("open_with", params);
+		startActivity(Intent.createChooser(intent, getActivity().getText(R.string.open_with)));
+	}
 
-			intent = new Intent(Intent.ACTION_SEND);
-			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-			// intent.addCategory(Intent.CATEGORY_DEFAULT);
-            if(!MimePredicate.mimeMatches(MimePredicate.SHARE_SKIP_MIMES, doc.mimeType)) {
-                intent.setType(doc.mimeType);
-            }
-            else{
-                intent.setType(MimeTypes.ALL_MIME_TYPES);
-            }
-			intent.putExtra(Intent.EXTRA_STREAM, doc.derivedUri);
-
-			Bundle params = new Bundle();
-			String type = IconUtils.getTypeNameFromMimeType(doc.mimeType);
-			params.putString(FILE_TYPE, type);
-			params.putInt(FILE_COUNT, docs.size());
-			AnalyticsManager.logEvent("share"+"_"+type, params);
-
-		} else if (docs.size() > 1) {
-			intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-			// intent.addCategory(Intent.CATEGORY_DEFAULT);
-
-			final ArrayList<String> mimeTypes = new ArrayList<>();
-			final ArrayList<Uri> uris = new ArrayList<>();
-			for (DocumentInfo doc : docs) {
-				mimeTypes.add(doc.mimeType);
-				uris.add(doc.derivedUri);
-			}
-
-            String mimeType = findCommonMimeType(mimeTypes);
-            if(!MimePredicate.mimeMatches(MimePredicate.SHARE_SKIP_MIMES, mimeType)) {
-                intent.setType(mimeType);
-            }
-            else{
-                intent.setType(MimeTypes.ALL_MIME_TYPES);
-            }
-			intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
-
-			Bundle params = new Bundle();
-			params.putInt(FILE_COUNT, docs.size());
-			AnalyticsManager.logEvent("share", params);
-
-		} else {
-			return;
-		}
-
-		intent = Intent.createChooser(intent, getActivity().getText(R.string.share_via));
-        if(Utils.isIntentAvailable(getActivity(), intent)) {
-            startActivity(intent);
-        }
+	private static Intent viewIntent(DocumentInfo doc) {
+		final Intent intent = new Intent(Intent.ACTION_VIEW);
+		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		intent.setDataAndType(doc.derivedUri, doc.mimeType);
+		return intent;
 	}
 
 	private boolean onDeleteDocuments(ArrayList<DocumentInfo> docs) {
@@ -984,31 +935,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		}
 	}
 
-	private String findCommonMimeType(ArrayList<String> mimeTypes) {
-		String[] commonType = mimeTypes.get(0).split("/");
-		if (commonType.length != 2) {
-			return "*/*";
-		}
-
-		for (int i = 1; i < mimeTypes.size(); i++) {
-			String[] type = mimeTypes.get(i).split("/");
-			if (type.length != 2)
-				continue;
-
-			if (!commonType[1].equals(type[1])) {
-				commonType[1] = "*";
-			}
-
-			if (!commonType[0].equals(type[0])) {
-				commonType[0] = "*";
-				commonType[1] = "*";
-				break;
-			}
-		}
-
-		return commonType[0] + "/" + commonType[1];
-	}
-
 	public boolean isDocumentEnabled(String docMimeType, int docFlags) {
 		final State state = getDisplayState(DirectoryFragment.this);
 
@@ -1042,7 +968,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		});
 		
 		final State state = getDisplayState(DirectoryFragment.this);
-		final MenuItem share = popup.getMenu().findItem(R.id.menu_share);
+		final MenuItem openWith = popup.getMenu().findItem(R.id.menu_open_with);
 		final MenuItem delete = popup.getMenu().findItem(R.id.menu_delete);
 		final MenuItem rename = popup.getMenu().findItem(R.id.menu_rename);
 		final MenuItem copy = popup.getMenu().findItem(R.id.menu_copy);
@@ -1065,7 +991,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			final ArrayList<DocumentInfo> single = new ArrayList<>();
 			single.add(doc);
-			share.setVisible(manageMode && canShare(single));
+			openWith.setVisible(manageMode && canOpenWith(single));
 			final MenuItem quickShare = popup.getMenu().findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType));
@@ -1135,8 +1061,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public boolean handleMenuAction(MenuItem item, ArrayList<DocumentInfo> docs) {
 		final int id = item.getItemId();
 		Bundle params = new Bundle();
-		if (id == R.id.menu_share) {
-			onShareDocuments(docs);
+		if (id == R.id.menu_open_with) {
+			onOpenWith(docs.get(0));
 			return true;
 		} else if (id == R.id.menu_quickshare) {
 			onQuickShareDocuments(docs);

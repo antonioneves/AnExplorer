@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"Ayarlar"</string>
     <string name="menu_open" msgid="432922957274920903">"Açın"</string>
     <string name="menu_save" msgid="2394743337684426338">"Yadda saxlayın"</string>
-    <string name="menu_share" msgid="3075149983979628146">"Paylaşın"</string>
     <string name="menu_delete" msgid="8138799623850614177">"Sil"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> seçilmiş"</string>
     <string name="sort_name" msgid="9183560467917256779">"Ad üzrə"</string>
@@ -40,5 +39,4 @@
     <string name="empty" msgid="7858882803708117596">"Element yoxdur"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"Faylı aça bilmir"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Bəzi sənədləri silə bilmir"</string>
-    <string name="share_via" msgid="8966594246261344259">"Bunun vasitəsilə paylaş:"</string>
 </resources>

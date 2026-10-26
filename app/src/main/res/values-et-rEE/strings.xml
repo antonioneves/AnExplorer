@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"Seaded"</string>
     <string name="menu_open" msgid="432922957274920903">"Ava"</string>
     <string name="menu_save" msgid="2394743337684426338">"Salvesta"</string>
-    <string name="menu_share" msgid="3075149983979628146">"Jaga"</string>
     <string name="menu_delete" msgid="8138799623850614177">"Kustuta"</string>
     <string name="menu_select" msgid="8711270657353563424">"Kataloogi „<xliff:g id="DIRECTORY">^1</xliff:g>” valimine"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> on valitud"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"Üksusi ei ole"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"Faili ei saa avada"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Mõnda dokumenti ei õnnestu kustutada"</string>
-    <string name="share_via" msgid="8966594246261344259">"Jagage teenusega"</string>
 </resources>

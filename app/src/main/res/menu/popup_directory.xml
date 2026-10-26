@@ -59,10 +59,10 @@
         support:showAsAction="always"
         android:title="@string/menu_uncompress"/>
     <item
-        android:id="@+id/menu_share"
-        android:icon="@drawable/ic_menu_share"
+        android:id="@+id/menu_open_with"
+        android:icon="@drawable/ic_menu_open_with"
         support:showAsAction="ifRoom"
-        android:title="@string/menu_share"/>
+        android:title="@string/menu_open_with"/>
     <item
         android:id="@+id/menu_quickshare"
         android:icon="@drawable/ic_root_quickshare"

@@ -24,7 +24,6 @@
     <string name="menu_settings" msgid="6008033148948428823">"सेटिंग्ज"</string>
     <string name="menu_open" msgid="432922957274920903">"उघडा"</string>
     <string name="menu_save" msgid="2394743337684426338">"जतन करा"</string>
-    <string name="menu_share" msgid="3075149983979628146">"सामायिक करा"</string>
     <string name="menu_delete" msgid="8138799623850614177">"हटवा"</string>
     <string name="menu_select" msgid="8711270657353563424">"\"<xliff:g id="DIRECTORY">^1</xliff:g>\" निवडा"</string>
     <string name="mode_selected_count" msgid="459111894725594625">"<xliff:g id="COUNT">%1$d</xliff:g> निवडले"</string>
@@ -39,5 +38,4 @@
     <string name="empty" msgid="7858882803708117596">"कोणतेही आयटम नाहीत"</string>
     <string name="toast_no_application" msgid="1339885974067891667">"फाईल उघडू शकत नाही"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"काही दस्‍तऐवज हटविण्‍यात अक्षम"</string>
-    <string name="share_via" msgid="8966594246261344259">"द्वारे सामायिक करा"</string>
 </resources>

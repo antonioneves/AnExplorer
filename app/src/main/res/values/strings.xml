@@ -44,7 +44,7 @@
     <!-- Menu item title that saves the current document [CHAR LIMIT=24] -->
     <string name="menu_save">Save</string>
     <!-- Menu item title that shares the selected documents [CHAR LIMIT=24] -->
-    <string name="menu_share">Share</string>
+    <string name="menu_open_with">Open with</string>
     <!-- Menu item title that deletes the selected documents [CHAR LIMIT=24] -->
     <string name="menu_delete">Delete</string>
     <!-- Menu item title that selects the current directory [CHAR LIMIT=48] -->
@@ -100,7 +100,7 @@
     <string name="toast_failed_delete">Unable to delete some documents</string>
 
     <!-- Title of dialog when prompting user to select an app to share documents with [CHAR LIMIT=32] -->
-    <string name="share_via">Share via</string>
+    <string name="open_with">Open with</string>
     <string name="cloud_gdrive">Google Drive</string>
     <string name="cloud_dropbox">Dropbox</string>
     <string name="cloud_onedrive">OneDrive</string>
