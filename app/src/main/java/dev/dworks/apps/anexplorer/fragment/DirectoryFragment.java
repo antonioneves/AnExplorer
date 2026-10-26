@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.BaseActivity.State;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
+import dev.dworks.apps.anexplorer.QuickShareSendActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment;
@@ -597,6 +598,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final boolean canRename = doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
 			share.setVisible(manageMode);
+			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
+			if (quickShare != null) {
+				quickShare.setVisible(manageMode);
+			}
 			delete.setVisible(manageMode && canDelete);
 			if(null != rename) {
 				rename.setVisible(manageMode && canRename && count == 1);
@@ -694,6 +699,20 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				size.setTag(null);
 			}
 		}
+	}
+
+	private void onQuickShareDocuments(ArrayList<DocumentInfo> docs) {
+		final ArrayList<Uri> uris = new ArrayList<>();
+		for (DocumentInfo doc : docs) {
+			if (!Utils.isDir(doc.mimeType)) {
+				uris.add(doc.derivedUri);
+			}
+		}
+		if (uris.isEmpty()) {
+			Utils.showError(getActivity(), R.string.quickshare_send_no_files);
+			return;
+		}
+		QuickShareSendActivity.start(getActivity(), uris);
 	}
 
 	private void onShareDocuments(ArrayList<DocumentInfo> docs) {
@@ -1019,6 +1038,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				bookmark.setVisible(manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported);
 			}
 			share.setVisible(manageMode);
+			final MenuItem quickShare = popup.getMenu().findItem(R.id.menu_quickshare);
+			if (quickShare != null) {
+				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType));
+			}
 			delete.setVisible(manageMode && doc.isDeleteSupported());
 			rename.setVisible(manageMode && doc.isRenameSupported());
 			copy.setVisible(manageMode && doc.isCopySupported());
@@ -1081,6 +1104,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		Bundle params = new Bundle();
 		if (id == R.id.menu_share) {
 			onShareDocuments(docs);
+			return true;
+		} else if (id == R.id.menu_quickshare) {
+			onQuickShareDocuments(docs);
 			return true;
 		} else if (id == R.id.menu_copy) {
 			moveDocument(docs, false);

@@ -230,7 +230,7 @@ public class QuickShareReceiveService extends Service {
      * The four digits the sender shows, from the connection's authentication token, the way
      * Quick Share derives them, so the user can tell it is talking to their phone.
      */
-    static String pinCode(byte[] authToken) {
+    public static String pinCode(byte[] authToken) {
         if (authToken == null) {
             return null;
         }

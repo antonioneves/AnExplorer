@@ -251,7 +251,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     }
 
     /** Bluetooth and Wi-Fi Direct, which phones use to find and reach the TV */
-    private static String[] nearbyPermissions() {
+    public static String[] nearbyPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return new String[]{Manifest.permission.BLUETOOTH_ADVERTISE,
                     Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN,
@@ -263,9 +263,22 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         return new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
     }
 
-    private boolean hasNearbyPermissions() {
-        for (String permission : nearbyPermissions()) {
-            if (getActivity().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+    /** Finding receivers to send to also takes location, which Play services checks for */
+    public static String[] sendPermissions() {
+        final String[] nearby = nearbyPermissions();
+        final String[] permissions = java.util.Arrays.copyOf(nearby, nearby.length + 2);
+        permissions[nearby.length] = Manifest.permission.ACCESS_FINE_LOCATION;
+        permissions[nearby.length + 1] = Manifest.permission.ACCESS_COARSE_LOCATION;
+        return permissions;
+    }
+
+    public static boolean hasNearbyPermissions(Context context) {
+        return hasPermissions(context, nearbyPermissions());
+    }
+
+    public static boolean hasPermissions(Context context, String[] permissions) {
+        for (String permission : permissions) {
+            if (context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
         }
@@ -273,7 +286,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     }
 
     private void startReceiving() {
-        if (hasNearbyPermissions()) {
+        if (hasNearbyPermissions(getActivity())) {
             QuickShareReceiveService.start(getActivity());
         } else {
             requestPermissions(nearbyPermissions(), REQUEST_NEARBY);
@@ -285,7 +298,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         if (requestCode != REQUEST_NEARBY || !isAdded() || grantResults.length == 0) {
             return;
         }
-        if (hasNearbyPermissions()) {
+        if (hasNearbyPermissions(getActivity())) {
             QuickShareReceiveService.start(getActivity());
         } else {
             // Receiving can't work without it; don't ask again on every resume

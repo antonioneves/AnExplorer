@@ -64,6 +64,11 @@
         support:showAsAction="ifRoom"
         android:title="@string/menu_share"/>
     <item
+        android:id="@+id/menu_quickshare"
+        android:icon="@drawable/ic_root_quickshare"
+        support:showAsAction="ifRoom"
+        android:title="@string/menu_quickshare"/>
+    <item
         android:id="@+id/menu_info"
         android:icon="@drawable/ic_menu_info"
         support:showAsAction="always"

@@ -30,10 +30,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="32" />
+    <!-- Play services still asks for location to discover receivers, on every version -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <uses-feature
@@ -130,6 +129,10 @@
             android:name=".QuickShareReceiveActivity"
             android:theme="@style/DocumentsTheme.Document" >
         </activity>
+
+        <activity
+            android:name=".QuickShareSendActivity"
+            android:theme="@style/DocumentsTheme.Document" />
 
         <receiver
             android:name=".receiver.PackageReceiver"
