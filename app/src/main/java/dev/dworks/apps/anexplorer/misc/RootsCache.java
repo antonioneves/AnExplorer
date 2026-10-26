@@ -138,7 +138,7 @@ public class RootsCache {
         // Special root for receiving with Quick Share, in the drawer on TV
         mQuickShareRoot.authority = null;
         mQuickShareRoot.rootId = "quickshare";
-        mQuickShareRoot.icon = R.drawable.ic_root_bluetooth;
+        mQuickShareRoot.icon = R.drawable.ic_root_quickshare;
         mQuickShareRoot.flags = Root.FLAG_LOCAL_ONLY;
         mQuickShareRoot.title = mContext.getString(R.string.home_quickshare);
         mQuickShareRoot.availableBytes = -1;

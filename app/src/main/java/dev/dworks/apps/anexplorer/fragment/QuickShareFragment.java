@@ -58,6 +58,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     public static final String EXTRA_STANDALONE = "standalone";
 
     private TextView status;
+    private TextView visibility;
     private Button action;
     private Dialog incomingDialog;
     private int incomingTransferId = -1;
@@ -73,7 +74,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
             String receivedAction = intent.getAction();
             if (QuickShareReceiveService.ACTION_QUICKSHARE_VISIBLE.equals(receivedAction)) {
                 setRunning(true);
-                status.setText(R.string.quickshare_receive_visible);
+                status.setText(R.string.quickshare_receive_ready);
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_STARTED.equals(receivedAction)) {
                 setRunning(true);
                 status.setText(R.string.quickshare_receive_waiting);
@@ -88,7 +89,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
                 dismissIncoming();
                 status.setText(R.string.quickshare_receive_failed);
             } else if (QuickShareReceiveService.ACTION_QUICKSHARE_TEXT.equals(receivedAction)) {
-                status.setText(R.string.quickshare_receive_visible);
+                status.setText(R.string.quickshare_receive_ready);
                 showText(intent.getStringExtra(QuickShareReceiveService.EXTRA_DEVICE_NAME),
                         intent.getStringExtra(QuickShareReceiveService.EXTRA_TEXT));
             }
@@ -116,16 +117,13 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         status = (TextView) view.findViewById(R.id.status);
+        visibility = (TextView) view.findViewById(R.id.visibility);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
         final String deviceName = QuickShareReceiveService.getDeviceName(getActivity());
         ((TextView) view.findViewById(R.id.hint)).setText(getString(R.string.quickshare_receive_hint,
                 deviceName));
-        // Only the TV layout lists these
-        final TextView device = (TextView) view.findViewById(R.id.device_name);
-        if (null != device) {
-            device.setText(deviceName);
-        }
+        ((TextView) view.findViewById(R.id.device_name)).setText(deviceName);
     }
 
     @Override
@@ -146,7 +144,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         }
         if (QuickShareReceiveService.isRunning(getActivity())) {
             setRunning(true);
-            status.setText(R.string.quickshare_receive_visible);
+            status.setText(R.string.quickshare_receive_ready);
         } else if (wantReceiving) {
             setRunning(true);
             status.setText(R.string.quickshare_receive_waiting);
@@ -176,8 +174,10 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
 
     private void setRunning(boolean running) {
         action.setText(running ? R.string.quickshare_receive_stop : R.string.quickshare_receive_start);
+        visibility.setText(running ? R.string.quickshare_receive_visible
+                : R.string.quickshare_receive_not_visible);
         if (!running) {
-            status.setText(R.string.quickshare_receive_not_visible);
+            status.setText(R.string.quickshare_receive_off);
         }
     }
 

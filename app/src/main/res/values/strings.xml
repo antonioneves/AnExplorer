@@ -148,9 +148,11 @@
     <string name="ftp_restart_to_apply">Stop and start the server to use the new settings</string>
     <string name="ftp_server_title">FTP server</string>
     <string name="quickshare_receive_not_visible">Not visible to nearby devices</string>
-    <string name="quickshare_receive_device">Device name</string>
-    <string name="quickshare_receive_folder">Saves to</string>
-    <string name="quickshare_receive_folder_path">Download/Quick Share</string>
+    <string name="quickshare_receive_saves_to">Files are saved to Download/Quick Share</string>
+    <string name="quickshare_receive_appear_as">You\'ll appear as</string>
+    <string name="quickshare_receive_sharing_with_you">Sharing with you</string>
+    <string name="quickshare_receive_ready">Ready to receive</string>
+    <string name="quickshare_receive_off">Turn on Quick Share to receive</string>
     <string name="quickshare_receive_accept">Accept</string>
     <string name="quickshare_receive_decline">Decline</string>
     <string name="quickshare_receive_incoming">%1$s wants to send files</string>
