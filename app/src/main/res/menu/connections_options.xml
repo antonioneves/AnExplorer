@@ -2,6 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:support="http://schemas.android.com/apk/res-auto">
 
+    <!-- The icons take the text's color, so they show on a light menu and a dark one -->
     <item
         android:id="@+id/menu_add_connection"
         android:alphabeticShortcut="s"
@@ -13,6 +14,7 @@
                 android:id="@+id/cloud_gdrive"
                 android:icon="@drawable/ic_root_gdrive"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/cloud_gdrive"
                 support:showAsAction="never" />
 
@@ -20,6 +22,7 @@
                 android:id="@+id/cloud_dropbox"
                 android:icon="@drawable/ic_root_dropbox"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/cloud_dropbox"
                 support:showAsAction="never" />
 
@@ -27,6 +30,7 @@
                 android:id="@+id/cloud_onedrive"
                 android:icon="@drawable/ic_root_onedrive"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/cloud_onedrive"
                 support:showAsAction="never" />
 
@@ -34,6 +38,7 @@
                 android:id="@+id/cloud_box"
                 android:icon="@drawable/ic_root_box"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/cloud_box"
                 support:showAsAction="never" />
 
@@ -41,6 +46,7 @@
                 android:id="@+id/network_ftp"
                 android:icon="@drawable/ic_connection_ftp"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/network_ftp"
                 support:showAsAction="never" />
 
@@ -48,6 +54,7 @@
                 android:id="@+id/network_webdav"
                 android:icon="@drawable/ic_connection_webdav"
                 android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
                 android:title="@string/network_webdav"
                 support:showAsAction="never" />
         </menu>

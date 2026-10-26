@@ -95,6 +95,8 @@
     <style name="DocumentsTheme.Note">
         <item name="windowActionBar">true</item>
         <item name="windowNoTitle">false</item>
+        <!-- The bar is the window's surface, so its title and buttons take the text's color -->
+        <item name="actionBarTheme">@style/DocumentsTheme.SurfaceBarOverlay</item>
     </style>
     <style name="EditTextAppTheme" parent="DocumentsTheme">
         <item name="colorControlNormal">@color/defaultThemeColor</item>
