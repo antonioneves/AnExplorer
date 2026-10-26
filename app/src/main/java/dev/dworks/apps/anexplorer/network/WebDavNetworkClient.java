@@ -247,8 +247,14 @@ public class WebDavNetworkClient extends NetworkClient {
         return code == 201;
     }
 
+    /** An empty file, without overwriting one that's already there, which PUT alone would */
     @Override
     public boolean createFile(String path) throws IOException {
+        try (Response found = propfind(urlFor(path, false), "0")) {
+            if (found.code() == MULTI_STATUS) {
+                return false;
+            }
+        }
         try (Response response = execute("PUT", urlFor(path, false),
                 RequestBody.create(new byte[0], null))) {
             return response.isSuccessful();

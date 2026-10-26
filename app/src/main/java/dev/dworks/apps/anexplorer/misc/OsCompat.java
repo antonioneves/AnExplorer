@@ -1,52 +1,16 @@
 package dev.dworks.apps.anexplorer.misc;
 
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
+
 import java.io.FileDescriptor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
-/** Very hackish */
+/** lseek, which Android has offered as android.system.Os since 5.0 */
 public final class OsCompat {
-    public static int SEEK_CUR;
-    public static int SEEK_END;
-    public static int SEEK_SET;
-
-    private static Method sLseek;
-    private static Object sOs;
-
-    static {
-        try {
-            Class<?> classLibcore = Class.forName("libcore.io.Libcore");
-            Class<?> classOsConstants;
-            try {
-                classOsConstants = Class.forName("android.system.OsConstants");
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                classOsConstants = Class.forName("libcore.io.OsConstants");
-            }
-
-            // Get os object
-            sOs = classLibcore.getDeclaredField("os").get(null);
-
-            // Get lseek method
-            sLseek = sOs.getClass().getDeclaredMethod(
-                    "lseek", FileDescriptor.class, long.class, int.class);
-
-            // Get lseek constants
-            SEEK_CUR = classOsConstants.getDeclaredField("SEEK_CUR").getInt(null);
-            SEEK_END = classOsConstants.getDeclaredField("SEEK_END").getInt(null);
-            SEEK_SET = classOsConstants.getDeclaredField("SEEK_SET").getInt(null);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-        }
-    }
+    public static final int SEEK_CUR = OsConstants.SEEK_CUR;
+    public static final int SEEK_END = OsConstants.SEEK_END;
+    public static final int SEEK_SET = OsConstants.SEEK_SET;
 
     public static class ExecutionFailedException extends Exception {
         public ExecutionFailedException(String detailMessage) {
@@ -62,13 +26,11 @@ public final class OsCompat {
         }
     }
 
-    public static int lseek(FileDescriptor fd, long offset, int whence) throws
+    public static long lseek(FileDescriptor fd, long offset, int whence) throws
             ExecutionFailedException {
         try {
-            return (Integer) sLseek.invoke(sOs, fd, offset, whence);
-        } catch (IllegalAccessException e) {
-            throw new ExecutionFailedException(e);
-        } catch (InvocationTargetException e) {
+            return Os.lseek(fd, offset, whence);
+        } catch (ErrnoException e) {
             throw new ExecutionFailedException(e);
         }
     }
