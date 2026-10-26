@@ -2434,7 +2434,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     private boolean showActionMenu() {
         final RootInfo root = getCurrentRoot();
-        return !RootInfo.isOtherRoot(root) &&
+        // Network shares that can make documents (WebDAV) say so on their folders
+        return (!RootInfo.isOtherRoot(root) || null != root && root.isNetworkStorage()) &&
                 isCreateSupported() &&
                 null != root
                 && mState.currentSearch == null;

@@ -112,7 +112,15 @@ public class NetworkConnection  implements Durable, Parcelable {
     }
 
     public String getSummary(){
-        return type.compareToIgnoreCase(SERVER) == 0 ? path : scheme + "://" + host + ":" + port;
+        if (type.compareToIgnoreCase(SERVER) == 0) {
+            return path;
+        }
+        if (WebDavNetworkClient.isWebDav(scheme)) {
+            final String folder = null == path || ROOT.equals(path) ? "" : path;
+            return (WebDavNetworkClient.SCHEME_SECURE.equals(scheme) ? "https" : "http")
+                    + "://" + host + ":" + port + folder;
+        }
+        return scheme + "://" + host + ":" + port;
     }
 
     /**
@@ -267,6 +275,12 @@ public class NetworkConnection  implements Durable, Parcelable {
         networkConnection.type = getCursorString(cursor, ConnectionColumns.TYPE);
         networkConnection.path = getCursorString(cursor, ConnectionColumns.PATH);
         networkConnection.setAnonymous(getCursorBolean(cursor, ConnectionColumns.ANONYMOUS_LOGIN));
+        if (WebDavNetworkClient.isWebDav(scheme)) {
+            // Opens at the saved folder, and an anonymous share gets no login at all
+            final boolean anonymous = networkConnection.isAnonymousLogin;
+            networkConnection.client = NetworkClient.create(scheme, host, port,
+                    anonymous ? null : username, anonymous ? null : password, networkConnection.path);
+        }
         return networkConnection;
     }
 

@@ -115,6 +115,8 @@
     <string name="cloud_not_configured">This build has no %1$s app key. Add %2$s to keystore.properties and build the app again.</string>
     <string name="cloud_google_not_registered">Google Drive isn\'t set up for this app yet. In the Google Cloud console, turn on the Google Drive API and add an Android OAuth client for %1$s with the SHA-1 fingerprint %2$s.</string>
     <string name="network_ftp">FTP</string>
+    <string name="network_webdav">WebDAV</string>
+    <string name="connection_webdav_folder">Folder on the server (optional)</string>
 
     <!-- Menu item that starts the in-process Quick Share receiver -->
     <string name="menu_receive_quickshare">Receive via Quick Share</string>

@@ -34,6 +34,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import androidx.annotation.GuardedBy;
+import dev.dworks.apps.anexplorer.network.NetworkClient;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.network.NetworkFile;
 
@@ -164,6 +165,9 @@ public class NetworkStorageProvider extends DocumentsProvider {
     public Cursor queryChildDocuments(String parentDocumentId, String[] projection,
                                       String sortOrder) throws FileNotFoundException {
         final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
+        // Lists again when a document is made or deleted in the folder
+        result.setNotificationUri(getContext().getContentResolver(),
+                DocumentsContract.buildChildDocumentsUri(AUTHORITY, parentDocumentId));
         final NetworkFile parent = getFileForDocId(parentDocumentId);
         final NetworkConnection connection = getNetworkConnection(parentDocumentId);
         try {
@@ -189,6 +193,10 @@ public class NetworkStorageProvider extends DocumentsProvider {
             final boolean isWrite = (mode.indexOf('w') != -1);
             if (isWrite) {
                 return null;
+            }
+            final InputStream stream = connection.getClient().openInputStream(file.getPath());
+            if (null != stream) {
+                return ParcelFileDescriptorUtil.pipeFrom(stream);
             } else {
                 Uri ftpUri = connection.toUri(file);
                 URL url = new URL(ftpUri.toString());
@@ -212,10 +220,16 @@ public class NetworkStorageProvider extends DocumentsProvider {
             throws FileNotFoundException {
 
         NetworkFile parent = getFileForDocId(documentId);
-        NetworkFile file = new NetworkFile(parent.getPath() + displayName, "");
+        NetworkFile file = new NetworkFile(NetworkFile.join(parent.getPath(), displayName), parent.getHost());
         final NetworkConnection connection = getNetworkConnection(documentId);
         try {
-            connection.getConnectedClient().createDirectories(file.getPath());
+            final NetworkClient client = connection.getConnectedClient();
+            final boolean created = Document.MIME_TYPE_DIR.equals(mimeType)
+                    ? client.createDirectories(file.getPath()) : client.createFile(file.getPath());
+            if (!created) {
+                throw new IOException("Server refused to create " + file.getPath());
+            }
+            notifyFolderChanged(documentId);
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to create document with name " +
                     displayName +" and documentId " + documentId);
@@ -228,10 +242,19 @@ public class NetworkStorageProvider extends DocumentsProvider {
         NetworkFile file = getFileForDocId(documentId);
         final NetworkConnection connection = getNetworkConnection(documentId);
         try {
-            connection.getConnectedClient().deleteFile(file.getPath());
+            if (!connection.getConnectedClient().deleteFile(file.getPath())) {
+                throw new IOException("Server refused to delete " + file.getPath());
+            }
+            notifyFolderChanged(getDocIdForFile(file.getParentFile()));
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to delete document with id " + documentId);
         }
+    }
+
+    /** So that a folder on screen lists what was made in it or taken out of it */
+    private void notifyFolderChanged(String folderDocumentId) {
+        getContext().getContentResolver().notifyChange(
+                DocumentsContract.buildChildDocumentsUri(AUTHORITY, folderDocumentId), null, false);
     }
 
     @Override
@@ -381,9 +404,14 @@ public class NetworkStorageProvider extends DocumentsProvider {
 
         int flags = 0;
 
+        final NetworkConnection connection = getNetworkConnection(docId);
+        final boolean editable = null != connection && null != connection.getClient()
+                && connection.getClient().supportsEditing();
         if (file.canWrite()) {
             if (file.isDirectory()) {
-                flags |= Document.FLAG_DIR_SUPPORTS_CREATE;
+                if (editable) {
+                    flags |= Document.FLAG_DIR_SUPPORTS_CREATE;
+                }
             } else {
                 flags |= Document.FLAG_SUPPORTS_WRITE;
             }
@@ -391,6 +419,9 @@ public class NetworkStorageProvider extends DocumentsProvider {
             flags |= Document.FLAG_SUPPORTS_RENAME;
             flags |= Document.FLAG_SUPPORTS_MOVE;
             flags |= Document.FLAG_SUPPORTS_EDIT;*/
+            if (editable) {
+                flags |= Document.FLAG_SUPPORTS_DELETE;
+            }
         }
 
         final String mimeType = getTypeForFile(file);

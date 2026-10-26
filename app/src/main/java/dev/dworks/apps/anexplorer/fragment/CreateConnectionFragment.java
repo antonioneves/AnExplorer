@@ -31,7 +31,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
@@ -39,6 +39,8 @@ import android.widget.ScrollView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
+
+import java.util.Arrays;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
@@ -49,6 +51,7 @@ import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 
@@ -61,6 +64,7 @@ import static dev.dworks.apps.anexplorer.network.NetworkConnection.SERVER;
  */
 public class CreateConnectionFragment extends DialogFragment {
     private static final String TAG = "create_connection";
+    private static final String EXTRA_SCHEME = "scheme";
     private AppCompatEditText name;
     private AppCompatEditText host;
     private AppCompatEditText port;
@@ -76,9 +80,20 @@ public class CreateConnectionFragment extends DialogFragment {
     private View pathContainer;
     // The built-in server being edited, whose type, host, port and scheme aren't in the form
     private NetworkConnection editedServer;
+    private String[] schemes;
+    private int shownScheme = -1;
 
     public static void show(FragmentManager fm) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
+        dialog.show(fm, TAG);
+    }
+
+    /** A new connection of the given scheme, such as "ftp" or "webdav" */
+    public static void showNew(FragmentManager fm, String scheme) {
+        final CreateConnectionFragment dialog = new CreateConnectionFragment();
+        final Bundle args = new Bundle();
+        args.putString(EXTRA_SCHEME, scheme);
+        dialog.setArguments(args);
         dialog.show(fm, TAG);
     }
 
@@ -97,6 +112,7 @@ public class CreateConnectionFragment extends DialogFragment {
         if(null != args){
             connection_id = args.getInt(EXTRA_CONNECTION_ID);
         }
+        schemes = getResources().getStringArray(R.array.connection_schemes);
     }
 
     @Override
@@ -119,6 +135,20 @@ public class CreateConnectionFragment extends DialogFragment {
         passwordContainer = view.findViewById(R.id.passwordContainer);
         scheme = (AppCompatSpinner) view.findViewById(R.id.scheme);
         anonymous = (CompoundButton) view.findViewById(R.id.anonymous);
+        scheme.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+                onSchemeSelected(view, position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        final String newScheme = null != getArguments() ? getArguments().getString(EXTRA_SCHEME) : null;
+        if (null != newScheme) {
+            scheme.setSelection(Math.max(0, Arrays.asList(schemes).indexOf(newScheme)));
+        }
         anonymous.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -135,9 +165,7 @@ public class CreateConnectionFragment extends DialogFragment {
             NetworkConnection connection =
                     NetworkConnection.fromConnectionId(getActivity(), connection_id);
 
-            ArrayAdapter myAdap = (ArrayAdapter) scheme.getAdapter();
-            int spinnerPosition = myAdap.getPosition(connection.getScheme().toUpperCase());
-            scheme.setSelection(spinnerPosition);
+            scheme.setSelection(Math.max(0, Arrays.asList(schemes).indexOf(connection.getScheme())));
 
             name.setText(connection.getName());
             host.setText(connection.getHost());
@@ -246,7 +274,7 @@ public class CreateConnectionFragment extends DialogFragment {
         }
         networkConnection.username = username.getText().toString();
         networkConnection.password = password.getText().toString();
-        networkConnection.scheme = scheme.getSelectedItem().toString().toLowerCase();
+        networkConnection.scheme = schemes[scheme.getSelectedItemPosition()];
         networkConnection.type = CLIENT;
         networkConnection.setAnonymous(anonymous.isChecked());
         if (null != editedServer) {
@@ -259,8 +287,38 @@ public class CreateConnectionFragment extends DialogFragment {
         if (null != editedServer) {
             // build() resets the path to the root; the server shares the folder in the form
             networkConnection.path = path.getText().toString();
+        } else if (WebDavNetworkClient.isWebDav(networkConnection.scheme)) {
+            // The share's folder, such as /remote.php/dav/files/me on Nextcloud
+            final String folder = path.getText().toString().trim();
+            if (!TextUtils.isEmpty(folder)) {
+                networkConnection.path = folder.startsWith("/") ? folder : "/" + folder;
+            }
         }
         return networkConnection;
+    }
+
+    /** WebDAV asks for the server's folder, and each scheme brings its usual port */
+    private void onSchemeSelected(View view, int position) {
+        if (null != editedServer) {
+            return;
+        }
+        final String selected = schemes[position];
+        final boolean webDav = WebDavNetworkClient.isWebDav(selected);
+        pathContainer.setVisibility(webDav ? View.VISIBLE : View.GONE);
+        ((TextInputLayout) view.findViewById(R.id.pathLayout)).setHint(
+                webDav ? R.string.connection_webdav_folder : R.string.connection_shared_folder);
+
+        final String current = port.getText().toString();
+        final boolean usualPort = shownScheme >= 0
+                && current.equals(Integer.toString(defaultPort(schemes[shownScheme])));
+        if (TextUtils.isEmpty(current) || usualPort) {
+            port.setText(Integer.toString(defaultPort(selected)));
+        }
+        shownScheme = position;
+    }
+
+    private static int defaultPort(String scheme) {
+        return WebDavNetworkClient.isWebDav(scheme) ? WebDavNetworkClient.defaultPort(scheme) : 21;
     }
 
     private boolean validate(NetworkConnection networkConnection){

@@ -39,8 +39,32 @@ public abstract class NetworkClient{
 
     public abstract boolean completePendingCommand() throws IOException ;
 
+    /** Streams a file, or returns null where the provider opens it by URL instead (FTP) */
+    public InputStream openInputStream(String path) throws IOException {
+        return null;
+    }
+
+    /** FTP connections have only ever made a folder for a new document */
+    public boolean createFile(String path) throws IOException {
+        return createDirectories(path);
+    }
+
+    /** Whether documents can be created and deleted, which FTP connections never could */
+    public boolean supportsEditing() {
+        return false;
+    }
+
     public static NetworkClient create(String scheme, String host, int port, String userName, String password) {
-        if(scheme.compareTo("ftp") == 0){
+        return create(scheme, host, port, userName, password, null);
+    }
+
+    /** @param path the folder of the server a WebDAV connection opens at */
+    public static NetworkClient create(String scheme, String host, int port, String userName,
+                                       String password, String path) {
+        if(WebDavNetworkClient.isWebDav(scheme)){
+            return new WebDavNetworkClient(WebDavNetworkClient.SCHEME_SECURE.equals(scheme),
+                    host, port, path, userName, password);
+        } else if(scheme.compareTo("ftp") == 0){
             return new FTPNetworkClient(host, port, userName, password);
         } else if(scheme.compareTo("ftps") == 0){
             return new FTPSNetworkClient(host, port, userName, password);

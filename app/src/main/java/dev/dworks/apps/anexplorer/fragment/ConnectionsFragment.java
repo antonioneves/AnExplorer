@@ -39,6 +39,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
@@ -264,8 +265,8 @@ public class ConnectionsFragment extends RecyclerFragment
         return false;
     }
 
-    private void addConnection() {
-        CreateConnectionFragment.show(((DocumentsActivity)getActivity()).getSupportFragmentManager());
+    private void addConnection(String scheme) {
+        CreateConnectionFragment.showNew(((DocumentsActivity)getActivity()).getSupportFragmentManager(), scheme);
         AnalyticsManager.logEvent("connection_add");
     }
 
@@ -356,8 +357,11 @@ public class ConnectionsFragment extends RecyclerFragment
         } else if (itemId == R.id.cloud_box){
             addCloudConnection(TYPE_BOX);
         } else if (itemId == R.id.network_ftp){
-            addConnection();
+            addConnection("ftp");
             AnalyticsManager.logEvent("add_ftp");
+        } else if (itemId == R.id.network_webdav){
+            addConnection(WebDavNetworkClient.SCHEME);
+            AnalyticsManager.logEvent("add_webdav");
         }
     }
 }

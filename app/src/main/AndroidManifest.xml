@@ -64,7 +64,9 @@
         android:roundIcon="@drawable/ic_launcher"
         android:label="@string/name"
         tools:replace="android:label"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true">
+        <!-- Cleartext for WebDAV over plain http, which shares on a home network mostly are -->
 
         <!-- TODO: allow rotation when state saving is in better shape -->
         <activity
