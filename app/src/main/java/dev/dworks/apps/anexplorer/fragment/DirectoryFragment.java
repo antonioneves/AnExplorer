@@ -17,6 +17,7 @@
 
 package dev.dworks.apps.anexplorer.fragment;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
@@ -139,6 +140,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private int mType = TYPE_NORMAL;
 	private String mStateKey;
+	// Set when the folder was picked from the sidebar, so the user can keep moving through it
+	private boolean mKeepSidebarFocus;
 
 	private int mLastMode = MODE_UNKNOWN;
 	private int mLastSortOrder = SORT_ORDER_UNKNOWN;
@@ -224,6 +227,16 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		final View view = inflater.inflate(R.layout.fragment_directory, container, false);
 
 		return view;
+	}
+
+	@Override
+	public void onAttach(Context context) {
+		super.onAttach(context);
+		// The folder being replaced is still on screen here, so focus is still where the user
+		// picked it from
+		if (context instanceof Activity) {
+			mKeepSidebarFocus = isInSidebar(((Activity) context).getCurrentFocus());
+		}
 	}
 
 	@Override
@@ -351,8 +364,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				}
 
 				mLastSortOrder = state.derivedSortOrder;
-				// Don't take focus from the search field while the user is typing
-				if(!(getActivity().getCurrentFocus() instanceof EditText)){
+				// Don't take focus from the search field while the user is typing, or from the
+				// sidebar while the user is moving through it
+				if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus) {
 					getListView().requestFocus();
 				}
 			}
@@ -368,6 +382,16 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
 
 		updateDisplayState();
+	}
+
+	private boolean isInSidebar(View view) {
+		final View sidebar = view != null ? view.getRootView().findViewById(R.id.container_roots) : null;
+		for (View v = view; v != null; v = v.getParent() instanceof View ? (View) v.getParent() : null) {
+			if (v == sidebar) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
