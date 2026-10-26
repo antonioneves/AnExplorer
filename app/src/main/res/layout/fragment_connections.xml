@@ -75,6 +75,41 @@
             android:text="No connections yet!"
             android:visibility="gone"
             app:drawableTop="@drawable/ic_empty_file" />
+
+        <!-- With no connections yet, adding one is the only thing to do here -->
+        <LinearLayout
+            android:id="@+id/empty_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:alpha="0.6"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_root_connections"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/connection_none"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <Button
+                android:id="@+id/add_connection"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:minWidth="112dp"
+                android:text="@string/connection_add_new" />
+        </LinearLayout>
     </FrameLayout>
 
 </dev.dworks.apps.anexplorer.ui.DirectoryView>

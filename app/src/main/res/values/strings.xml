@@ -137,6 +137,8 @@
     <string name="connection_new">New connection</string>
     <string name="connection_edit">Edit connection</string>
     <string name="connection_add">Add</string>
+    <string name="connection_none">No connections yet</string>
+    <string name="connection_add_new">Add connection</string>
     <string name="connection_save">Save</string>
     <string name="connection_name">Name</string>
     <string name="connection_host">Host</string>

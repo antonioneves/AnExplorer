@@ -43,6 +43,7 @@ import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
+import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
@@ -66,6 +67,8 @@ public class ConnectionsFragment extends RecyclerFragment
 
     private final int mLoaderId = 42;
     private RootInfo mConnectionsRoot;
+    private View mEmptyGroup;
+    private boolean mEmpty;
 
     public static void show(FragmentManager fm) {
         final ConnectionsFragment fragment = new ConnectionsFragment();
@@ -105,6 +108,32 @@ public class ConnectionsFragment extends RecyclerFragment
             decoration.setInset(0, insetSize);
         }
         getListView().addItemDecoration(decoration);
+
+        mEmptyGroup = view.findViewById(R.id.empty_group);
+        view.findViewById(R.id.add_connection).setOnClickListener(this::showAddMenu);
+    }
+
+    /** Hides the toolbar's add button for the one in the middle of the screen while there are none */
+    private void showEmpty(boolean empty) {
+        if (mEmptyGroup != null) {
+            mEmptyGroup.setVisibility(empty ? View.VISIBLE : View.GONE);
+        }
+        // Or the empty list takes the remote's focus from the button
+        getListView().setFocusable(!empty);
+        if (mEmpty != empty) {
+            mEmpty = empty;
+            getActivity().invalidateOptionsMenu();
+        }
+    }
+
+    private void showAddMenu(View anchor) {
+        final PopupMenu popup = new PopupMenu(getActivity(), anchor);
+        popup.getMenuInflater().inflate(R.menu.connections_options, popup.getMenu());
+        final Menu types = popup.getMenu().findItem(R.id.menu_add_connection).getSubMenu();
+        SideMenuPopup.show(anchor, types, item -> {
+            menuItemAction(item);
+            return true;
+        });
     }
 
 
@@ -152,6 +181,7 @@ public class ConnectionsFragment extends RecyclerFragment
                     return;
 
                 mAdapter.swapCursor(result);
+                showEmpty(result == null || result.getCount() == 0);
                 if (isResumed()) {
                     setListShown(true);
                 } else {
@@ -181,6 +211,15 @@ public class ConnectionsFragment extends RecyclerFragment
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.connections_options, menu);
         super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public void onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        final MenuItem add = menu.findItem(R.id.menu_add_connection);
+        if (add != null) {
+            add.setVisible(!mEmpty);
+        }
     }
 
     @Override
