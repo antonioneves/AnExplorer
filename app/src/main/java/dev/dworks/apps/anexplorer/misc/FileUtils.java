@@ -686,12 +686,17 @@ public class FileUtils {
     }
 
     public static void removeMediaStore(Context context, File file) {
+        removeMediaStore(context, file, file.isDirectory());
+    }
+
+    /** For a file already moved or deleted, which can't say any more whether it was a folder */
+    public static void removeMediaStore(Context context, File file, boolean isDirectory) {
         try {
             final ContentResolver resolver = context.getContentResolver();
 
             // Remove media store entries for any files inside this directory, using
             // path prefix match. Logic borrowed from MtpDatabase.
-            if (file.isDirectory()) {
+            if (isDirectory) {
                 final String path = file.getAbsolutePath() + "/";
                 resolver.delete(FILE_URI,
                         "_data LIKE ?1 AND lower(substr(_data,1,?2))=lower(?3)",

@@ -221,8 +221,11 @@
     <string name="menu_restore">Restore</string>
     <string name="menu_empty_bin">Empty Recycle Bin</string>
     <string name="moved_to_bin">Moved to the Recycle Bin</string>
-    <string name="delete_for_good">Delete for good? This can\'t be undone.</string>
-    <string name="empty_bin_confirm">Delete everything in the Recycle Bin for good?</string>
+    <plurals name="delete_permanently">
+        <item quantity="one">This item will be permanently deleted. Are you sure?</item>
+        <item quantity="other">These %d items will be permanently deleted. Are you sure?</item>
+    </plurals>
+    <string name="empty_bin_confirm">Everything in the Recycle Bin will be permanently deleted. Are you sure?</string>
     <string name="toast_failed_restore">Unable to restore some files</string>
 
 </resources>

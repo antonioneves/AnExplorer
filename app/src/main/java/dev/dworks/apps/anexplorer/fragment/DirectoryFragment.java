@@ -939,7 +939,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void deleteFiles(final ArrayList<DocumentInfo> docs, final int id, String title) {
 		DialogBuilder builder = new DialogBuilder(getActivity());
-		builder.setMessage(title).setCancelable(false).setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+		builder.setMessage(title).setCancelable(false).setPositiveButton(R.string.menu_delete, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int did) {
 				new OperationTask(docs, id).execute();
 			}
@@ -1221,7 +1221,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		if (goToRecycleBin(docs)) {
 			new OperationTask(docs, type).execute();
 		} else {
-			deleteFiles(docs, type, getString(R.string.delete_for_good));
+			deleteFiles(docs, type, getResources().getQuantityString(
+					R.plurals.delete_permanently, docs.size(), docs.size()));
 		}
 		AnalyticsManager.logEvent("delete", params);
 	}

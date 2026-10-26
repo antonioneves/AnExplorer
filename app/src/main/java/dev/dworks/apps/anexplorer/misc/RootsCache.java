@@ -391,6 +391,15 @@ public class RootsCache {
         return getDefaultRoot();
     }
 
+    public RootInfo getRecycleBinRoot() {
+        for (RootInfo root : mRoots.get(ExternalStorageProvider.AUTHORITY)) {
+            if (root.isRecycleBin()) {
+                return root;
+            }
+        }
+        return null;
+    }
+
     public RootInfo getStorageRoot() {
         RootInfo rootInfo =  getPrimaryRoot();
         if(null != rootInfo){

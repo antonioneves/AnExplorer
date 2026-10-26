@@ -110,6 +110,7 @@
     <color name="item_connection_cloud">#455A64</color>
     <color name="item_root_recent">#7E57C2</color>
     <color name="item_root_download">#1E88E5</color>
+    <color name="item_root_recycle_bin">#78909C</color>
 
     <color name="material_black_protected">#88000000</color>
     <!-- Delete action in the TV selection bar; strong enough to read on colorPrimaryContainer -->

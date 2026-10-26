@@ -546,11 +546,12 @@ public class ExternalStorageProvider extends StorageProvider {
         if (null == volume) {
             return false;
         }
-        // Before the move, while a folder's media can still be found under it
-        FileUtils.removeMediaStore(getContext(), file);
+        final boolean isDirectory = file.isDirectory();
         if (!RecycleBin.moveToBin(volume, file)) {
             return false;
         }
+        // Only after the move: from Android 11, removing a file's media entry deletes the file too
+        FileUtils.removeMediaStore(getContext(), file, isDirectory);
         notifyRecycleBinChanged();
         return true;
     }

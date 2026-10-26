@@ -219,6 +219,7 @@ public class RootInfo implements Durable, Parcelable {
             derivedTag = "bluetooth";
         } else if (isRecycleBin()) {
             derivedIcon = R.drawable.ic_root_recycle_bin;
+            derivedColor = R.color.item_root_recycle_bin;
             derivedTag = "recycle_bin";
         } else if (isBookmarkFolder()) {
             derivedIcon = R.drawable.ic_root_bookmark;

@@ -39,6 +39,7 @@ import dev.dworks.apps.anexplorer.archive.DocumentArchiveHelper;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
+import dev.dworks.apps.anexplorer.misc.RecycleBin;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
@@ -54,6 +55,10 @@ public class NonMediaDocumentsProvider extends StorageProvider {
 	private static final String TAG = "NonMediaDocumentsProvider";
 
     public static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".nonmedia.documents";
+
+    // Deleted files keep their media entry, moved along with them into the recycle bin
+    private static final String NOT_IN_RECYCLE_BIN =
+            " AND " + FileColumns.DATA + " NOT LIKE '%/" + RecycleBin.DIR_NAME + "/%'";
     // docId format: root:id
 
     private static final String[] DEFAULT_ROOT_PROJECTION = new String[] {
@@ -294,8 +299,8 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         // single file
         cursor = resolver.query(FILE_URI,
                 FileQuery.PROJECTION,
-                FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")"
-                + " OR " + FileColumns.MIME_TYPE + " LIKE "+ "'"+like+"%'",
+                "(" + FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")"
+                + " OR " + FileColumns.MIME_TYPE + " LIKE "+ "'"+like+"%')" + NOT_IN_RECYCLE_BIN,
                 null,
                 null);
         copyNotificationUri(result, FILE_URI);
@@ -307,7 +312,7 @@ public class NonMediaDocumentsProvider extends StorageProvider {
     private void queryFile(ContentResolver resolver, Cursor cursor, MatrixCursor result, String[] mimeType, String type) {
         // single file
         cursor = resolver.query(FILE_URI,
-                FileQuery.PROJECTION, FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" , null,
+                FileQuery.PROJECTION, FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" + NOT_IN_RECYCLE_BIN, null,
                 null);
         copyNotificationUri(result, FILE_URI);
         while (cursor.moveToNext()) {
@@ -318,7 +323,7 @@ public class NonMediaDocumentsProvider extends StorageProvider {
     private void queryRecentFile(ContentResolver resolver, Cursor cursor, MatrixCursor result, String[] mimeType) {
         // single file
         cursor = resolver.query(FILE_URI,
-                FileQuery.PROJECTION, FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" , null,
+                FileQuery.PROJECTION, FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" + NOT_IN_RECYCLE_BIN, null,
                 FileQuery.DATE_MODIFIED + " DESC");
         copyNotificationUri(result, FILE_URI);
         while (cursor.moveToNext() && result.getCount() < 64) {
@@ -438,7 +443,7 @@ public class NonMediaDocumentsProvider extends StorageProvider {
             }
             cursor = resolver.query(FILE_URI,
                     FileQuery.PROJECTION,
-                    FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" , null, null);
+                    FileColumns.MIME_TYPE + " IN "+ "("+toString(mimeType)+")" + NOT_IN_RECYCLE_BIN, null, null);
             return (cursor == null) || (cursor.getCount() == 0);
         } finally {
             IoUtils.closeQuietly(cursor);
