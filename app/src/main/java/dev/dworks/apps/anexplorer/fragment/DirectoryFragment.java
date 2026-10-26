@@ -28,6 +28,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.content.Loader;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -153,6 +154,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private final int mLoaderId = 42;
 	private RootInfo root;
 	private DocumentInfo doc;
+	/** Android TV's placeholder for apps it lacks, e.g. email; it can't share anything */
+	private static final String SHARE_STUB_PACKAGE = "com.android.tv.frameworkpackagestubs";
     private int mDefaultColor;
     private MaterialProgressBar mProgressBar;
     private boolean isOperationSupported;
@@ -597,7 +600,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final boolean canDelete = doc != null && doc.isDeleteSupported();
 			final boolean canRename = doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
-			share.setVisible(manageMode);
+			share.setVisible(manageMode && canShare(getCheckedDocuments()));
 			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode);
@@ -668,9 +671,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			int count = mAdapter.getCheckedItemCount();
 			mode.setTitle(getResources().getString(R.string.mode_selected_count, count));
-			if (count == 1 || count == 2) {
-				mode.invalidate();
-			}
+			// What can be shared depends on every file in the selection
+			mode.invalidate();
 		}
 	};
 
@@ -713,6 +715,30 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return;
 		}
 		QuickShareSendActivity.start(getActivity(), uris);
+	}
+
+	/**
+	 * Whether some app takes these files. A TV often has none: only a system stub that answers
+	 * every share with "not supported", which doesn't count.
+	 */
+	private boolean canShare(ArrayList<DocumentInfo> docs) {
+		if (docs.isEmpty()) {
+			return false;
+		}
+		final ArrayList<String> mimeTypes = new ArrayList<>();
+		for (DocumentInfo doc : docs) {
+			mimeTypes.add(doc.mimeType);
+		}
+		final String mimeType = docs.size() == 1 ? docs.get(0).mimeType : findCommonMimeType(mimeTypes);
+		final Intent intent = new Intent(docs.size() == 1 ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE);
+		intent.setType(mimeType == null || MimePredicate.mimeMatches(MimePredicate.SHARE_SKIP_MIMES, mimeType)
+				? MimeTypes.ALL_MIME_TYPES : mimeType);
+		for (ResolveInfo info : getActivity().getPackageManager().queryIntentActivities(intent, 0)) {
+			if (!SHARE_STUB_PACKAGE.equals(info.activityInfo.packageName)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void onShareDocuments(ArrayList<DocumentInfo> docs) {
@@ -1037,7 +1063,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			if(null != bookmark) {
 				bookmark.setVisible(manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported);
 			}
-			share.setVisible(manageMode);
+			final ArrayList<DocumentInfo> single = new ArrayList<>();
+			single.add(doc);
+			share.setVisible(manageMode && canShare(single));
 			final MenuItem quickShare = popup.getMenu().findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType));
@@ -1080,7 +1108,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return handleMenuAction(item, docs);
 	}
 
-	public boolean handleMenuAction(MenuItem item){
+	private ArrayList<DocumentInfo> getCheckedDocuments() {
 		final SparseBooleanArray checked = mAdapter.getCheckedItemPositions();
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();
 		final int size = checked.size();
@@ -1093,6 +1121,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				}
 			}
 		}
+		return docs;
+	}
+
+	public boolean handleMenuAction(MenuItem item){
+		final ArrayList<DocumentInfo> docs = getCheckedDocuments();
 		if(docs.isEmpty()){
 			return false;
 		}
