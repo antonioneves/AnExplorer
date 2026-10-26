@@ -118,6 +118,8 @@ public class SettingsFragment extends Fragment {
         addSwitch(inflater, section, KEY_PIN_ENABLED, R.drawable.ic_settings_lock, R.string.pref_title_pin_enable,
                 R.string.pref_description_pin_enable,
                 prefs().getBoolean(KEY_PIN_ENABLED, false));
+        addSwitch(inflater, section, KEY_LOCKED_FOLDER, R.drawable.ic_root_locked_folder, R.string.pref_locked_folder,
+                R.string.settings_locked_folder_summary, AppSettings.isLockedFolderEnabled(context));
         mPinSetRow = addRow(inflater, section, R.drawable.ic_settings_pin, R.string.pref_title_pin_set, 0);
         mPinSetRow.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -126,8 +128,6 @@ public class SettingsFragment extends Fragment {
                 checkPin();
             }
         });
-        addSwitch(inflater, section, KEY_LOCKED_FOLDER, R.drawable.ic_root_locked_folder, R.string.pref_locked_folder,
-                R.string.settings_locked_folder_summary, AppSettings.isLockedFolderEnabled(context));
         updatePinSetRow();
 
         section = addSection(inflater, R.string.pref_header_quickshare);
