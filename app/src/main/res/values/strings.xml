@@ -37,6 +37,7 @@
     <string name="storage_access_title">Allow access to all files</string>
     <string name="storage_access_message">AnExplorer needs access to all files to browse and manage your storage. On the next screen, turn on access for AnExplorer.</string>
     <string name="storage_access_grant">Continue</string>
+    <string name="storage_access_adb">This TV\'s settings don\'t include the switch for it. Grant it once from a computer with adb:\n\nadb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
     <string name="storage_access_unavailable">All files access can\'t be granted on this device</string>
 
     <!-- Menu item title that opens the selected documents [CHAR LIMIT=24] -->

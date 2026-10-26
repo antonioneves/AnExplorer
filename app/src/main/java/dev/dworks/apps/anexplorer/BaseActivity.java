@@ -255,17 +255,32 @@ public abstract class BaseActivity extends ActionBarActivity {
             return;
         }
         mAllFilesAccessAsked = true;
+        Intent settings = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                Uri.fromParts("package", getPackageName(), null));
+        if (!Utils.isIntentAvailable(this, settings)) {
+            settings = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+        }
         final DialogBuilder builder = new DialogBuilder(this);
+        if (!Utils.isIntentAvailable(this, settings)) {
+            // Some TVs (e.g. Xiaomi's Android 11 ones) leave the screen out of their Settings, so
+            // the only way left is from a computer
+            builder.setTitle(R.string.storage_access_title)
+                    .setMessage(getString(R.string.storage_access_adb, getPackageName()))
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            mAllFilesAccessAsked = false;
+                        }
+                    });
+            builder.showDialog();
+            return;
+        }
+        final Intent intent = settings;
         builder.setTitle(R.string.storage_access_title)
                 .setMessage(R.string.storage_access_message)
                 .setPositiveButton(R.string.storage_access_grant, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                Uri.fromParts("package", getPackageName(), null));
-                        if (!Utils.isIntentAvailable(BaseActivity.this, intent)) {
-                            intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                        }
                         try {
                             startActivityForResult(intent, REQUEST_STORAGE);
                         } catch (ActivityNotFoundException e) {
