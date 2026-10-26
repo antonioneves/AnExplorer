@@ -23,9 +23,11 @@ import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.content.Intent;
 import android.content.Loader;
+import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 
 import androidx.annotation.Nullable;
@@ -82,6 +84,16 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     private int totalSpanSize;
     private int shortcutSpanSize;
 
+    // A drive plugged in or out changes the storage cards while Home is showing
+    private final ContentObserver mRootsObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+        @Override
+        public void onChange(boolean selfChange) {
+            if (isResumed()) {
+                showData();
+            }
+        }
+    };
+
     public static void show(FragmentManager fm) {
         final HomeFragment fragment = new HomeFragment();
         final FragmentTransaction ft = fm.beginTransaction();
@@ -119,7 +131,15 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
     @Override
     public void onResume() {
         super.onResume();
+        getActivity().getContentResolver().registerContentObserver(
+                RootsCache.sNotificationUri, false, mRootsObserver);
         showData();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        getActivity().getContentResolver().unregisterContentObserver(mRootsObserver);
     }
 
     public void showData(){
