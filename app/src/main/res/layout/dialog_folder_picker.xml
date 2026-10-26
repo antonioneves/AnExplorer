@@ -31,16 +31,16 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingStart="12dp"
-            android:paddingTop="8dp"
             android:paddingEnd="12dp"
-            android:paddingBottom="8dp"
             android:scrollbarStyle="outsideOverlay">
 
             <LinearLayout
                 android:id="@+id/folders"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp" />
         </dev.dworks.apps.anexplorer.ui.FocusMarginScrollView>
 
         <!-- Under the Up row, when there is nothing to open -->
