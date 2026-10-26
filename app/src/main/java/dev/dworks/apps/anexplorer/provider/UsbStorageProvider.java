@@ -28,10 +28,7 @@ import android.hardware.usb.UsbManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.CancellationSignal;
-import android.os.Environment;
 import android.os.ParcelFileDescriptor;
-import android.os.storage.StorageManager;
-import android.os.storage.StorageVolume;
 import android.support.provider.DocumentFile;
 import androidx.collection.ArrayMap;
 import android.text.TextUtils;
@@ -442,9 +439,10 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     public void discoverDevices(){
-        // Android mounts USB drives itself, and claiming one here would unmount it. An ejected
-        // drive is still Android's until it is unplugged
-        if (hasRemovableVolume()) {
+        // Android mounts USB drives itself, in every format this driver reads and more, and
+        // claiming one here cuts Android off from it, whether it is portable, ejected or
+        // formatted as device storage
+        if (isMountedBySystem()) {
             return;
         }
         try{
@@ -464,20 +462,8 @@ public class UsbStorageProvider extends DocumentsProvider {
         }
     }
 
-    /** Whether Android has a drive plugged in, mounted, being checked or ejected */
-    private boolean hasRemovableVolume() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            return false;
-        }
-        final StorageManager storageManager = getContext().getSystemService(StorageManager.class);
-        for (StorageVolume volume : storageManager.getStorageVolumes()) {
-            final String state = volume.getState();
-            if (volume.isRemovable() && !Environment.MEDIA_REMOVED.equals(state)
-                    && !Environment.MEDIA_BAD_REMOVAL.equals(state)) {
-                return true;
-            }
-        }
-        return false;
+    private static boolean isMountedBySystem() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
     }
 
     private static boolean isMassStorage(UsbDevice device) {
@@ -490,7 +476,7 @@ public class UsbStorageProvider extends DocumentsProvider {
     }
 
     private void discoverDevice(UsbDevice device) {
-        if (hasRemovableVolume()) {
+        if (isMountedBySystem()) {
             return;
         }
         for (UsbMassStorageDevice massStorageDevice : UsbMassStorageDevice.getMassStorageDevices(getContext())) {

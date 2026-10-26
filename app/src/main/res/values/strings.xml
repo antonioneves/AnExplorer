@@ -191,6 +191,5 @@
     <string name="quickshare_receive_unknown_device">A nearby device</string>
     <string name="quickshare_receive_permission_needed">Quick Share needs the Nearby devices permission to be found by phones</string>
     <string name="local_network_permission_needed">Allow local network access to connect to devices on your network</string>
-    <string name="root_eject">Eject</string>
     <string name="root_analyze">Storage settings</string>
 </resources>

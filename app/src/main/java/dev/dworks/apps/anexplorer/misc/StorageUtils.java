@@ -106,6 +106,9 @@ public final class StorageUtils {
     }
 
     public List<StorageVolume> getStorageMounts() {
+        if (Utils.hasNougat()) {
+            return getPublicStorageMounts();
+        }
         List<StorageVolume> mounts = new ArrayList<StorageVolume>();
         boolean first = false;
         Object[] sv = null;
@@ -154,6 +157,30 @@ public final class StorageUtils {
             storageVolume.mUserLabel = mUserLabel;
             storageVolume.mState = mState;
 
+            mounts.add(storageVolume);
+        }
+        return mounts;
+    }
+
+    /**
+     * The volumes from the public API. Android 14 blocks the hidden fields read below, which
+     * left every drive without its UUID, so two drives (or one drive reformatted) shared a root
+     */
+    @TargetApi(Build.VERSION_CODES.N)
+    private List<StorageVolume> getPublicStorageMounts() {
+        final List<StorageVolume> mounts = new ArrayList<>();
+        for (android.os.storage.StorageVolume volume : mStorageManager.getStorageVolumes()) {
+            final File path = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ? volume.getDirectory() : getFile(volume);
+            if (path == null) {
+                continue;
+            }
+            final StorageVolume storageVolume = new StorageVolume(0, path,
+                    volume.getDescription(mContext), volume.isPrimary(), volume.isRemovable(),
+                    volume.isEmulated(), 0, false, 0);
+            storageVolume.mUuid = volume.getUuid();
+            storageVolume.mFsUuid = volume.getUuid();
+            storageVolume.mState = volume.getState();
             mounts.add(storageVolume);
         }
         return mounts;

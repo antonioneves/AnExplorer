@@ -202,6 +202,13 @@ public class RootsFragment extends Fragment {
                     mList.setOnGroupExpandListener(mOnGroupExpandListener);
                     mList.setOnGroupCollapseListener(mOnGroupCollapseListener);
                 }
+                // A drive that went away (ejected, unplugged or reformatted) can't stay open
+                final RootInfo current = ((BaseActivity) getActivity()).getCurrentRoot();
+                if (getActivity() instanceof DocumentsActivity && current != null
+                        && (current.isSecondaryStorage() || current.isUsbStorage())
+                        && !result.contains(current)) {
+                    ((DocumentsActivity) getActivity()).onRootPicked(roots.getHomeRoot(), false);
+                }
                 // The current root may have been picked before the list was loaded
                 onCurrentRootChanged();
             }

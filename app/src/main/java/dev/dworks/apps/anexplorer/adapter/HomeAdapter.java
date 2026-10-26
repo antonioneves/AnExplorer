@@ -268,9 +268,9 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             int drawableId = -1;
             int descriptionId = -1;
             if (commonInfo.rootInfo.isSecondaryStorage()) {
-                // Ejecting is done in the system's storage settings, which this opens
-                drawableId = R.drawable.ic_eject;
-                descriptionId = R.string.root_eject;
+                // Ejecting and formatting are done in the system's storage settings, which this opens
+                drawableId = R.drawable.ic_menu_settings;
+                descriptionId = R.string.root_analyze;
             } else if (commonInfo.rootInfo.isStorage()) {
                 drawableId = R.drawable.ic_analyze;
                 descriptionId = R.string.root_analyze;

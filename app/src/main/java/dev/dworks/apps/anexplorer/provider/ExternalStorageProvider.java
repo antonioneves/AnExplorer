@@ -33,6 +33,7 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.os.storage.StorageManager;
 import androidx.core.os.EnvironmentCompat;
 import android.support.provider.DocumentFile;
 import androidx.collection.ArrayMap;
@@ -68,6 +69,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import androidx.annotation.GuardedBy;
+import androidx.annotation.NonNull;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.misc.FileUtils.getTypeForFile;
@@ -131,6 +133,17 @@ public class ExternalStorageProvider extends StorageProvider {
         mHandler = new Handler();
         updateRoots();
         updateSettings();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // The media broadcasts only cover portable drives, so a drive formatted as device
+            // storage, or one being formatted, left its root behind when it went away
+            getContext().getSystemService(StorageManager.class).registerStorageVolumeCallback(
+                    getContext().getMainExecutor(), new StorageManager.StorageVolumeCallback() {
+                        @Override
+                        public void onStateChanged(@NonNull android.os.storage.StorageVolume volume) {
+                            updateRoots();
+                        }
+                    });
+        }
 
         return super.onCreate();
     }
