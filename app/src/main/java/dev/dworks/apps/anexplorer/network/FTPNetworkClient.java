@@ -5,8 +5,12 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 
+import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.LogUtils;
@@ -26,19 +30,20 @@ public class FTPNetworkClient extends NetworkClient {
     public String password;
 
     public FTPNetworkClient(final String host, final int port){
-        client = new FTPClient();
-        this.host = host;
-        this.port = port;
-        this.username = "anonymous";
-        this.password = "";
+        this(host, port, "anonymous", "");
     }
 
     public FTPNetworkClient(final String host, final int port, final String userName, final String password){
-        client = new FTPClient();
         this.host = host;
         this.port = port;
         this.username = userName;
         this.password = password;
+        client = newClient();
+    }
+
+    /** A client for one connection; a file being read or written gets one of its own */
+    protected FTPClient newClient() {
+        return new FTPClient();
     }
 
     @Override
@@ -73,21 +78,115 @@ public class FTPNetworkClient extends NetworkClient {
 
     @Override
     public boolean connectClient() throws IOException {
-        boolean isLoggedIn = true;
+        return login(client);
+    }
+
+    protected boolean login(FTPClient client) throws IOException {
         client.setAutodetectUTF8(true);
         client.setControlEncoding("UTF-8");
         client.connect(host, port);
-        client.setFileType(FTP.BINARY_FILE_TYPE);
-        client.enterLocalPassiveMode();
         client.login(username, password);
         int reply = client.getReplyCode();
         if (!FTPReply.isPositiveCompletion(reply)) {
             client.disconnect();
             LogUtils.LOGD(TAG, "Negative reply form FTP server, aborting, id was {}:"+ reply);
-            //throw new IOException("failed to connect to FTP server");
-            isLoggedIn = false;
+            return false;
         }
-        return isLoggedIn;
+        afterLogin(client);
+        client.setFileType(FTP.BINARY_FILE_TYPE);
+        client.enterLocalPassiveMode();
+        return true;
+    }
+
+    /** Whatever else the server needs before files go back and forth */
+    protected void afterLogin(FTPClient client) throws IOException {
+    }
+
+    private FTPClient openTransferClient() throws IOException {
+        final FTPClient transfer = newClient();
+        if (!login(transfer)) {
+            throw new IOException("FTP server refused the login");
+        }
+        return transfer;
+    }
+
+    /** On a connection of its own, so that browsing goes on while the file is read */
+    @Override
+    public InputStream openInputStream(String path) throws IOException {
+        final FTPClient reader = openTransferClient();
+        final InputStream stream = reader.retrieveFileStream(path);
+        if (null == stream) {
+            reader.disconnect();
+            throw new IOException("Can't read " + path + ": " + reader.getReplyString());
+        }
+        return new FilterInputStream(stream) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                    reader.completePendingCommand();
+                    reader.logout();
+                } finally {
+                    reader.disconnect();
+                }
+            }
+        };
+    }
+
+    /** The file is in place once the stream is closed */
+    @Override
+    public OutputStream openOutputStream(String path) throws IOException {
+        final FTPClient writer = openTransferClient();
+        final OutputStream stream = writer.storeFileStream(path);
+        if (null == stream) {
+            writer.disconnect();
+            throw new IOException("Can't write " + path + ": " + writer.getReplyString());
+        }
+        return new FilterOutputStream(stream) {
+            private long written;
+
+            @Override
+            public void write(byte[] b, int off, int len) throws IOException {
+                out.write(b, off, len);
+                written += len;
+            }
+
+            @Override
+            public void close() throws IOException {
+                try {
+                    out.flush();
+                    beforeUploadClose(writer);
+                    super.close();
+                    if (!writer.completePendingCommand()) {
+                        throw new IOException("FTP server didn't keep " + path);
+                    }
+                    checkSize(writer, path, written);
+                    writer.logout();
+                } finally {
+                    writer.disconnect();
+                }
+            }
+        };
+    }
+
+    /** Whatever the data connection needs before an upload ends */
+    protected void beforeUploadClose(FTPClient client) {
+    }
+
+    /** So a file the server cut short isn't taken for a copy, where the server tells its size */
+    private static void checkSize(FTPClient client, String path, long written) throws IOException {
+        if (!FTPReply.isPositiveCompletion(client.sendCommand("SIZE", path))) {
+            return;
+        }
+        final String[] reply = client.getReplyString().trim().split("\\s+");
+        try {
+            final long size = Long.parseLong(reply[reply.length - 1]);
+            if (size != written) {
+                throw new IOException("FTP server has " + size + " of " + written + " bytes of " + path);
+            }
+        } catch (NumberFormatException e) {
+            LogUtils.LOGD(TAG, "Unreadable SIZE reply: " + client.getReplyString());
+        }
     }
 
     @Override
@@ -100,20 +199,10 @@ public class FTPNetworkClient extends NetworkClient {
         client.changeWorkingDirectory(pathname);
     }
 
-    /**
-     * Return input stream for given file name
-     *
-     * @param fileName  name of the remote file
-     * @param directory remote directory
-     * @return input stream or null
-     */
+    @Override
     public InputStream getInputStream(final String fileName, final String directory) {
-
         try {
-            connectClient();
-            changeWorkingDirectory(directory);
-            return client.retrieveFileStream(fileName);
-
+            return openInputStream(NetworkFile.join(directory, fileName));
         } catch (IOException e) {
             LogUtils.LOGE(TAG, "Error retrieving file from FTP server: " + host, e);
             CrashReportingManager.logException(e);
@@ -121,33 +210,53 @@ public class FTPNetworkClient extends NetworkClient {
         return null;
     }
 
-    /**
-     * Creates directories on FTP server
-     *
-     * @param directory directory to create
-     * @return SimpleFtpClientResult.CREATED on succes SimpleFtpClientResult.ERROR on error
-     * @throws IOException on error
-     */
+    /** Makes every missing folder along the path */
+    @Override
     public boolean createDirectories(final String directory) throws IOException {
-        String[] iterable = directory.split("/");
-        for (String dir : iterable) {
-            boolean dirExists = client.changeWorkingDirectory(dir);
-            if (!dirExists) {
-                // try to create directory:
-                client.makeDirectory(dir);
-                dirExists = client.changeWorkingDirectory(dir);
+        final StringBuilder path = new StringBuilder();
+        for (String segment : directory.split(NetworkFile.separator)) {
+            if (segment.isEmpty()) {
+                continue;
             }
-            if (!dirExists) {
-                LogUtils.LOGD(TAG, "failed to change FTP directory (forms), not doing anything");
+            path.append(NetworkFile.separatorChar).append(segment);
+            // Refused when the folder is already there, which the check below allows for
+            client.makeDirectory(path.toString());
+        }
+        return client.changeWorkingDirectory(path.length() == 0 ? NetworkFile.separator : path.toString());
+    }
+
+    /** An empty file, without overwriting one that's already there */
+    @Override
+    public boolean createFile(String path) throws IOException {
+        if (null != client.mlistFile(path) || client.listFiles(path).length > 0) {
+            return false;
+        }
+        return client.storeFile(path, new ByteArrayInputStream(new byte[0]));
+    }
+
+    /** A folder goes with everything in it, as it does over WebDAV and SFTP */
+    @Override
+    public boolean deleteFile(String path) throws IOException {
+        if (client.deleteFile(path)) {
+            return true;
+        }
+        if (!client.changeWorkingDirectory(path)) {
+            return false;
+        }
+        for (FTPFile file : client.listFiles()) {
+            final String name = file.getName();
+            if (!".".equals(name) && !"..".equals(name)
+                    && !deleteFile(NetworkFile.join(path, name))) {
                 return false;
             }
         }
-        return true;
+        client.changeToParentDirectory();
+        return client.removeDirectory(path);
     }
 
     @Override
-    public boolean deleteFile(String path) throws IOException {
-        return client.deleteFile(path);
+    public boolean supportsEditing() {
+        return true;
     }
 
     @Override

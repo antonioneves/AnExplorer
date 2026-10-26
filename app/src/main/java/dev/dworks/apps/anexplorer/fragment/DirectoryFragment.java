@@ -605,7 +605,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		@Override
 		public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-			editMode = root != null && root.isEditSupported();
+			editMode = root != null && (root.isEditSupported() || copiesAcross());
 			mode.getMenuInflater().inflate(R.menu.mode_directory, menu);
 			int count = mAdapter.getCheckedItemCount();
 			mode.setTitle(count+"");
@@ -661,8 +661,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final MenuItem cut = menu.findItem(R.id.menu_cut);
 			final MenuItem compress = menu.findItem(R.id.menu_compress);
 			copy.setVisible(editMode);
-			cut.setVisible(editMode);
-			compress.setVisible(editMode && !isOperationSupported);
+			cut.setVisible(editMode && (!copiesAcross() || allDeletable(getCheckedDocuments())));
+			compress.setVisible(editMode && !copiesAcross() && !isOperationSupported);
 
 			info.setVisible(count == 1);
 			bookmark.setVisible(count == 1 && !isRecycleBin());
@@ -1137,8 +1137,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			popup.getMenu().findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
 			delete.setVisible(manageMode && doc.isDeleteSupported());
 			rename.setVisible(manageMode && doc.isRenameSupported());
-			copy.setVisible(manageMode && doc.isCopySupported());
-			cut.setVisible(manageMode && doc.isMoveSupported());
+			copy.setVisible(manageMode && (doc.isCopySupported() || copiesAcross()));
+			cut.setVisible(manageMode && (doc.isMoveSupported()
+					|| (copiesAcross() && doc.isDeleteSupported())));
 		}
 
 		// Beside the item, so every option fits on screen without scrolling
@@ -1279,6 +1280,20 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					R.plurals.delete_permanently, docs.size(), docs.size()));
 		}
 		AnalyticsManager.logEvent("delete", params);
+	}
+
+	/** Network storage can't copy by itself, but its files can be copied or moved elsewhere */
+	private boolean copiesAcross() {
+		return root != null && root.isNetworkStorage() && !root.isServer();
+	}
+
+	private static boolean allDeletable(ArrayList<DocumentInfo> docs) {
+		for (DocumentInfo doc : docs) {
+			if (!doc.isDeleteSupported()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void moveDocument(ArrayList<DocumentInfo> docs, boolean move) {

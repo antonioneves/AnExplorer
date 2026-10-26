@@ -13,9 +13,11 @@ import android.util.Log;
 
 import org.apache.commons.net.ftp.FTPFile;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Map;
@@ -210,7 +212,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
         try {
             final boolean isWrite = (mode.indexOf('w') != -1);
             if (isWrite) {
-                return null;
+                return upload(connection, file);
             }
             final InputStream stream = connection.getClient().openInputStream(file.getPath());
             if (null != stream) {
@@ -267,6 +269,37 @@ public class NetworkStorageProvider extends DocumentsProvider {
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to delete document with id " + documentId);
         }
+    }
+
+    /**
+     * Sends what's written to the server. The writer gets one end of a socket, and this end
+     * closes once the server has the whole file, or with an error if it hasn't; so a copy can
+     * wait for the upload to finish before it, say, deletes the original.
+     */
+    private ParcelFileDescriptor upload(NetworkConnection connection, NetworkFile file)
+            throws IOException {
+        final String folderId = getDocIdForFile(file.getParentFile());
+        final OutputStream server = connection.getClient().openOutputStream(file.getPath());
+        final ParcelFileDescriptor[] pair = ParcelFileDescriptor.createReliableSocketPair();
+        final ParcelFileDescriptor ours = pair[0];
+        new Thread(() -> {
+            try {
+                try (InputStream written = new FileInputStream(ours.getFileDescriptor());
+                     OutputStream out = server) {
+                    IoUtils.copy(written, out);
+                }
+                ours.close();
+            } catch (IOException e) {
+                Log.w(TAG, "Upload of " + file.getPath() + " failed: " + e);
+                try {
+                    ours.closeWithError(e.getMessage());
+                } catch (IOException ignored) {
+                }
+            }
+            // Shown with its size once the server has all of it
+            notifyFolderChanged(folderId);
+        }, "Network upload").start();
+        return pair[1];
     }
 
     /** So that a folder on screen lists what was made in it or taken out of it */

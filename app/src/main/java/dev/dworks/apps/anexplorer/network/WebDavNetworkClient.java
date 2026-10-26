@@ -8,7 +8,12 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
+import java.io.FilterOutputStream;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -17,10 +22,13 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.LogUtils;
+import okhttp3.Call;
 import okhttp3.Credentials;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
@@ -29,6 +37,9 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import okio.BufferedSink;
+import okio.Okio;
+import okio.Source;
 
 /**
  * A WebDAV share, over http ("webdav") or https ("webdavs"). Paths are relative to the folder
@@ -48,6 +59,7 @@ public class WebDavNetworkClient extends NetworkClient {
             + "</d:prop></d:propfind>";
     private static final int MULTI_STATUS = 207;
     private static final int METHOD_NOT_ALLOWED = 405;
+    private static final int UPLOAD_BUFFER = 64 * 1024;
 
     private final OkHttpClient client;
     private final HttpUrl baseUrl;
@@ -160,6 +172,61 @@ public class WebDavNetworkClient extends NetworkClient {
             throw new IOException("GET " + path + " failed: " + response.code());
         }
         return response.body().byteStream();
+    }
+
+    /** Sent while it's written; the file is in place once the stream is closed */
+    @Override
+    public OutputStream openOutputStream(String path) throws IOException {
+        final PipedInputStream body = new PipedInputStream(UPLOAD_BUFFER);
+        final PipedOutputStream stream = new PipedOutputStream(body);
+        final Call call = client.newCall(new Request.Builder().url(urlFor(path, false))
+                .put(new RequestBody() {
+                    @Override
+                    public MediaType contentType() {
+                        return null;
+                    }
+
+                    @Override
+                    public boolean isOneShot() {
+                        return true;
+                    }
+
+                    @Override
+                    public void writeTo(BufferedSink sink) throws IOException {
+                        try (Source source = Okio.source(body)) {
+                            sink.writeAll(source);
+                        }
+                    }
+                }).build());
+        final FutureTask<Integer> upload = new FutureTask<>(() -> {
+            try (Response response = call.execute()) {
+                return response.code();
+            }
+        });
+        new Thread(upload, "WebDAV upload").start();
+        return new FilterOutputStream(stream) {
+            @Override
+            public void write(byte[] b, int off, int len) throws IOException {
+                out.write(b, off, len);
+            }
+
+            @Override
+            public void close() throws IOException {
+                super.close();
+                final int code;
+                try {
+                    code = upload.get();
+                } catch (ExecutionException e) {
+                    throw new IOException("PUT " + path + " failed", e.getCause());
+                } catch (InterruptedException e) {
+                    call.cancel();
+                    throw new InterruptedIOException();
+                }
+                if (code < 200 || code >= 300) {
+                    throw new IOException("PUT " + path + " failed: " + code);
+                }
+            }
+        };
     }
 
     @Override

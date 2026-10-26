@@ -897,6 +897,16 @@ public class ExternalStorageProvider extends StorageProvider {
         }
 
         final File file = FileUtils.buildUniqueFile(parent, mimeType, displayName);
+        if (parent.canWrite()) {
+            // Made with the unique name, which DocumentFile would give the type's extension again
+            // ("a.txt.txt") or, for a folder, leave as the name of one that's already there
+            if (!(Document.MIME_TYPE_DIR.equals(mimeType) ? file.mkdir() : createNewFile(file))) {
+                throw new IllegalStateException("Failed to make " + file);
+            }
+            final String madeDocId = getDocIdForFile(file);
+            notifyDocumentsChanged(madeDocId);
+            return madeDocId;
+        }
         DocumentFile documentFile = getDocumentFile(docId, parent);
         if (Document.MIME_TYPE_DIR.equals(mimeType)) {
             DocumentFile newFile = documentFile.createDirectory(displayName);
@@ -912,6 +922,14 @@ public class ExternalStorageProvider extends StorageProvider {
         final String afterDocId = getDocIdForFile(file);
         notifyDocumentsChanged(afterDocId);
         return afterDocId;
+    }
+
+    private static boolean createNewFile(File file) {
+        try {
+            return file.createNewFile();
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     @Override

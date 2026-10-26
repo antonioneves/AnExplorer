@@ -4,6 +4,7 @@ import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * Created by HaKr on 02/01/17.
@@ -44,12 +45,17 @@ public abstract class NetworkClient{
         return null;
     }
 
-    /** FTP connections have only ever made a folder for a new document */
-    public boolean createFile(String path) throws IOException {
-        return createDirectories(path);
+    /** Writes a file, which is in place once the stream is closed */
+    public OutputStream openOutputStream(String path) throws IOException {
+        throw new IOException("Can't write files to this server");
     }
 
-    /** Whether documents can be created and deleted, which FTP connections never could */
+    /** An empty file, without overwriting one that's already there */
+    public boolean createFile(String path) throws IOException {
+        return false;
+    }
+
+    /** Whether documents can be created, written and deleted */
     public boolean supportsEditing() {
         return false;
     }

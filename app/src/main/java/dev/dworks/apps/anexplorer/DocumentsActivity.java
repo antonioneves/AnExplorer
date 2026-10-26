@@ -130,6 +130,7 @@ import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.misc.DocumentCopier;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.IntentUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
@@ -894,7 +895,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 SaveFragment.get(fm).setSaveEnabled(cwd != null && cwd.isCreateSupported());
 
             if(null != MoveFragment.get(fm))
-                MoveFragment.get(fm).setSaveEnabled(cwd != null && cwd.isMoveSupported());
+                MoveFragment.get(fm).setSaveEnabled(cwd != null
+                        && (cwd.isMoveSupported() || cwd.isCreateSupported()));
         }
 
         // TODO: close any search in-progress when hiding
@@ -2267,20 +2269,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             final DocumentInfo cwd = null == toDoc ? getCurrentDirectory() : toDoc;
 
 			boolean hadTrouble = false;
+			final DocumentCopier copier = new DocumentCopier(resolver);
     		for (DocumentInfo doc : docs) {
-
-				if (!doc.isMoveSupported()) {
-    				Log.w(TAG, "Skipping " + doc);
-    				hadTrouble = true;
-    				continue;
-    			}
-
     			try {
-                    if(deleteAfter) {
-                        hadTrouble = DocumentsContract.moveDocument(resolver, doc.derivedUri, null,
+                    if (!DocumentCopier.copiesItself(doc, cwd, deleteAfter)) {
+                        // Another storage, so the files are read and written here
+                        hadTrouble |= !copier.copy(doc, cwd.derivedUri, deleteAfter);
+                    } else if(deleteAfter) {
+                        hadTrouble |= DocumentsContract.moveDocument(resolver, doc.derivedUri, null,
                                 cwd.derivedUri) == null;
                     } else {
-                        hadTrouble = DocumentsContract.copyDocument(resolver, doc.derivedUri,
+                        hadTrouble |= DocumentsContract.copyDocument(resolver, doc.derivedUri,
                                 cwd.derivedUri) == null;
                     }
     			} catch (Exception e) {

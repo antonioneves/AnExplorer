@@ -13,8 +13,10 @@ import org.apache.commons.net.ftp.FTPFile;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -139,16 +141,7 @@ public class SftpNetworkClient extends NetworkClient {
     /** On a channel of its own, so that browsing goes on while the file is read */
     @Override
     public InputStream openInputStream(String path) throws IOException {
-        final ChannelSftp reader;
-        synchronized (this) {
-            ensureConnected();
-            try {
-                reader = (ChannelSftp) session.openChannel("sftp");
-                reader.connect(TIMEOUT);
-            } catch (JSchException e) {
-                throw new IOException(e);
-            }
-        }
+        final ChannelSftp reader = openChannel();
         try {
             return new FilterInputStream(reader.get(path)) {
                 @Override
@@ -162,6 +155,43 @@ public class SftpNetworkClient extends NetworkClient {
             };
         } catch (SftpException e) {
             reader.disconnect();
+            throw new IOException(e);
+        }
+    }
+
+    /** On a channel of its own too; the file is in place once the stream is closed */
+    @Override
+    public OutputStream openOutputStream(String path) throws IOException {
+        final ChannelSftp writer = openChannel();
+        try {
+            return new FilterOutputStream(writer.put(path)) {
+                @Override
+                public void write(byte[] b, int off, int len) throws IOException {
+                    out.write(b, off, len);
+                }
+
+                @Override
+                public void close() throws IOException {
+                    try {
+                        super.close();
+                    } finally {
+                        writer.disconnect();
+                    }
+                }
+            };
+        } catch (SftpException e) {
+            writer.disconnect();
+            throw new IOException(e);
+        }
+    }
+
+    private synchronized ChannelSftp openChannel() throws IOException {
+        ensureConnected();
+        try {
+            final ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+            channel.connect(TIMEOUT);
+            return channel;
+        } catch (JSchException e) {
             throw new IOException(e);
         }
     }
