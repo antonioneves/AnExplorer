@@ -49,6 +49,7 @@ import android.graphics.drawable.TransitionDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.os.Handler;
 
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -212,6 +213,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private RootsCache mRoots;
     private State mState;
 	private boolean mAuthenticated;
+    /** Whether the PIN was entered for the locked folder; it locks again on leaving it */
+    private boolean mLockedFolderOpen;
+    private long mStoppedAt;
     private boolean mActionMode;
     private RootInfo mParentRoot;
 
@@ -574,7 +578,79 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     public void onResume() {
         super.onResume();
         loadDisplaySettings();
+        // Away for a while, e.g. on another app, the locked folder locks again; a quick look at
+        // a file in a viewer doesn't
+        if (mStoppedAt > 0 && SystemClock.elapsedRealtime() - mStoppedAt > LOCKED_FOLDER_TIMEOUT) {
+            mLockedFolderOpen = false;
+        }
+        mStoppedAt = 0;
+        final RootInfo root = getCurrentRoot();
+        if (!mLockedFolderOpen && null != root && root.isLockedFolder() && !mShowingSettings) {
+            askLockedFolderPin(null);
+        }
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mStoppedAt = SystemClock.elapsedRealtime();
+    }
+
+    private static final long LOCKED_FOLDER_TIMEOUT = 60 * 1000;
+
+    /**
+     * Asks for the PIN before showing the locked folder: then opens root, when given. Cancelled,
+     * it goes back Home if the locked folder is showing.
+     */
+    private void askLockedFolderPin(final RootInfo root) {
+        if (!AppSettings.isPinProtected(this)) {
+            mLockedFolderOpen = true;
+            if (null != root) {
+                onRootPicked(root, true);
+            }
+            return;
+        }
+        if (null != getFragmentManager().findFragmentByTag(TAG_LOCKED_PIN)) {
+            return;
+        }
+        final Dialog d = new Dialog(this, R.style.DocumentsTheme_DailogPIN);
+        final PinViewHelper pin = new PinViewHelper(getLayoutInflater(), null, null) {
+            public void onEnter(String password) {
+                super.onEnter(password);
+                if (AppSettings.checkPin(DocumentsActivity.this, password)) {
+                    mLockedFolderOpen = true;
+                    d.dismiss();
+                    if (null != root) {
+                        onRootPicked(root, true);
+                    }
+                } else {
+                    setInstruction(R.string.incorrect_pin);
+                }
+            }
+
+            public void onCancel() {
+                super.onCancel();
+                d.dismiss();
+                final RootInfo current = getCurrentRoot();
+                if (null != current && current.isLockedFolder()) {
+                    onRootPicked(mRoots.getHomeRoot(), true);
+                } else {
+                    // The sidebar already marked the locked folder when it was picked
+                    final RootsCommonFragment roots = RootsCommonFragment.get(getFragmentManager());
+                    if (roots != null) {
+                        roots.onCurrentRootChanged();
+                    }
+                }
+            }
+        };
+        d.setContentView(pin.getView(), new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        final PINDialogFragment fragment = new PINDialogFragment();
+        fragment.setDialog(d);
+        fragment.setCancelable(false);
+        fragment.show(getFragmentManager(), TAG_LOCKED_PIN);
+    }
+
+    private static final String TAG_LOCKED_PIN = "LockedFolderPin";
 
     /** Applies the display settings (file size, thumbnails, hidden files...) to the current state. */
     public void loadDisplaySettings() {
@@ -1711,6 +1787,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if(null == root){
             return;
         }
+        if (root.isLockedFolder() && !mLockedFolderOpen) {
+            askLockedFolderPin(root);
+            return;
+        }
+        if (!root.isLockedFolder()) {
+            mLockedFolderOpen = false;
+        }
         mShowingSettings = false;
         // Connections to LAN servers need local network access on Android 17+
         if (root.isNetworkStorage() && !root.isServerStorage()
@@ -2279,7 +2362,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private class ToolbarActionMode extends ActionMode {
         // Bar order: open, then edit actions, then sharing, then details; Delete always goes last
         private final int[] ACTION_ORDER = {
-                R.id.menu_open, R.id.menu_restore, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_rename,
+                R.id.menu_open, R.id.menu_restore, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_lock, R.id.menu_rename,
                 R.id.menu_compress, R.id.menu_open_with, R.id.menu_quickshare, R.id.menu_bookmark, R.id.menu_info,
         };
         private final ActionMode.Callback callback;

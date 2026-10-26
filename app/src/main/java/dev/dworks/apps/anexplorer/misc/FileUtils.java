@@ -281,10 +281,15 @@ public class FileUtils {
                     return false;
                 }
 
-                for (int i = 0; i < filesInDir.length; i++) {
-                    moveDocument(filesInDir[i], filesToDir, null);
+                if (null == filesInDir) {
+                    return false;
                 }
-                return true;
+                // False when any file inside fails, so a move doesn't delete what wasn't copied
+                boolean copied = true;
+                for (int i = 0; i < filesInDir.length; i++) {
+                    copied &= moveDocument(filesInDir[i], filesToDir, null);
+                }
+                return copied;
             }
         } else {
             return false;

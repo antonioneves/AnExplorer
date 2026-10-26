@@ -197,6 +197,10 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
         for (RootInfo root: roots.getLibraryRoots()) {
             shortcutsData.add(CommonInfo.from(root, TYPE_SHORTCUT));
         }
+        final RootInfo lockedFolder = roots.getLockedFolderRoot();
+        if (null != lockedFolder) {
+            shortcutsData.add(CommonInfo.from(lockedFolder, TYPE_SHORTCUT));
+        }
         final RootInfo recycleBin = roots.getRecycleBinRoot();
         if (null != recycleBin) {
             shortcutsData.add(CommonInfo.from(recycleBin, TYPE_SHORTCUT));

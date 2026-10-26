@@ -30,6 +30,12 @@
         android:title="@string/menu_restore"
         android:visible="false"/>
     <item
+        android:id="@+id/menu_lock"
+        android:icon="@drawable/ic_menu_lock"
+        support:showAsAction="always"
+        android:title="@string/menu_lock"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_info"
         android:icon="@drawable/ic_menu_info"
         support:showAsAction="always"

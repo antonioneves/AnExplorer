@@ -641,6 +641,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				quickShare.setVisible(manageMode && !isRecycleBin());
 			}
 			menu.findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
+			menu.findItem(R.id.menu_lock).setVisible(manageMode && canLock(getCheckedDocuments()));
 			delete.setVisible(manageMode && canDelete);
 			if(null != rename) {
 				rename.setVisible(manageMode && canRename && count == 1);
@@ -829,6 +830,38 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return null != root && root.isRecycleBin();
 	}
 
+	/** Whether these local files can be moved into the locked folder */
+	private boolean canLock(ArrayList<DocumentInfo> docs) {
+		if (!AppSettings.isLockedFolderEnabled(getActivity()) || isRecycleBin()
+				|| (null != root && root.isLockedFolder()) || docs.isEmpty()) {
+			return false;
+		}
+		for (DocumentInfo doc : docs) {
+			if (!ExternalStorageProvider.AUTHORITY.equals(doc.authority) || !doc.isMoveSupported()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Moves the files into the locked folder; true when some of them couldn't be */
+	private boolean onLockDocuments(ArrayList<DocumentInfo> docs) {
+		final ContentResolver resolver = getActivity().getContentResolver();
+		final Uri locked = DocumentsContract.buildDocumentUri(ExternalStorageProvider.AUTHORITY,
+				ExternalStorageProvider.ROOT_ID_LOCKED + ':');
+		boolean hadTrouble = false;
+		for (DocumentInfo doc : docs) {
+			try {
+				hadTrouble |= null == DocumentsContract.moveDocument(resolver, doc.derivedUri, null, locked);
+			} catch (Exception e) {
+				Log.w(TAG, "Failed to lock " + doc);
+				CrashReportingManager.logException(e);
+				hadTrouble = true;
+			}
+		}
+		return hadTrouble;
+	}
+
 	/** The top of the recycle bin, where the deleted items themselves are listed */
 	private boolean isRecycleBinTop() {
 		return isRecycleBin() && null != doc && TextUtils.equals(root.documentId, doc.documentId);
@@ -836,7 +869,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** Whether deleting these moves them to the recycle bin rather than deleting them for good */
 	private boolean goToRecycleBin(ArrayList<DocumentInfo> docs) {
-		if (isRecycleBin() || !AppSettings.isRecycleBinEnabled(getActivity())) {
+		// The locked folder isn't on a drive with a bin, so deleting from it is for good
+		if (isRecycleBin() || (null != root && root.isLockedFolder())
+				|| !AppSettings.isRecycleBinEnabled(getActivity())) {
 			return false;
 		}
 		for (DocumentInfo doc : docs) {
@@ -872,6 +907,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				builder.setMessage("Compressing files...");
 			} else if (id == R.id.menu_restore) {
 				builder.setMessage("Restoring files...");
+			} else if (id == R.id.menu_lock) {
+				builder.setMessage("Moving files...");
 			}
 			progressDialog = builder.create();
 		}
@@ -890,6 +927,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				result = onDeleteDocuments(docs);
 			} else if (id == R.id.menu_restore) {
 				result = onRestoreDocuments(docs);
+			} else if (id == R.id.menu_lock) {
+				result = onLockDocuments(docs);
 			} else if (id == R.id.menu_uncompress) {
                 result = onUncompressDocuments(docs);
 				params2 = new Bundle();
@@ -926,9 +965,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
                     }
 				} else if (id == R.id.menu_restore) {
 					Utils.showError(getActivity(), R.string.toast_failed_restore);
+				} else if (id == R.id.menu_lock) {
+					Utils.showError(getActivity(), R.string.toast_failed_lock);
 				}
 			} else if (toRecycleBin) {
 				Utils.showSnackBar(getActivity(), getString(R.string.moved_to_bin));
+			} else if (id == R.id.menu_lock) {
+				Utils.showSnackBar(getActivity(), getString(R.string.moved_to_locked_folder));
 			}
 
 			if (mType == TYPE_RECENT_OPEN) {
@@ -1091,6 +1134,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType) && !isRecycleBin());
 			}
 			popup.getMenu().findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
+			popup.getMenu().findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
 			delete.setVisible(manageMode && doc.isDeleteSupported());
 			rename.setVisible(manageMode && doc.isRenameSupported());
 			copy.setVisible(manageMode && doc.isCopySupported());
@@ -1180,7 +1224,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		} else if (id == R.id.menu_delete) {
 			deleteDocument(docs, id);
 			return true;
-		} else if (id == R.id.menu_uncompress || id == R.id.menu_compress || id == R.id.menu_restore) {
+		} else if (id == R.id.menu_uncompress || id == R.id.menu_compress || id == R.id.menu_restore
+				|| id == R.id.menu_lock) {
 			new OperationTask(docs, id).execute();
 			return true;
 		} else if (id == R.id.menu_open) {

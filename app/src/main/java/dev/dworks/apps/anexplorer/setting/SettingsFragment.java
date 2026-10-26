@@ -40,6 +40,7 @@ import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_SIZE;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_THUMBNAIL;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_ANIMATIONS;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_SIZE;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_LOCKED_FOLDER;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_ENABLED;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_SET;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECENT_MEDIA;
@@ -125,6 +126,8 @@ public class SettingsFragment extends Fragment {
                 checkPin();
             }
         });
+        addSwitch(inflater, section, KEY_LOCKED_FOLDER, R.drawable.ic_root_locked_folder, R.string.pref_locked_folder,
+                R.string.settings_locked_folder_summary, AppSettings.isLockedFolderEnabled(context));
         updatePinSetRow();
 
         section = addSection(inflater, R.string.pref_header_quickshare);
@@ -285,10 +288,29 @@ public class SettingsFragment extends Fragment {
                 break;
             case KEY_PIN_ENABLED:
                 updatePinSetRow();
-                // Turning protection on without a PIN would protect nothing; ask for one right away
+                // Turning protection on without a PIN would protect nothing; ask for one right away,
+                // and leave it off when that's cancelled
                 if (value && !AppSettings.isPinProtected(activity)) {
-                    setPin();
+                    setPin(new Runnable() {
+                        @Override
+                        public void run() {
+                            turnOff(KEY_PIN_ENABLED);
+                        }
+                    });
                 }
+                break;
+            case KEY_LOCKED_FOLDER:
+                updatePinSetRow();
+                if (value && !AppSettings.isPinProtected(activity)) {
+                    setPin(new Runnable() {
+                        @Override
+                        public void run() {
+                            turnOff(KEY_LOCKED_FOLDER);
+                        }
+                    }, R.string.locked_folder_set_pin);
+                }
+                // Shows or hides it in the sidebar and on Home; its files stay where they are
+                RootsCache.updateRoots(activity, ExternalStorageProvider.AUTHORITY);
                 break;
         }
     }
@@ -302,8 +324,16 @@ public class SettingsFragment extends Fragment {
         return PreferenceManager.getDefaultSharedPreferences(getActivity());
     }
 
+    private void turnOff(String key) {
+        mSwitches.get(key).setChecked(false);
+        prefs().edit().putBoolean(key, false).apply();
+        onSwitchChanged(key, false);
+    }
+
     private void updatePinSetRow() {
-        final boolean enabled = prefs().getBoolean(KEY_PIN_ENABLED, false);
+        // The locked folder uses the same PIN
+        final boolean enabled = prefs().getBoolean(KEY_PIN_ENABLED, false)
+                || AppSettings.isLockedFolderEnabled(getActivity());
         mPinSetRow.setEnabled(enabled);
         mPinSetRow.setFocusable(enabled);
         mPinSetRow.setAlpha(enabled ? 1f : 0.38f);
@@ -311,7 +341,8 @@ public class SettingsFragment extends Fragment {
                 AppSettings.isPinProtected(getActivity()) ? R.string.pin_set : R.string.pin_disabled);
     }
 
-    private void confirmPin(final String pin) {
+    /** Cancelling either step runs onCancelled, when given, unless a PIN was already set */
+    private void confirmPin(final String pin, final Runnable onCancelled) {
         final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
         d.getWindow().setWindowAnimations(R.style.DialogEnterNoAnimation);
         PinViewHelper pinViewHelper = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
@@ -334,6 +365,7 @@ public class SettingsFragment extends Fragment {
             public void onCancel() {
                 super.onCancel();
                 d.dismiss();
+                onPinCancelled(onCancelled);
             }
         };
         View view = pinViewHelper.getView();
@@ -343,33 +375,56 @@ public class SettingsFragment extends Fragment {
         d.show();
     }
 
-    private void setPin() {
+    private void onPinCancelled(Runnable onCancelled) {
+        if (null != onCancelled && Utils.isActivityAlive(getActivity())
+                && !AppSettings.isPinProtected(getActivity())) {
+            onCancelled.run();
+        }
+    }
+
+    private void setPin(final Runnable onCancelled) {
+        setPin(onCancelled, R.string.enter_pin);
+    }
+
+    private void setPin(final Runnable onCancelled, int instructionId) {
         final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
         d.getWindow().setWindowAnimations(R.style.DialogExitNoAnimation);
-        View view = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
+        final PinViewHelper pinViewHelper = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
             public void onEnter(String password) {
                 super.onEnter(password);
-                confirmPin(password);
+                confirmPin(password, onCancelled);
                 d.dismiss();
             }
 
             public void onCancel() {
                 super.onCancel();
                 d.dismiss();
+                onPinCancelled(onCancelled);
             }
-        }.getView();
+        };
+        pinViewHelper.setInstruction(instructionId);
+        final View view = pinViewHelper.getView();
         view.findViewById(R.id.logo).setVisibility(View.GONE);
         d.setContentView(view);
         d.show();
     }
 
-    /** With a PIN set, entering it removes it; without one, sets a new one. */
+    /**
+     * With a PIN set, entering it removes it, or changes it while the locked folder needs one;
+     * without one, sets a new one.
+     */
     private void checkPin() {
         if (AppSettings.isPinProtected(getActivity())) {
             final Dialog d = new Dialog(getActivity(), R.style.DocumentsTheme_DailogPIN);
             View view = new PinViewHelper(LayoutInflater.from(getActivity()), null, null) {
                 public void onEnter(String password) {
                     super.onEnter(password);
+                    if (AppSettings.checkPin(getActivity(), password)
+                            && AppSettings.isLockedFolderEnabled(getActivity())) {
+                        d.dismiss();
+                        setPin(null);
+                        return;
+                    }
                     if (AppSettings.checkPin(getActivity(), password)) {
                         AppSettings.setPin(getActivity(), "");
                         updatePinSetRow();
@@ -391,7 +446,7 @@ public class SettingsFragment extends Fragment {
             d.setContentView(view);
             d.show();
         } else {
-            setPin();
+            setPin(null);
         }
     }
 

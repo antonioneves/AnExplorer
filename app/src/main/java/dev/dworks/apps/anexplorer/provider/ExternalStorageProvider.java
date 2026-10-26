@@ -122,6 +122,7 @@ public class ExternalStorageProvider extends StorageProvider {
     public static final String ROOT_ID_HIDDEN = "hidden";
     public static final String ROOT_ID_BOOKMARK = "bookmark";
     public static final String ROOT_ID_RECYCLE_BIN = "trash";
+    public static final String ROOT_ID_LOCKED = "locked";
 
     /** {@link #call} methods for the recycle bin; arg is a document id, or a path to move */
     public static final String METHOD_RESTORE = "restoreFromBin";
@@ -170,6 +171,7 @@ public class ExternalStorageProvider extends StorageProvider {
             includeOtherRoot();
             includeBookmarkRoot();
             includeRecycleBinRoot();
+            includeLockedRoot();
             Log.d(TAG, "After updating volumes, found " + mRoots.size() + " active roots");
             notifyRootsChanged(getContext());
         }
@@ -467,6 +469,43 @@ public class ExternalStorageProvider extends StorageProvider {
             root.docId = getDocIdForFile(root.path);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * The locked folder lives in the app's own storage, out of reach of other apps and the media
+     * scanner; the app asks for the PIN before showing it. Turned off, it's only hidden.
+     */
+    private void includeLockedRoot() {
+        if (!AppSettings.isLockedFolderEnabled(getContext())) {
+            return;
+        }
+        try {
+            final RootInfo root = new RootInfo();
+            root.rootId = ROOT_ID_LOCKED;
+            root.flags = Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_IS_CHILD | Root.FLAG_SUPPORTS_CREATE;
+            root.title = getContext().getString(R.string.root_locked_folder);
+            root.path = getLockedFolder(getContext());
+            root.path.mkdirs();
+            mRoots.put(ROOT_ID_LOCKED, root);
+            root.docId = getDocIdForFile(root.path);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static File getLockedFolder(Context context) {
+        return new File(context.getFilesDir(), "locked");
+    }
+
+    private static boolean isLockedDocId(String docId) {
+        return null != docId && docId.startsWith(ROOT_ID_LOCKED + ':');
+    }
+
+    /** Other apps, e.g. the system file picker, never see the locked folder's contents */
+    private static void enforceLockedAccess(String docId) throws FileNotFoundException {
+        if (isLockedDocId(docId) && Binder.getCallingUid() != Process.myUid()) {
+            throw new FileNotFoundException("No access to " + docId);
         }
     }
 
@@ -803,7 +842,11 @@ public class ExternalStorageProvider extends StorageProvider {
     public Cursor queryRoots(String[] projection) throws FileNotFoundException {
         final MatrixCursor result = new MatrixCursor(resolveRootProjection(projection));
         synchronized (mRootsLock) {
+            final boolean self = Binder.getCallingUid() == Process.myUid();
             for (RootInfo root : mRoots.values()) {
+                if (!self && ROOT_ID_LOCKED.equals(root.rootId)) {
+                    continue;
+                }
                 final RowBuilder row = result.newRow();
                 row.add(Root.COLUMN_ROOT_ID, root.rootId);
                 row.add(Root.COLUMN_FLAGS, root.flags);
@@ -993,6 +1036,7 @@ public class ExternalStorageProvider extends StorageProvider {
             result.setExtras(extras);
             return result;
         }
+        enforceLockedAccess(parentDocumentId);
         if (isRecycleBinRoot(parentDocumentId)) {
             return queryRecycleBin(parentDocumentId, projection);
         }
@@ -1025,6 +1069,7 @@ public class ExternalStorageProvider extends StorageProvider {
         }
         if (null == parent) {
             // Not a root: a folder's document id, to search just that folder
+            enforceLockedAccess(rootId);
             parent = getFileForDocId(rootId);
         }
         updateSettings();
@@ -1280,7 +1325,16 @@ public class ExternalStorageProvider extends StorageProvider {
                 throw new IllegalStateException("Already exists " + after);
             }
             if (!source.renameTo(after)) {
-                throw new IllegalStateException("Failed to move to " + after);
+                // Another file system, e.g. into the locked folder in the app's storage: copy, and
+                // only remove the original once the copy is complete
+                if (!FileUtils.moveDocument(source, target, null)) {
+                    FileUtils.deleteFile(after);
+                    throw new IllegalStateException("Failed to move to " + after);
+                }
+                keepDates(source, after);
+                FileUtils.removeMediaStore(getContext(), source);
+                FileUtils.deleteFile(source);
+                notifyDocumentsChanged(targetParentDocumentId);
             } else {
                 notifyDocumentsChanged(targetParentDocumentId);
                 FileUtils.updateMediaStore(getContext(), source.getPath());
@@ -1291,7 +1345,18 @@ public class ExternalStorageProvider extends StorageProvider {
         return afterDocId;
     }
 
-    private File getFile(String documentId) throws FileNotFoundException {
+    /** A moved file keeps its date, as it would after a rename */
+    private static void keepDates(File source, File copy) {
+        final File[] children = source.listFiles();
+        if (null != children) {
+            for (File child : children) {
+                keepDates(child, new File(copy, child.getName()));
+            }
+        }
+        copy.setLastModified(source.lastModified());
+    }
+
+        private File getFile(String documentId) throws FileNotFoundException {
         if(documentId.startsWith(ROOT_ID_USB)){
             return null;
         }

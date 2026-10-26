@@ -96,8 +96,8 @@
     <string name="incorrect_pin">Incorrect PIN</string>
     <string name="confirm_pin">Confirm PIN</string>
     <string name="pin_mismatch">PIN did not match</string>
-    <string name="pin_set">PIN protection enabled</string>
-    <string name="pin_disabled">PIN protection disabled</string>
+    <string name="pin_set">PIN set</string>
+    <string name="pin_disabled">No PIN set</string>
     <string name="loading">Loading...</string>
     <string name="pref_foreground_color_title">Primary color</string>
     <string name="pref_foreground_color_description">The main color of actionbar</string>
@@ -227,5 +227,13 @@
     </plurals>
     <string name="empty_bin_confirm">Everything in the Recycle Bin will be permanently deleted. Are you sure?</string>
     <string name="toast_failed_restore">Unable to restore some files</string>
+
+    <string name="root_locked_folder">Locked folder</string>
+    <string name="pref_locked_folder">Locked folder</string>
+    <string name="settings_locked_folder_summary">Keep files behind your PIN, hidden from other apps. Uninstalling the app deletes them</string>
+    <string name="menu_lock">Move to Locked folder</string>
+    <string name="moved_to_locked_folder">Moved to the Locked folder</string>
+    <string name="toast_failed_lock">Unable to move some files to the Locked folder</string>
+    <string name="locked_folder_set_pin">Set a PIN for the Locked folder</string>
 
 </resources>
