@@ -389,6 +389,9 @@ public class NonMediaDocumentsProvider extends StorageProvider {
         // Delegate to real provider
         final long token = Binder.clearCallingIdentity();
         try {
+            if (ExternalStorageProvider.moveToRecycleBin(getContext(), target)) {
+                return;
+            }
             getContext().getContentResolver().delete(target, null, null);
         } finally {
             Binder.restoreCallingIdentity(token);

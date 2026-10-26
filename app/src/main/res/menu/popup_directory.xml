@@ -24,6 +24,12 @@
         android:visible="false" />
 
     <item
+        android:id="@+id/menu_restore"
+        android:icon="@drawable/ic_menu_restore"
+        support:showAsAction="always"
+        android:title="@string/menu_restore"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_bookmark"
         android:icon="@drawable/ic_menu_bookmark"
         support:showAsAction="always"

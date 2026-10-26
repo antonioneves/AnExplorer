@@ -27,6 +27,7 @@ import android.database.Cursor;
 import android.graphics.Point;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Process;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
@@ -35,6 +36,7 @@ import android.os.FileObserver;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.os.storage.StorageManager;
+import android.provider.MediaStore;
 import androidx.core.os.EnvironmentCompat;
 import android.support.provider.DocumentFile;
 import androidx.collection.ArrayMap;
@@ -49,6 +51,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import dev.dworks.apps.anexplorer.BuildConfig;
@@ -62,6 +65,7 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.DiskInfo;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
+import dev.dworks.apps.anexplorer.misc.RecycleBin;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
 import dev.dworks.apps.anexplorer.misc.StorageUtils;
 import dev.dworks.apps.anexplorer.misc.StorageVolume;
@@ -117,6 +121,13 @@ public class ExternalStorageProvider extends StorageProvider {
     public static final String ROOT_ID_BLUETOOTH = "bluetooth";
     public static final String ROOT_ID_HIDDEN = "hidden";
     public static final String ROOT_ID_BOOKMARK = "bookmark";
+    public static final String ROOT_ID_RECYCLE_BIN = "trash";
+
+    /** {@link #call} methods for the recycle bin; arg is a document id, or a path to move */
+    public static final String METHOD_RESTORE = "restoreFromBin";
+    public static final String METHOD_EMPTY_BIN = "emptyBin";
+    public static final String METHOD_MOVE_TO_BIN = "moveToBin";
+    public static final String EXTRA_RESULT = "result";
 
     private static final String DIR_ROOT = "/";
 
@@ -158,6 +169,7 @@ public class ExternalStorageProvider extends StorageProvider {
             updateVolumesLocked();
             includeOtherRoot();
             includeBookmarkRoot();
+            includeRecycleBinRoot();
             Log.d(TAG, "After updating volumes, found " + mRoots.size() + " active roots");
             notifyRootsChanged(getContext());
         }
@@ -434,6 +446,176 @@ public class ExternalStorageProvider extends StorageProvider {
         }
     }
 
+    private void includeRecycleBinRoot() {
+        final RootInfo primary = mRoots.get(ROOT_ID_PRIMARY_EMULATED);
+        if (null == primary) {
+            return;
+        }
+        // Turned off, it still shows while it holds files, so they can be restored or deleted
+        if (!AppSettings.isRecycleBinEnabled(getContext()) && isRecycleBinEmpty()) {
+            return;
+        }
+        try {
+            final RootInfo root = new RootInfo();
+            mRoots.put(ROOT_ID_RECYCLE_BIN, root);
+
+            root.rootId = ROOT_ID_RECYCLE_BIN;
+            root.flags = Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_IS_CHILD;
+            root.title = getContext().getString(R.string.root_recycle_bin);
+            root.path = RecycleBin.getFilesDir(primary.path);
+            root.docId = getDocIdForFile(root.path);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** The drives that get a recycle bin of their own: internal storage and the mounted drives */
+    private List<File> getRecycleBinVolumes() {
+        final List<File> volumes = new ArrayList<>();
+        synchronized (mRootsLock) {
+            for (RootInfo root : mRoots.values()) {
+                if (ROOT_ID_PRIMARY_EMULATED.equals(root.rootId) || root.rootId.startsWith(ROOT_ID_SECONDARY)) {
+                    volumes.add(root.path);
+                }
+            }
+        }
+        return volumes;
+    }
+
+    private File getVolumeFor(File file) {
+        final String path = file.getAbsolutePath();
+        for (File volume : getRecycleBinVolumes()) {
+            if (path.startsWith(volume.getAbsolutePath() + "/")) {
+                return volume;
+            }
+        }
+        return null;
+    }
+
+    /** Calls one of the recycle bin methods; false when it failed */
+    public static boolean callRecycleBin(Context context, String method, String arg) {
+        final Bundle out = context.getContentResolver().call(
+                Uri.parse(ContentResolver.SCHEME_CONTENT + "://" + AUTHORITY), method, arg, null);
+        return null != out && out.getBoolean(EXTRA_RESULT);
+    }
+
+    /**
+     * For the media providers: moves a media item's file to the recycle bin when that's turned on,
+     * so deleting from the Library works like deleting from its folder. False when it wasn't moved.
+     */
+    public static boolean moveToRecycleBin(Context context, Uri mediaUri) {
+        if (!AppSettings.isRecycleBinEnabled(context)) {
+            return false;
+        }
+        String path = null;
+        Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(mediaUri,
+                    new String[]{MediaStore.MediaColumns.DATA}, null, null, null);
+            if (null != cursor && cursor.moveToFirst()) {
+                path = cursor.getString(0);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "No path for " + mediaUri, e);
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        return !TextUtils.isEmpty(path) && callRecycleBin(context, METHOD_MOVE_TO_BIN, path);
+    }
+
+    private boolean isRecycleBinEmpty() {
+        for (File volume : getRecycleBinVolumes()) {
+            if (!RecycleBin.isEmpty(volume)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isRecycleBinRoot(String docId) {
+        return (ROOT_ID_RECYCLE_BIN + ':').equals(docId);
+    }
+
+    /** Moves the file to its drive's recycle bin when that's turned on; false when it wasn't moved */
+    private boolean moveToRecycleBin(File file) {
+        if (!AppSettings.isRecycleBinEnabled(getContext()) || RecycleBin.isInBin(file)) {
+            return false;
+        }
+        final File volume = getVolumeFor(file);
+        if (null == volume) {
+            return false;
+        }
+        // Before the move, while a folder's media can still be found under it
+        FileUtils.removeMediaStore(getContext(), file);
+        if (!RecycleBin.moveToBin(volume, file)) {
+            return false;
+        }
+        notifyRecycleBinChanged();
+        return true;
+    }
+
+    private void notifyRecycleBinChanged() {
+        getContext().getContentResolver().notifyChange(
+                DocumentsContract.buildChildDocumentsUri(AUTHORITY, ROOT_ID_RECYCLE_BIN + ':'), null, false);
+        // Turned off, the bin leaves the sidebar once it's empty
+        if (!AppSettings.isRecycleBinEnabled(getContext())) {
+            updateRoots();
+        }
+    }
+
+    /** Lists the deleted items of every drive, after deleting for good the ones kept long enough */
+    private Cursor queryRecycleBin(String docId, String[] projection) throws FileNotFoundException {
+        final File parent = getFileForDocId(docId);
+        final MatrixCursor result = new DirectoryCursor(resolveDocumentProjection(projection), docId, parent);
+        updateSettings();
+        for (File volume : getRecycleBinVolumes()) {
+            RecycleBin.purge(volume, RecycleBin.KEEP_MILLIS);
+            final File[] items = RecycleBin.getFilesDir(volume).listFiles();
+            if (null == items) {
+                continue;
+            }
+            for (File item : items) {
+                includeFile(result, null, item);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Bundle call(String method, String arg, Bundle extras) {
+        if (!METHOD_RESTORE.equals(method) && !METHOD_EMPTY_BIN.equals(method)
+                && !METHOD_MOVE_TO_BIN.equals(method)) {
+            return super.call(method, arg, extras);
+        }
+        // Only the app itself; these act on any path with its storage access
+        if (Binder.getCallingUid() != Process.myUid()) {
+            throw new SecurityException("Not allowed: " + method);
+        }
+        final Bundle out = new Bundle();
+        if (METHOD_RESTORE.equals(method)) {
+            try {
+                final File restored = RecycleBin.restore(getFileForDocId(arg));
+                if (null != restored) {
+                    FileUtils.updateMediaStore(getContext(), restored.getPath());
+                    notifyDocumentsChanged(getDocIdForFile(restored));
+                    out.putBoolean(EXTRA_RESULT, true);
+                }
+            } catch (FileNotFoundException e) {
+                Log.w(TAG, "Failed to restore " + arg, e);
+            }
+            notifyRecycleBinChanged();
+        } else if (METHOD_EMPTY_BIN.equals(method)) {
+            for (File volume : getRecycleBinVolumes()) {
+                RecycleBin.purge(volume, 0);
+            }
+            notifyRecycleBinChanged();
+            out.putBoolean(EXTRA_RESULT, true);
+        } else {
+            out.putBoolean(EXTRA_RESULT, moveToRecycleBin(new File(arg)));
+        }
+        return out;
+    }
+
     public void updateSettings(){
         showFilesHidden = AppSettings.getDisplayFileHidden(getContext());
     }
@@ -553,7 +735,8 @@ public class ExternalStorageProvider extends StorageProvider {
         // Hidden entries are skipped before the stat calls below; a folder with many entries
         // pays for them once per entry
         final String displayName = file.getName();
-        if (!showFilesHidden && !TextUtils.isEmpty(displayName) && displayName.charAt(0) == '.') {
+        if (!showFilesHidden && !TextUtils.isEmpty(displayName) && displayName.charAt(0) == '.'
+                && !RecycleBin.isBinItem(file)) {
             return;
         }
 
@@ -596,7 +779,11 @@ public class ExternalStorageProvider extends StorageProvider {
         if(MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, mimeType)){
             flags |= Document.FLAG_SUPPORTS_THUMBNAIL;
         }
-        
+        if (RecycleBin.isInBin(file)) {
+            // Deleted items can only be looked at, restored or deleted for good
+            flags &= Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_DIR_PREFERS_GRID;
+        }
+
         final RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, docId);
         row.add(Document.COLUMN_DISPLAY_NAME, displayName);
@@ -689,6 +876,21 @@ public class ExternalStorageProvider extends StorageProvider {
     @Override
     public void deleteDocument(String docId) throws FileNotFoundException {
         final File file = getFileForDocId(docId);
+        if (RecycleBin.isInBin(file)) {
+            // Deleting from the bin is for good
+            if (!RecycleBin.delete(file)) {
+                throw new IllegalStateException("Failed to delete " + file);
+            }
+            notifyDocumentsChanged(docId);
+            notifyRecycleBinChanged();
+            return;
+        }
+        // A drive the bin can't be made on, e.g. one only reachable through the system picker,
+        // still deletes for good
+        if (moveToRecycleBin(file)) {
+            notifyDocumentsChanged(docId);
+            return;
+        }
         DocumentFile documentFile = getDocumentFile(docId, file);
 
         if (!documentFile.delete()) {
@@ -792,6 +994,9 @@ public class ExternalStorageProvider extends StorageProvider {
                     getContext().getString(R.string.folder_restricted));
             result.setExtras(extras);
             return result;
+        }
+        if (isRecycleBinRoot(parentDocumentId)) {
+            return queryRecycleBin(parentDocumentId, projection);
         }
         if (mArchiveHelper.isArchivedDocument(parentDocumentId) ||
                 DocumentArchiveHelper.isSupportedArchiveType(getDocumentType(parentDocumentId))) {

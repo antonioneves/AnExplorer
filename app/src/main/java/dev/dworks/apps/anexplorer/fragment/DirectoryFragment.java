@@ -40,6 +40,7 @@ import android.os.Parcelable;
 import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
@@ -89,6 +90,8 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
+import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
+import dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.StateColumns;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
@@ -635,8 +638,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			openWith.setVisible(manageMode && canOpenWith(getCheckedDocuments()));
 			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
-				quickShare.setVisible(manageMode);
+				quickShare.setVisible(manageMode && !isRecycleBin());
 			}
+			menu.findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
 			delete.setVisible(manageMode && canDelete);
 			if(null != rename) {
 				rename.setVisible(manageMode && canRename && count == 1);
@@ -660,7 +664,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			compress.setVisible(editMode && !isOperationSupported);
 
 			info.setVisible(count == 1);
-			bookmark.setVisible(count == 1);
+			bookmark.setVisible(count == 1 && !isRecycleBin());
 
 			return true;
 		}
@@ -805,6 +809,46 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return hadTrouble;
 	}
 
+	/** Puts deleted items back where they were; true when some of them couldn't be */
+	private boolean onRestoreDocuments(ArrayList<DocumentInfo> docs) {
+		boolean hadTrouble = false;
+		for (DocumentInfo doc : docs) {
+			try {
+				hadTrouble |= !ExternalStorageProvider.callRecycleBin(getActivity(),
+						ExternalStorageProvider.METHOD_RESTORE, doc.documentId);
+			} catch (Exception e) {
+				Log.w(TAG, "Failed to restore " + doc);
+				CrashReportingManager.logException(e);
+				hadTrouble = true;
+			}
+		}
+		return hadTrouble;
+	}
+
+	private boolean isRecycleBin() {
+		return null != root && root.isRecycleBin();
+	}
+
+	/** The top of the recycle bin, where the deleted items themselves are listed */
+	private boolean isRecycleBinTop() {
+		return isRecycleBin() && null != doc && TextUtils.equals(root.documentId, doc.documentId);
+	}
+
+	/** Whether deleting these moves them to the recycle bin rather than deleting them for good */
+	private boolean goToRecycleBin(ArrayList<DocumentInfo> docs) {
+		if (isRecycleBin() || !AppSettings.isRecycleBinEnabled(getActivity())) {
+			return false;
+		}
+		for (DocumentInfo doc : docs) {
+			if (!ExternalStorageProvider.AUTHORITY.equals(doc.authority)
+					&& !MediaDocumentsProvider.AUTHORITY.equals(doc.authority)
+					&& !NonMediaDocumentsProvider.AUTHORITY.equals(doc.authority)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private class OperationTask extends AsyncTask<Void, Void, Boolean> {
 
 		private Dialog progressDialog;
@@ -824,6 +868,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				builder.setMessage("Uncompressing files...");
 			} else if (id == R.id.menu_compress) {
 				builder.setMessage("Compressing files...");
+			} else if (id == R.id.menu_restore) {
+				builder.setMessage("Restoring files...");
 			}
 			progressDialog = builder.create();
 		}
@@ -840,6 +886,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			boolean result = false;
 			if (id == R.id.menu_delete) {
 				result = onDeleteDocuments(docs);
+			} else if (id == R.id.menu_restore) {
+				result = onRestoreDocuments(docs);
 			} else if (id == R.id.menu_uncompress) {
                 result = onUncompressDocuments(docs);
 				params2 = new Bundle();
@@ -874,6 +922,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
                     if(!((BaseActivity) getActivity()).isSAFIssue(doc.documentId)) {
                         Utils.showError(getActivity(), R.string.uncompress_error);
                     }
+				} else if (id == R.id.menu_restore) {
+					Utils.showError(getActivity(), R.string.toast_failed_restore);
 				}
 			}
 
@@ -1034,8 +1084,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			openWith.setVisible(manageMode && canOpenWith(single));
 			final MenuItem quickShare = popup.getMenu().findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
-				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType));
+				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType) && !isRecycleBin());
 			}
+			popup.getMenu().findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
 			delete.setVisible(manageMode && doc.isDeleteSupported());
 			rename.setVisible(manageMode && doc.isRenameSupported());
 			copy.setVisible(manageMode && doc.isCopySupported());
@@ -1116,7 +1167,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		} else if (id == R.id.menu_delete) {
 			deleteDocument(docs, id);
 			return true;
-		} else if (id == R.id.menu_uncompress || id == R.id.menu_compress) {
+		} else if (id == R.id.menu_uncompress || id == R.id.menu_compress || id == R.id.menu_restore) {
 			new OperationTask(docs, id).execute();
 			return true;
 		} else if (id == R.id.menu_open) {
@@ -1162,7 +1213,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private void deleteDocument(ArrayList<DocumentInfo> docs, int type) {
 		Bundle params = new Bundle();
 		params.putInt(FILE_COUNT, docs.size());
-		deleteFiles(docs, type, "Delete files ?");
+		deleteFiles(docs, type, getString(goToRecycleBin(docs) ? R.string.delete_to_bin : R.string.delete_for_good));
 		AnalyticsManager.logEvent("delete", params);
 	}
 

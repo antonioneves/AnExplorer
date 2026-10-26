@@ -217,6 +217,9 @@ public class RootInfo implements Durable, Parcelable {
         } else if (isBluetoothFolder()) {
             derivedIcon = R.drawable.ic_root_bluetooth;
             derivedTag = "bluetooth";
+        } else if (isRecycleBin()) {
+            derivedIcon = R.drawable.ic_root_recycle_bin;
+            derivedTag = "recycle_bin";
         } else if (isBookmarkFolder()) {
             derivedIcon = R.drawable.ic_root_bookmark;
             derivedTag = "bookmark";
@@ -355,6 +358,11 @@ public class RootInfo implements Durable, Parcelable {
     public boolean isBluetoothFolder() {
         return ExternalStorageProvider.AUTHORITY.equals(authority)
                 && ExternalStorageProvider.ROOT_ID_BLUETOOTH.equals(rootId);
+    }
+
+    public boolean isRecycleBin() {
+        return ExternalStorageProvider.AUTHORITY.equals(authority)
+                && ExternalStorageProvider.ROOT_ID_RECYCLE_BIN.equals(rootId);
     }
 
     public boolean isBookmarkFolder() {

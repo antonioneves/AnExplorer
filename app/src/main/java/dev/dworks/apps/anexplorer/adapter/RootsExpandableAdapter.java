@@ -44,10 +44,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<RootInfo> library = new ArrayList<>();
         final List<Item> folders = new ArrayList<>();
         final List<Item> bookmarks = new ArrayList<>();
+        Item recycleBin = null;
 
         for (RootInfo root : roots) {
             if (root.isHome()) {
                 home.add(new RootItem(root));
+            } else if (root.isRecycleBin()) {
+                recycleBin = new RootItem(root);
             } else if (root.isRecents()) {
                 // Recent is a Home card instead
             } else if (root.isConnections()) {
@@ -110,6 +113,11 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         if(!folders.isEmpty()){
             folders.addAll(bookmarks);
             groupRoots.add(new GroupInfo("Folders", folders));
+        }
+
+        // Like Home, a single row of its own
+        if (null != recycleBin) {
+            groupRoots.add(new GroupInfo(recycleBin));
         }
 
         final List<Item> more = new ArrayList<>();

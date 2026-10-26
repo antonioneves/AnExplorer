@@ -29,6 +29,12 @@
         android:title="@string/menu_search"
         android:visible="false"/>
     <item
+        android:id="@+id/menu_empty_bin"
+        android:icon="@drawable/ic_menu_delete"
+        support:showAsAction="always"
+        android:title="@string/menu_empty_bin"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_create_file"
         android:icon="@drawable/ic_menu_new_file"
         support:showAsAction="always"

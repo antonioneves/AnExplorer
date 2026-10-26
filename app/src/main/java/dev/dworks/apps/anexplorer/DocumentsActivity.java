@@ -29,6 +29,7 @@ import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
@@ -108,6 +109,7 @@ import java.util.Locale;
 import java.util.concurrent.Executor;
 
 import dev.dworks.apps.anexplorer.archive.DocumentArchiveHelper;
+import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.RootsCommonFragment;
 import dev.dworks.apps.anexplorer.fragment.ConnectionsFragment;
 import dev.dworks.apps.anexplorer.fragment.CreateDirectoryFragment;
@@ -811,6 +813,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         search.setVisible(searchVisible);
 
         settings.setVisible(false);
+        menu.findItem(R.id.menu_empty_bin).setVisible(null != root && root.isRecycleBin()
+                && null != cwd && TextUtils.equals(root.documentId, cwd.documentId));
 
         // Settings have nothing to create, search, sort or lay out
         if (mShowingSettings) {
@@ -820,6 +824,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             sort.setVisible(false);
             grid.setVisible(false);
             list.setVisible(false);
+            menu.findItem(R.id.menu_empty_bin).setVisible(false);
         }
     }
 
@@ -865,6 +870,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final int id = item.getItemId();
         if (id == android.R.id.home) {
             onBackPressed();
+            return true;
+        } else if (id == R.id.menu_empty_bin) {
+            emptyRecycleBin();
             return true;
         }  else if (id == R.id.menu_create_dir) {
             createFolder();
@@ -2109,6 +2117,34 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
     
+    private void emptyRecycleBin() {
+        final DialogBuilder builder = new DialogBuilder(this);
+        builder.setMessage(R.string.empty_bin_confirm)
+                .setPositiveButton(R.string.menu_empty_bin, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        new EmptyRecycleBinTask().execute();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null);
+        builder.showDialog();
+    }
+
+    private class EmptyRecycleBinTask extends AsyncTask<Void, Void, Boolean> {
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            return ExternalStorageProvider.callRecycleBin(DocumentsActivity.this,
+                    ExternalStorageProvider.METHOD_EMPTY_BIN, null);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean emptied) {
+            if (!emptied && Utils.isActivityAlive(DocumentsActivity.this)) {
+                Utils.showError(DocumentsActivity.this, R.string.toast_failed_delete);
+            }
+        }
+    }
+
     private class MoveTask extends AsyncTask<Void, Void, Boolean> {
         private final DocumentInfo toDoc;
         private final ArrayList<DocumentInfo> docs;
@@ -2226,7 +2262,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private class ToolbarActionMode extends ActionMode {
         // Bar order: open, then edit actions, then sharing, then details; Delete always goes last
         private final int[] ACTION_ORDER = {
-                R.id.menu_open, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_rename,
+                R.id.menu_open, R.id.menu_restore, R.id.menu_select_all, R.id.menu_copy, R.id.menu_cut, R.id.menu_rename,
                 R.id.menu_compress, R.id.menu_open_with, R.id.menu_quickshare, R.id.menu_bookmark, R.id.menu_info,
         };
         private final ActionMode.Callback callback;

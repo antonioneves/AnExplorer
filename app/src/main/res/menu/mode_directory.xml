@@ -24,6 +24,12 @@
         support:showAsAction="always"
         android:title="@string/menu_open"/>
     <item
+        android:id="@+id/menu_restore"
+        android:icon="@drawable/ic_menu_restore"
+        support:showAsAction="always"
+        android:title="@string/menu_restore"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_info"
         android:icon="@drawable/ic_menu_info"
         support:showAsAction="always"

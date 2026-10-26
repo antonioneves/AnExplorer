@@ -29,10 +29,13 @@ import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.RootsCommonFragment;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper;
+import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
+import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_ADVANCED_DEVICES;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_HIDDEN;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECYCLE_BIN;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_SIZE;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_THUMBNAIL;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FOLDER_ANIMATIONS;
@@ -100,6 +103,8 @@ public class SettingsFragment extends Fragment {
                 R.string.settings_hidden_summary, AppSettings.getDisplayFileHidden(context));
         addSwitch(inflater, section, KEY_RECENT_MEDIA, R.drawable.ic_root_recent, R.string.pref_recent_media,
                 R.string.settings_recent_media_summary, AppSettings.getDisplayRecentMedia());
+        addSwitch(inflater, section, KEY_RECYCLE_BIN, R.drawable.ic_root_recycle_bin, R.string.pref_recycle_bin,
+                R.string.settings_recycle_bin_summary, AppSettings.isRecycleBinEnabled(context));
 
         section = addSection(inflater, R.string.pref_header_theme);
         addThemeStyle(inflater, section);
@@ -266,6 +271,10 @@ public class SettingsFragment extends Fragment {
             case KEY_FILE_THUMBNAIL:
             case KEY_FILE_HIDDEN:
                 activity.loadDisplaySettings();
+                break;
+            case KEY_RECYCLE_BIN:
+                // Shows or hides the bin in the sidebar
+                RootsCache.updateRoots(activity, ExternalStorageProvider.AUTHORITY);
                 break;
             case KEY_ADVANCED_DEVICES:
                 // Changes which storage the sidebar lists
