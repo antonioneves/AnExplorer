@@ -78,12 +78,16 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             }
         }
 
-        if(!home.isEmpty() || !storage.isEmpty() || !phone.isEmpty()){
-            home.addAll(storage);
-            home.addAll(secondaryStorage);
-            home.addAll(usb);
-            home.addAll(phone);
-            groupRoots.add(new GroupInfo("Storage", home));
+        // Home sits on its own above the sections
+        for (Item item : home) {
+            groupRoots.add(new GroupInfo(item));
+        }
+        if(!storage.isEmpty() || !secondaryStorage.isEmpty() || !usb.isEmpty() || !phone.isEmpty()){
+            final List<Item> storageItems = new ArrayList<>(storage);
+            storageItems.addAll(secondaryStorage);
+            storageItems.addAll(usb);
+            storageItems.addAll(phone);
+            groupRoots.add(new GroupInfo("Storage", storageItems));
         }
 
         connection.addAll(0, quickShare);
@@ -133,8 +137,22 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
     }
 
     @Override
+    public int getGroupTypeCount() {
+        return 2;
+    }
+
+    @Override
+    public int getGroupType(int groupPosition) {
+        return group.get(groupPosition).item != null ? 1 : 0;
+    }
+
+    @Override
     public View getGroupView(int groupPosition, boolean isExpanded,
                              View convertView, ViewGroup parent) {
+        final Item row = group.get(groupPosition).item;
+        if (row != null) {
+            return row.getView(convertView, parent);
+        }
         final GroupItem item = new GroupItem((GroupInfo) getGroup(groupPosition));
         return item.getView(convertView, parent);
     }

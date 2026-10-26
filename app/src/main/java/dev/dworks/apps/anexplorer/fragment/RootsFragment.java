@@ -131,6 +131,7 @@ public class RootsFragment extends Fragment {
         ((TextView) title).setCompoundDrawablesRelative(icon, null, null, null);
         mList = (ExpandableListView) view.findViewById(android.R.id.list);
         mList.setOnChildClickListener(mItemListener);
+        mList.setOnGroupClickListener(mGroupListener);
         mList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         // Items draw their own selected and focused states (drawable-television/item_root)
         mList.setSelector(android.R.color.transparent);
@@ -264,6 +265,11 @@ public class RootsFragment extends Fragment {
         final boolean settings = getActivity() instanceof DocumentsActivity
                 && ((DocumentsActivity) getActivity()).isShowingSettings();
         for (int i = 0; i < mAdapter.getGroupCount(); i++) {
+            final Item row = ((GroupInfo) mAdapter.getGroup(i)).item;
+            if (!settings && row instanceof RootItem && Objects.equal(((RootItem) row).root, root)) {
+                check(mList.getFlatListPosition(ExpandableListView.getPackedPositionForGroup(i)));
+                return;
+            }
             for (int j = 0; j < mAdapter.getChildrenCount(i); j++) {
                 final Object item = mAdapter.getChild(i,j);
                 if (settings) {
@@ -296,7 +302,12 @@ public class RootsFragment extends Fragment {
         // user is moving through the list (e.g. after Back returns to Home from a folder)
         if (mList.getChildCount() == 0) {
             // Not laid out yet, so the app is opening: start on the current root, not the header
-            mList.post(() -> selectInPlace(index));
+            mList.post(() -> {
+                selectInPlace(index);
+                if (getActivity() != null && getActivity().getCurrentFocus() == null) {
+                    mList.requestFocus();
+                }
+            });
         } else if (!mList.hasFocus()) {
             selectInPlace(index);
         }
@@ -321,37 +332,53 @@ public class RootsFragment extends Fragment {
         @Override
         public boolean onChildClick(ExpandableListView parent, View v, int groupPosition,
                                     int childPosition, long id) {
-            final BaseActivity activity = BaseActivity.get(RootsFragment.this);
-            final Item item = (Item) mAdapter.getChild(groupPosition, childPosition);
-            if (item instanceof RootItem) {
-                    int index = parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition));
-                parent.setItemChecked(index, true);
-                RootInfo rootInfo = ((RootItem) item).root;
-                if(RootInfo.isProFeature(rootInfo) && !DocumentsApplication.isPurchased()){
-                    DocumentsApplication.openPurchaseActivity(activity);
-                    return false;
-                }
-                activity.onRootPicked(rootInfo, true);
-                Bundle params = new Bundle();
-                params.putString("type", rootInfo.title);
-                AnalyticsManager.logEvent("navigate", rootInfo, params);
-            } else if (item instanceof AppItem) {
-                activity.onAppPicked(((AppItem) item).info);
-            } else if (item instanceof ActionItem) {
-                if (activity instanceof DocumentsActivity) {
-                    final int actionId = ((ActionItem) item).id;
-                    if (actionId == R.id.menu_settings) {
-                        ((DocumentsActivity) activity).openSettings();
-                    } else if (actionId == R.id.menu_about) {
-                        ((DocumentsActivity) activity).openAbout();
-                    }
-                }
-            } else {
-                throw new IllegalStateException("Unknown root: " + item);
-            }
+            onItemPicked((Item) mAdapter.getChild(groupPosition, childPosition),
+                    parent.getFlatListPosition(ExpandableListView.getPackedPositionForChild(groupPosition, childPosition)));
             return false;
         }
     };
+
+    /** Single-row groups (Home) open their item instead of collapsing. */
+    private ExpandableListView.OnGroupClickListener mGroupListener = new ExpandableListView.OnGroupClickListener() {
+        @Override
+        public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+            final Item row = ((GroupInfo) mAdapter.getGroup(groupPosition)).item;
+            if (row == null) {
+                return false;
+            }
+            onItemPicked(row, parent.getFlatListPosition(ExpandableListView.getPackedPositionForGroup(groupPosition)));
+            return true;
+        }
+    };
+
+    private void onItemPicked(Item item, int index) {
+        final BaseActivity activity = BaseActivity.get(RootsFragment.this);
+        if (item instanceof RootItem) {
+            mList.setItemChecked(index, true);
+            RootInfo rootInfo = ((RootItem) item).root;
+            if(RootInfo.isProFeature(rootInfo) && !DocumentsApplication.isPurchased()){
+                DocumentsApplication.openPurchaseActivity(activity);
+                return;
+            }
+            activity.onRootPicked(rootInfo, true);
+            Bundle params = new Bundle();
+            params.putString("type", rootInfo.title);
+            AnalyticsManager.logEvent("navigate", rootInfo, params);
+        } else if (item instanceof AppItem) {
+            activity.onAppPicked(((AppItem) item).info);
+        } else if (item instanceof ActionItem) {
+            if (activity instanceof DocumentsActivity) {
+                final int actionId = ((ActionItem) item).id;
+                if (actionId == R.id.menu_settings) {
+                    ((DocumentsActivity) activity).openSettings();
+                } else if (actionId == R.id.menu_about) {
+                    ((DocumentsActivity) activity).openAbout();
+                }
+            }
+        } else {
+            throw new IllegalStateException("Unknown root: " + item);
+        }
+    }
 
     private OnItemLongClickListener mItemLongClickListener = new OnItemLongClickListener() {
         @Override
