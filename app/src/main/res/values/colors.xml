@@ -58,7 +58,11 @@
 
     <color name="item_doc_grid_background">@color/material_grey_300</color>
 
-    <color name="item_doc_grid_protect_background">#88000000</color>
+    <!-- The sidebar logo's folder: white like the launcher icon on dark, dark on light -->
+    <color name="app_logo_folder">@color/onSurfaceVariantColor</color>
+    <!-- The footer under a grid item's picture, and its text -->
+    <color name="item_doc_grid_protect_background">@color/surfaceContainerHighColor</color>
+    <color name="item_doc_grid_text">#DE000000</color>
     <color name="item_doc_grid_protect_background_light">#0a000000</color>
 
     <color name="item_doc_grid_overlay_activated">#88000000</color>

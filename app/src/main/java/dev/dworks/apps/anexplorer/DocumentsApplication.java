@@ -120,11 +120,6 @@ public class DocumentsApplication extends AppFlavour {
         final IntentFilter localeFilter = new IntentFilter();
         localeFilter.addAction(Intent.ACTION_LOCALE_CHANGED);
         registerReceiver(mCacheReceiver, localeFilter);
-
-        // TV apps are dark
-        if(Integer.valueOf(AppSettings.getThemeStyle()) != AppCompatDelegate.MODE_NIGHT_YES){
-            AppSettings.setThemeStyle(AppCompatDelegate.MODE_NIGHT_YES);
-        }
     }
 
     public static synchronized DocumentsApplication getInstance() {

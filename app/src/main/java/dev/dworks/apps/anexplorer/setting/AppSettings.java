@@ -161,7 +161,7 @@ public class AppSettings {
 
     public static String getThemeStyle() {
         return prefs(DocumentsApplication.getInstance().getBaseContext())
-                .getString(KEY_THEME_STYLE, "1");
+                .getString(KEY_THEME_STYLE, "2");
     }
 
     public static void setThemeStyle(int style) {

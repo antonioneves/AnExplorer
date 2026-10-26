@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -16,8 +17,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
@@ -43,6 +49,8 @@ public class SettingsFragment extends Fragment {
     public static final String TAG = "SettingsFragment";
 
     private ViewGroup mList;
+    private final Map<String, MaterialSwitch> mSwitches = new HashMap<>();
+    private final Map<String, Boolean> mSwitchDefaults = new HashMap<>();
     private View mPinSetRow;
 
     public static void show(FragmentManager fm) {
@@ -67,6 +75,16 @@ public class SettingsFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onViewStateRestored(Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        // Every row's switch has the same id, so when the activity is rebuilt (e.g. for a new
+        // theme) they all get one switch's saved state; the preferences hold the real values
+        for (Map.Entry<String, MaterialSwitch> entry : mSwitches.entrySet()) {
+            entry.getValue().setChecked(prefs().getBoolean(entry.getKey(), mSwitchDefaults.get(entry.getKey())));
+        }
+    }
+
     private void buildRows(LayoutInflater inflater) {
         final Context context = getActivity();
         mList.removeAllViews();
@@ -84,6 +102,7 @@ public class SettingsFragment extends Fragment {
                 R.string.settings_recent_media_summary, AppSettings.getDisplayRecentMedia());
 
         section = addSection(inflater, R.string.pref_header_theme);
+        addThemeStyle(inflater, section);
         addColor(inflater, section, ColorPickerDialog.TYPE_PRIMARY, R.string.pref_foreground_color_title,
                 R.string.settings_primary_color_summary, AppSettings.getPrimaryColor(context));
         addColor(inflater, section, ColorPickerDialog.TYPE_ACCENT, R.string.pref_accent_color_title,
@@ -177,6 +196,8 @@ public class SettingsFragment extends Fragment {
         final MaterialSwitch toggle = (MaterialSwitch) row.findViewById(R.id.toggle);
         toggle.setVisibility(View.VISIBLE);
         toggle.setChecked(checked);
+        mSwitches.put(key, toggle);
+        mSwitchDefaults.put(key, checked);
         row.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -205,6 +226,34 @@ public class SettingsFragment extends Fragment {
                 AppSettings.logSettingEvent(colorType == ColorPickerDialog.TYPE_PRIMARY
                         ? AppSettings.KEY_PRIMARY_COLOR : AppSettings.KEY_ACCENT_COLOR);
                 ColorPickerDialog.show(getFragmentManager(), colorType);
+            }
+        });
+    }
+
+    private void addThemeStyle(LayoutInflater inflater, ViewGroup section) {
+        final View row = addRow(inflater, section, R.drawable.ic_settings_theme, R.string.pref_theme_style_title, 0);
+        final String[] names = getResources().getStringArray(R.array.theme_style_names);
+        final String[] values = getResources().getStringArray(R.array.theme_style_values);
+        final int current = Math.max(0, Arrays.asList(values).indexOf(AppSettings.getThemeStyle()));
+        ((TextView) row.findViewById(android.R.id.summary)).setText(names[current]);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AppSettings.logSettingEvent(AppSettings.KEY_THEME_STYLE);
+                new MaterialAlertDialogBuilder(getActivity())
+                        .setTitle(R.string.pref_theme_style_title)
+                        .setSingleChoiceItems(names, current, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                if (which != current) {
+                                    AppSettings.setThemeStyle(Integer.parseInt(values[which]));
+                                    // Like the colors, the theme applies to the whole app
+                                    getActivity().recreate();
+                                }
+                            }
+                        })
+                        .show();
             }
         });
     }

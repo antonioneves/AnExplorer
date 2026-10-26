@@ -18,6 +18,9 @@
     <color name="surfaceContainerHighestColor">#313539</color>
 
     <color name="item_doc_grid_background">@color/material_blue_grey_800</color>
+    <color name="app_logo_folder">#FFFFFF</color>
+    <color name="item_doc_grid_protect_background">#88000000</color>
+    <color name="item_doc_grid_text">@color/primary_text_default_material_dark</color>
     <color name="item_doc_grid_overlay_activated">#88ffffff</color>
     <color name="item_doc_grid_overlay_disabled">#88000000</color>
 

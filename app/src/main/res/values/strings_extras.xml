@@ -104,7 +104,7 @@
     <string name="pref_accent_color_title">Accent color</string>
     <string name="pref_accent_color_description">The secondary color</string>
 
-    <string name="pref_theme_style_title">Theme Style</string>
+    <string name="pref_theme_style_title">Theme</string>
 
     <!-- Size unit, displayed in a button next to an attachment [CHAR LIMIT=5] -->
     <string name="bytes"><xliff:g id="count">%s</xliff:g> B</string>
@@ -125,16 +125,18 @@
     <string name="add">Add</string>
     <string name="made_with_love">Made with Love</string>
 
+    <!-- In the order of theme_style_values -->
     <string-array name="theme_style_names">
         <item>Light</item>
         <item>Dark</item>
-        <item>Auto</item>
+        <item>Same as the TV</item>
     </string-array>
 
-    <string-array name="theme_style_values">
+    <!-- AppCompatDelegate's MODE_NIGHT_NO, MODE_NIGHT_YES and MODE_NIGHT_FOLLOW_SYSTEM -->
+    <string-array name="theme_style_values" translatable="false">
         <item>1</item>
         <item>2</item>
-        <item>0</item>
+        <item>-1</item>
     </string-array>
 
     <string name="root_usb">USB Storage</string>
