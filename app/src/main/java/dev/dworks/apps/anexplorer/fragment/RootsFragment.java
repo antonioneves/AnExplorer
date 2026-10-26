@@ -268,8 +268,8 @@ public class RootsFragment extends Fragment {
                 final Object item = mAdapter.getChild(i,j);
                 if (settings) {
                     if (item instanceof ActionItem && ((ActionItem) item).id == R.id.menu_settings) {
-                        mList.setItemChecked(mList.getFlatListPosition(
-                                ExpandableListView.getPackedPositionForChild(i, j)), true);
+                        check(mList.getFlatListPosition(
+                                ExpandableListView.getPackedPositionForChild(i, j)));
                         return;
                     }
                 } else if (item instanceof RootItem) {
@@ -278,8 +278,7 @@ public class RootsFragment extends Fragment {
                         try {
                             long id = ExpandableListView.getPackedPositionForChild(i, j);
                             int index = mList.getFlatListPosition(id);
-                            //mList.setSelection(index);
-                            mList.setItemChecked(index, true);
+                            check(index);
                         } catch (Exception e){
                             CrashReportingManager.logException(e);
                         }
@@ -288,6 +287,15 @@ public class RootsFragment extends Fragment {
                     }
                 }
             }
+        }
+    }
+
+    private void check(int index) {
+        mList.setItemChecked(index, true);
+        // Focus comes back to the list's selected row, so keep it on the checked one unless the
+        // user is moving through the list (e.g. after Back returns to Home from a folder)
+        if (!mList.hasFocus()) {
+            mList.setSelection(index);
         }
     }
 

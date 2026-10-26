@@ -1374,31 +1374,24 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             closeSettings();
             return;
         }
-        if (!mState.stackTouched) {
-            super.onBackPressed();
-            return;
-        }
-
-        final int size = mState.stack.size();
-        if (size > 1) {
+        if (mState.stackTouched && mState.stack.size() > 1) {
             mState.stack.pop();
             onCurrentDirectoryChanged(ANIM_UP);
-        } else if (size == 1) {
-            // TODO: open root drawer once we can capture back key
-            if(null != mParentRoot){
-                onRootPicked(mParentRoot, true);
-                mParentRoot = null;
-                return;
-            }
-            super.onBackPressed();
-        } else {
-            if(null != mParentRoot){
-                onRootPicked(mParentRoot, true);
-                mParentRoot = null;
-                return;
-            }
-            super.onBackPressed();
+            return;
         }
+        if (null != mParentRoot) {
+            onRootPicked(mParentRoot, true);
+            mParentRoot = null;
+            return;
+        }
+        // Back goes to Home first, and only leaves the app from there
+        final RootInfo root = getCurrentRoot();
+        final RootInfo home = mRoots.getHomeRoot();
+        if (null != root && !root.isHome() && null != home) {
+            onRootPicked(home, true);
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override
