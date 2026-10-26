@@ -183,14 +183,14 @@ public class ListDocumentHolder extends DocumentHolder {
                     && ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)) {
                 size.setVisibility(View.VISIBLE);
                 final boolean withSize = state.showSize && state.showFolderSize;
-                final ArrayMap<Integer, Integer> counts = DocumentsApplication.getFolderCounts();
-                final ArrayMap<Integer, Long> sizes = DocumentsApplication.getFolderSizes();
-                final int count = counts.containsKey(position) ? counts.get(position) : -1;
-                final long sizeInBytes = sizes.containsKey(position) ? sizes.get(position) : -1;
+                final ArrayMap<String, Integer> counts = DocumentsApplication.getFolderCounts();
+                final ArrayMap<String, Long> sizes = DocumentsApplication.getFolderSizes();
+                final int count = counts.containsKey(mDoc.path) ? counts.get(mDoc.path) : -1;
+                final long sizeInBytes = sizes.containsKey(mDoc.path) ? sizes.get(mDoc.path) : -1;
                 if (count != -1 && (!withSize || sizeInBytes != -1)) {
                     size.setText(FolderSizeAsyncTask.format(context, count, withSize ? sizeInBytes : -1));
                 } else {
-                    final FolderSizeAsyncTask task = new FolderSizeAsyncTask(size, mDoc.path, position,
+                    final FolderSizeAsyncTask task = new FolderSizeAsyncTask(size, mDoc.path,
                             withSize, state.showHiddenFiles);
                     size.setTag(task);
                     ProviderExecutor.forAuthority(mDoc.authority).execute(task);

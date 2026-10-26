@@ -25,18 +25,16 @@ public class FolderSizeAsyncTask extends AsyncTask<Uri, Void, Void> implements P
 		private final TextView mSizeView;
 		private final CancellationSignal mSignal;
 		private final String mPath;
-		private final int mPosition;
 		private final boolean mWithSize;
 		private final boolean mWithHidden;
 		private int mCount = -1;
 		private long mSize = -1;
 
-		public FolderSizeAsyncTask(TextView sizeView, String path, int position, boolean withSize,
+		public FolderSizeAsyncTask(TextView sizeView, String path, boolean withSize,
 								   boolean withHidden) {
 			mSizeView = sizeView;
 			mSignal = new CancellationSignal();
 			mPath = path;
-			mPosition = position;
 			mWithSize = withSize;
 			mWithHidden = withHidden;
 		}
@@ -82,11 +80,13 @@ public class FolderSizeAsyncTask extends AsyncTask<Uri, Void, Void> implements P
 				return;
 			}
 			mSizeView.setTag(null);
+			// By folder, not by row: a count for a folder left behind can finish after the next
+			// one is on screen, and its row there is some other folder
 			if (mCount != -1) {
-				DocumentsApplication.getFolderCounts().put(mPosition, mCount);
+				DocumentsApplication.getFolderCounts().put(mPath, mCount);
 			}
 			if (mSize != -1) {
-				DocumentsApplication.getFolderSizes().put(mPosition, mSize);
+				DocumentsApplication.getFolderSizes().put(mPath, mSize);
 			}
 			mSizeView.setText(format(mSizeView.getContext(), mCount, mSize));
 		}

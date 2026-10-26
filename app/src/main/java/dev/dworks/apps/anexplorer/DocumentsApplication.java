@@ -50,8 +50,8 @@ public class DocumentsApplication extends AppFlavour {
     }
 
     private RootsCache mRoots;
-    private ArrayMap<Integer, Long> mSizes = new ArrayMap<Integer, Long>();
-    private ArrayMap<Integer, Integer> mCounts = new ArrayMap<Integer, Integer>();
+    private ArrayMap<String, Long> mSizes = new ArrayMap<String, Long>();
+    private ArrayMap<String, Integer> mCounts = new ArrayMap<String, Integer>();
     private SAFManager mSAFManager;
     private Point mThumbnailsSize;
     private ThumbnailCache mThumbnailCache;
@@ -60,11 +60,11 @@ public class DocumentsApplication extends AppFlavour {
         return ((DocumentsApplication) context.getApplicationContext()).mRoots;
     }
 
-    public static ArrayMap<Integer, Long> getFolderSizes() {
+    public static ArrayMap<String, Long> getFolderSizes() {
         return getInstance().mSizes;
     }
 
-    public static ArrayMap<Integer, Integer> getFolderCounts() {
+    public static ArrayMap<String, Integer> getFolderCounts() {
         return getInstance().mCounts;
     }
 
