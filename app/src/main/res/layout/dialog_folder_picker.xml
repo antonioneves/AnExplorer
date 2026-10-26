@@ -20,6 +20,7 @@
         android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="Download/Quick Share" />
 
+    <!-- The fading edges also keep the focused row clear of the list's top and bottom -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="216dp"
@@ -30,10 +31,12 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:fadingEdgeLength="16dp"
+            android:requiresFadingEdge="vertical"
             android:paddingStart="12dp"
-            android:paddingTop="4dp"
+            android:paddingTop="8dp"
             android:paddingEnd="12dp"
-            android:paddingBottom="4dp"
+            android:paddingBottom="8dp"
             android:scrollbarStyle="outsideOverlay">
 
             <LinearLayout
