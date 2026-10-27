@@ -923,6 +923,21 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
+    /** The remote's Menu key opens the focused item's menu, the same as a long press. */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
+            final View focused = getCurrentFocus();
+            if (focused != null && focused.isLongClickable()) {
+                if (event.getAction() == KeyEvent.ACTION_UP && event.getRepeatCount() == 0) {
+                    focused.performLongClick();
+                }
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (null != mToolbarActionMode) {
