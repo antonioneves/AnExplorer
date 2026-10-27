@@ -33,6 +33,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/name"
+            android:imeOptions="actionNext"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="text" />
@@ -56,6 +57,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/host"
+            android:imeOptions="actionNext"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textUri" />
@@ -72,6 +74,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/port"
+            android:imeOptions="actionNext"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number" />
@@ -95,6 +98,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/path"
+            android:imeOptions="actionNext"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textUri" />
@@ -120,6 +124,9 @@
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/username"
+            android:imeOptions="actionNext"
+            android:nextFocusDown="@id/password"
+            android:nextFocusForward="@id/password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text" />
@@ -136,6 +143,7 @@
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/password"
+            android:imeOptions="actionDone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPassword" />
