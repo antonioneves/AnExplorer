@@ -329,18 +329,12 @@ public class MediaDocumentsProvider extends StorageProvider {
         Cursor cursor = null;
         try {
             if (TYPE_IMAGES_ROOT.equals(ident.type)) {
-                // include all unique buckets
+                // every image at the top level, not grouped in buckets
                 cursor = resolver.query(Images.Media.EXTERNAL_CONTENT_URI,
-                        ImagesBucketQuery.PROJECTION, null, null, ImagesBucketQuery.SORT_ORDER);
-                // multiple orders
+                        ImageQuery.PROJECTION, null, null, ImageColumns.DATE_MODIFIED + " DESC");
                 copyNotificationUri(result, Images.Media.EXTERNAL_CONTENT_URI);
-                long lastId = Long.MIN_VALUE;
                 while (cursor.moveToNext()) {
-                    final long id = cursor.getLong(ImagesBucketQuery.BUCKET_ID);
-                    if (lastId != id) {
-                        includeImagesBucket(result, cursor);
-                        lastId = id;
-                    }
+                    includeImage(result, cursor);
                 }
             } else if (TYPE_IMAGES_BUCKET.equals(ident.type)) {
                 // include images under bucket
@@ -352,17 +346,12 @@ public class MediaDocumentsProvider extends StorageProvider {
                     includeImage(result, cursor);
                 }
             } else if (TYPE_VIDEOS_ROOT.equals(ident.type)) {
-                // include all unique buckets
+                // every video at the top level, not grouped in buckets
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
-                        VideosBucketQuery.PROJECTION, null, null, VideosBucketQuery.SORT_ORDER);
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DATE_MODIFIED + " DESC");
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
-                long lastId = Long.MIN_VALUE;
                 while (cursor.moveToNext()) {
-                    final long id = cursor.getLong(VideosBucketQuery.BUCKET_ID);
-                    if (lastId != id) {
-                        includeVideosBucket(result, cursor);
-                        lastId = id;
-                    }
+                    includeVideo(result, cursor);
                 }
             } else if (TYPE_VIDEOS_BUCKET.equals(ident.type)) {
                 // include videos under bucket
@@ -374,19 +363,12 @@ public class MediaDocumentsProvider extends StorageProvider {
                     includeVideo(result, cursor);
                 }
             } else if (TYPE_AUDIO_ROOT.equals(ident.type)) {
-/*                // include all artists
-                cursor = resolver.query(Audio.Artists.EXTERNAL_CONTENT_URI,
-                        ArtistQuery.PROJECTION, null, null, null);
-                copyNotificationUri(result, Artists.EXTERNAL_CONTENT_URI);
+                // every song at the top level, not grouped in albums
+                cursor = resolver.query(Audio.Media.EXTERNAL_CONTENT_URI,
+                        SongQuery.PROJECTION, null, null, AudioColumns.TITLE);
+                copyNotificationUri(result, Audio.Media.EXTERNAL_CONTENT_URI);
                 while (cursor.moveToNext()) {
-                    includeArtist(result, cursor);
-                }*/
-                // include all albums under artist
-                cursor = resolver.query(Audio.Albums.EXTERNAL_CONTENT_URI,
-                        AlbumQuery.PROJECTION, null, null, null);
-                copyNotificationUri(result, Audio.Albums.EXTERNAL_CONTENT_URI);
-                while (cursor.moveToNext()) {
-                    includeAlbum(result, cursor);
+                    includeAudio(result, cursor);
                 }
             } else if (TYPE_ARTIST.equals(ident.type)) {
                 // include all albums under artist
@@ -598,7 +580,6 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, TYPE_IMAGES_ROOT);
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_images));
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
     }
@@ -609,7 +590,6 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_videos));
 
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
     }
@@ -621,7 +601,6 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
 
         int flags = Document.FLAG_DIR_PREFERS_LAST_MODIFIED | Document.FLAG_SUPPORTS_DELETE;
-        flags |= Document.FLAG_DIR_PREFERS_GRID;
         row.add(Document.COLUMN_FLAGS, flags);
     }
 
