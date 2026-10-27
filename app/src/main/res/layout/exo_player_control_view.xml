@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Player controls: every button sits in one rounded bar along the bottom.
+     The ids are the ones media3's PlayerControlView looks for. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <View
+        android:id="@id/exo_controls_background"
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/player_scrim" />
+
+    <LinearLayout
+        android:id="@id/exo_bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="28dp"
+        android:layout_marginEnd="48dp"
+        android:layout_marginStart="48dp"
+        android:background="@drawable/player_bar_background"
+        android:gravity="center_vertical"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal"
+        android:paddingEnd="20dp"
+        android:paddingStart="20dp">
+
+        <ImageButton
+            android:id="@id/exo_prev"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_previous_description"
+            android:src="@drawable/exo_styled_controls_previous" />
+
+        <ImageButton
+            android:id="@id/exo_rew"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_rewind_description"
+            android:src="@drawable/ic_player_rewind" />
+
+        <ImageButton
+            android:id="@id/exo_play_pause"
+            style="@style/PlayerButton"
+            android:src="@drawable/exo_styled_controls_play" />
+
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_fastforward_description"
+            android:src="@drawable/ic_player_forward" />
+
+        <ImageButton
+            android:id="@id/exo_next"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_next_description"
+            android:src="@drawable/exo_styled_controls_next" />
+
+        <TextView
+            android:id="@id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:includeFontPadding="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp" />
+
+        <androidx.media3.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_height="26dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            app:bar_height="4dp"
+            app:played_color="@color/accentColor"
+            app:scrubber_color="@color/accentColor"
+            app:buffered_color="#66FFFFFF"
+            app:unplayed_color="#33FFFFFF"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+        <TextView
+            android:id="@id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:includeFontPadding="false"
+            android:textColor="#B3FFFFFF"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@id/exo_subtitle"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_cc_enabled_description"
+            android:src="@drawable/exo_styled_controls_subtitle_on" />
+
+        <ImageButton
+            android:id="@id/exo_settings"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_settings_description"
+            android:src="@drawable/exo_styled_controls_settings" />
+    </LinearLayout>
+</merge>

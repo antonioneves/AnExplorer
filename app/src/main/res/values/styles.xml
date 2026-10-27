@@ -89,4 +89,16 @@
         <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
+
+    <!-- A round, focusable button in the video player's bottom bar -->
+    <style name="PlayerButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:background">@drawable/player_button_background</item>
+        <item name="android:focusable">true</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
 </resources>
