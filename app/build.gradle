@@ -30,12 +30,15 @@ android {
         buildConfigField "String", "BOX_CLIENT_ID", "\"${propOrEmpty('BOX_CLIENT_ID')}\""
         buildConfigField "String", "BOX_CLIENT_KEY", "\"${propOrEmpty('BOX_CLIENT_KEY')}\""
     }
+    // Without a keystore (as on CI without its secrets) the release APK is built unsigned
     signingConfigs {
-        release {
-            storeFile rootProject.file(props.keyStore)
-            storePassword props.keyStorePassword
-            keyAlias props.keyAlias
-            keyPassword props.keyAliasPassword
+        if (props.keyStore) {
+            release {
+                storeFile rootProject.file(props.keyStore)
+                storePassword props.keyStorePassword
+                keyAlias props.keyAlias
+                keyPassword props.keyAliasPassword
+            }
         }
     }
     buildTypes {
@@ -46,7 +49,9 @@ android {
                     'proguard-rules.pro'
         }
         release {
-            signingConfig signingConfigs.release
+            if (props.keyStore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
