@@ -26,6 +26,9 @@
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:textAlignment="viewStart"
+        android:imeOptions="actionDone"
+        android:inputType="text"
+        android:maxLines="1"
         app:boxedEdges="all"
         android:theme="@style/EditTextAppTheme"/>
 

@@ -92,7 +92,9 @@ public class CreateDirectoryFragment extends DialogFragment {
         });
         builder.setNegativeButton(android.R.string.cancel, null);
 
-        return builder.create();
+        final Dialog dialog = builder.create();
+        DialogBuilder.submitOnDone(text1, dialog);
+        return dialog;
     }
     
     private class CreateDirectoryTask extends AsyncTask<Void, Void, DocumentInfo> {

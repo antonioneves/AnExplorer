@@ -105,7 +105,9 @@ public class CreateFileFragment extends DialogFragment {
         });
         builder.setNegativeButton(android.R.string.cancel, null);
 
-        return builder.create();
+        final Dialog dialog = builder.create();
+        DialogBuilder.submitOnDone(text1, dialog);
+        return dialog;
     }
 
     private class CreateFileTask extends AsyncTask<Void, Void, Uri> {
