@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A PIN key: a pill with the focus ring of round_button_background, inset so the ring isn't clipped -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <inset android:inset="4dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_pressed="true">
+        <inset android:inset="4dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>
