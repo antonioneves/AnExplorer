@@ -16,10 +16,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - name: Protocol tests
         run: ./gradlew :protocol:test
+      - name: App tests
+        run: ./gradlew :app:testDebugUnitTest
       - name: Debug build
         run: ./gradlew :app:assembleDebug
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: test-reports
-          path: protocol/build/reports/tests/
+          path: |
+            protocol/build/reports/tests/
+            app/build/reports/tests/

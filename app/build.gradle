@@ -106,4 +106,5 @@ dependencies {
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.vectordrawable:vectordrawable-animated:1.2.0'
     implementation 'com.github.javiersantos:AppUpdater:2.7'
+    testImplementation 'junit:junit:4.13.2'
 }

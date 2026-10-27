@@ -398,13 +398,17 @@ public class SmbNetworkClient extends NetworkClient {
         }
         final List<FTPFile> files = new ArrayList<>();
         for (NetShareInfo1 share : shares) {
-            final int type = share.getType();
-            if ((type & SHARE_TYPE_MASK) == SHARE_TYPE_DISK && (type & SHARE_SPECIAL) == 0
-                    && !share.getNetName().endsWith("$")) {
+            if (isFolderShare(share.getType(), share.getNetName())) {
                 files.add(file(share.getNetName(), true, 0, 0));
             }
         }
         return files.toArray(new FTPFile[0]);
+    }
+
+    /** Not printers, pipes or the hidden admin shares like C$ */
+    static boolean isFolderShare(int type, String name) {
+        return (type & SHARE_TYPE_MASK) == SHARE_TYPE_DISK && (type & SHARE_SPECIAL) == 0
+                && !name.endsWith("$");
     }
 
     private File open(String path, AccessMask access, SMB2CreateDisposition disposition)
@@ -519,7 +523,7 @@ public class SmbNetworkClient extends NetworkClient {
         return relative.isEmpty() ? basePath : basePath + NetworkFile.separator + relative;
     }
 
-    private static String shareOf(String full) {
+    static String shareOf(String full) {
         if (full.isEmpty()) {
             return null;
         }
@@ -528,7 +532,7 @@ public class SmbNetworkClient extends NetworkClient {
     }
 
     /** The path inside its share, in the backslashes SMB uses */
-    private static String pathInShare(String full) {
+    static String pathInShare(String full) {
         final int slash = full.indexOf(NetworkFile.separatorChar);
         return slash < 0 ? "" : full.substring(slash + 1).replace(NetworkFile.separatorChar, '\\');
     }
@@ -544,7 +548,7 @@ public class SmbNetworkClient extends NetworkClient {
         return file;
     }
 
-    private static String trimSlashes(String path) {
+    static String trimSlashes(String path) {
         if (path == null) {
             return "";
         }
