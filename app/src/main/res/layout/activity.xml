@@ -57,6 +57,58 @@
                     android:layout_marginStart="4dp"
                     android:overlapAnchor="true" />
 
+            <!-- Apps and APK files, shown in the toolbar only in APKs -->
+            <LinearLayout
+                android:id="@+id/app_tabs"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tab_apk_files"
+                    style="@style/AppTab"
+                    android:text="@string/root_apk_files" />
+
+                <TextView
+                    android:id="@+id/tab_user_apps"
+                    style="@style/AppTab"
+                    android:text="@string/root_apps" />
+
+                <TextView
+                    android:id="@+id/tab_system_apps"
+                    style="@style/AppTab"
+                    android:text="@string/root_system_apps" />
+            </LinearLayout>
+
+            <!-- Movies, TV shows and folders, shown in the toolbar only in Videos -->
+            <LinearLayout
+                android:id="@+id/video_tabs"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tab_videos_movies"
+                    style="@style/AppTab"
+                    android:text="@string/videos_movies" />
+
+                <TextView
+                    android:id="@+id/tab_videos_shows"
+                    style="@style/AppTab"
+                    android:text="@string/videos_shows" />
+
+                <TextView
+                    android:id="@+id/tab_videos_folders"
+                    style="@style/AppTab"
+                    android:text="@string/videos_folders" />
+            </LinearLayout>
+
             </androidx.appcompat.widget.Toolbar>
 
             <FrameLayout

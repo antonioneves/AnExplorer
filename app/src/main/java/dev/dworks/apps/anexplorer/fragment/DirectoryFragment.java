@@ -267,8 +267,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mEmptyIcon = (ImageView) view.findViewById(R.id.empty_icon);
 		mEmptyView = (TextView) view.findViewById(android.R.id.empty);
 		mEmptyMessage = (TextView) view.findViewById(R.id.empty_message);
-		mAppTabs = view.findViewById(R.id.app_tabs);
-		mVideoTabs = view.findViewById(R.id.video_tabs);
+		mAppTabs = getActivity().findViewById(R.id.app_tabs);
+		mVideoTabs = getActivity().findViewById(R.id.video_tabs);
 		getListView().setRecyclerListener(mRecycleListener);
 		// Reuse the previous folder's rows: inflating a card costs ~20ms on a TV
 		getListView().setRecycledViewPool(mActivity.getDirectoryViewPool());
@@ -278,6 +278,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public void onDestroyView() {
 		super.onDestroyView();
 
+		// The tabs live in the toolbar, so they would linger on screens without this fragment.
+		// A fragment that replaced this one owns them now and is left alone.
+		if (mAppTabs != null && mAppTabs.getTag() == this) mAppTabs.setVisibility(View.GONE);
+		if (mVideoTabs != null && mVideoTabs.getTag() == this) mVideoTabs.setVisibility(View.GONE);
 		mMultiChoiceHelper.clearChoices();
 		// Cancel any outstanding thumbnail requests
 		final ViewGroup target = getListView();
@@ -416,7 +420,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** APKs shows tabs for installed apps, system apps and APK files, like Google Files */
 	private void setUpAppTabs() {
+		mAppTabs.setTag(this);
 		if (null == root || !(root.isApp() || root.isApk())) {
+			mAppTabs.setVisibility(View.GONE);
 			return;
 		}
 		mAppTabs.setVisibility(View.VISIBLE);
@@ -433,6 +439,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	 * folder they are hidden: BACK returns to the tab it was opened from.
 	 */
 	private void setUpVideoTabs() {
+		mVideoTabs.setTag(this);
+		mVideoTabs.setVisibility(View.GONE);
 		if (null == root || !root.isVideos() || null == doc) {
 			return;
 		}
