@@ -9,9 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.misc.Utils;
 
 /** About, shown in place of the file list like Settings, with the sidebar still beside it. */
 public class AboutFragment extends Fragment {
@@ -30,8 +28,7 @@ public class AboutFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_about, container, false);
-        ((TextView) view.findViewById(R.id.about_version)).setText(getString(R.string.app_ver)
-                + Utils.getSuffix() + " v" + BuildConfig.VERSION_NAME + (BuildConfig.DEBUG ? " Debug" : ""));
+        ((TextView) view.findViewById(R.id.about_version)).setText(getString(R.string.app_ver));
         return view;
     }
 }
