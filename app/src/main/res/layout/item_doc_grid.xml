@@ -27,13 +27,6 @@
     app:strokeColor="@color/doc_card_stroke"
     app:strokeWidth="3dp">
 
-    <ImageView
-        android:id="@+id/icon_thumb"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:scaleType="centerCrop" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -59,6 +52,14 @@
                 android:layout_gravity="center"
                 android:contentDescription="@null"
                 android:scaleType="fitCenter" />
+
+            <!-- Only the preview area, so the text section stays clear of it -->
+            <ImageView
+                android:id="@+id/icon_thumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop" />
 
         </FrameLayout>
 
