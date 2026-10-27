@@ -796,7 +796,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			compress.setVisible(editMode && !copiesAcross() && !isOperationSupported);
 
 			info.setVisible(count == 1);
-			bookmark.setVisible(count == 1 && !isRecycleBin());
+			final MenuItem unbookmark = menu.findItem(R.id.menu_unbookmark);
+			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
+			final boolean bookmarked = count == 1 && !checked.isEmpty() && isBookmarkedDoc(checked.get(0));
+			bookmark.setVisible(count == 1 && !isRecycleBin() && !bookmarked);
+			if (unbookmark != null) {
+				unbookmark.setVisible(count == 1 && !isRecycleBin() && bookmarked);
+			}
 			updateStarItems(menu, getCheckedDocuments());
 
 			if (null != root && root.isApp()) {
@@ -1362,6 +1368,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
         final MenuItem compress = popup.getMenu().findItem(R.id.menu_compress);
         final MenuItem uncompress = popup.getMenu().findItem(R.id.menu_uncompress);
         final MenuItem bookmark = popup.getMenu().findItem(R.id.menu_bookmark);
+        final MenuItem unbookmark = popup.getMenu().findItem(R.id.menu_unbookmark);
 
         final Cursor cursor = mAdapter.getItem(position);
         final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
@@ -1372,8 +1379,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				compress.setVisible(manageMode && doc.isArchiveSupported() && !isCompressed && !isOperationSupported);
 			if(null != uncompress)
 				uncompress.setVisible(manageMode && doc.isArchiveSupported() && isCompressed && !isOperationSupported);
+			final boolean canBookmark = manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported;
+			final boolean bookmarked = isBookmarkedDoc(doc);
 			if(null != bookmark) {
-				bookmark.setVisible(manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported);
+				bookmark.setVisible(canBookmark && !bookmarked);
+			}
+			if(null != unbookmark) {
+				unbookmark.setVisible(canBookmark && bookmarked);
 			}
 			final ArrayList<DocumentInfo> single = new ArrayList<>();
 			single.add(doc);
@@ -1537,6 +1549,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		} else if (id == R.id.menu_bookmark) {
 			bookmarkDocument(docs.get(0));
 			return true;
+		} else if (id == R.id.menu_unbookmark) {
+			unbookmarkDocument(docs.get(0));
+			return true;
 		} else if (id == R.id.menu_star || id == R.id.menu_unstar) {
 			if (id == R.id.menu_unstar && null != root && root.isStarred()) {
 				// The row leaves Starred, and focus would fall to the sidebar
@@ -1578,6 +1593,22 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return false;
 		}
 		return false;
+	}
+
+	private boolean isBookmarkedDoc(DocumentInfo doc) {
+		return !TextUtils.isEmpty(doc.path) && mBookmarkedPaths.contains(doc.path);
+	}
+
+	/** Deletes every bookmark row for the path, since duplicates can exist */
+	private void unbookmarkDocument(DocumentInfo doc) {
+		final int rows = getActivity().getContentResolver().delete(ExplorerProvider.buildBookmark(),
+				ExplorerProvider.BookmarkColumns.PATH + " = ? ", new String[]{doc.path});
+		if (rows > 0) {
+			Utils.showSnackBar(getActivity(), getString(R.string.bookmark_removed));
+			RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
+			loadMarkedPaths();
+			mAdapter.notifyDataSetChanged();
+		}
 	}
 
 	private void bookmarkDocument(DocumentInfo doc) {

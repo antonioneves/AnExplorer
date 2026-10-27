@@ -60,6 +60,12 @@
         android:title="@string/menu_bookmark"
         android:visible="false"/>
     <item
+        android:id="@+id/menu_unbookmark"
+        android:icon="@drawable/ic_menu_bookmark_remove"
+        support:showAsAction="always"
+        android:title="@string/menu_unbookmark"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_edit"
         android:icon="@drawable/ic_menu_edit"
         support:showAsAction="always"

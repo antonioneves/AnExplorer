@@ -278,6 +278,7 @@
     <string name="menu_exit">Exit</string>
     <string name="menu_info">Info</string>
     <string name="menu_bookmark">Bookmark</string>
+    <string name="menu_unbookmark">Remove bookmark</string>
     <string name="menu_copy">Copy</string>
     <string name="menu_cut">Cut</string>
     <string name="menu_select_all">Select all</string>

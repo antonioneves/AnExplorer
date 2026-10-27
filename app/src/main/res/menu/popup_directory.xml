@@ -53,6 +53,12 @@
         support:showAsAction="always"
         android:title="@string/menu_bookmark" />
     <item
+        android:id="@+id/menu_unbookmark"
+        android:icon="@drawable/ic_menu_bookmark_remove"
+        support:showAsAction="always"
+        android:title="@string/menu_unbookmark"
+        android:visible="false" />
+    <item
         android:id="@+id/menu_rename"
         android:icon="@drawable/ic_menu_rename_file"
         support:showAsAction="always"
