@@ -117,6 +117,7 @@ import dev.dworks.apps.anexplorer.fragment.ConnectionsFragment;
 import dev.dworks.apps.anexplorer.fragment.CreateDirectoryFragment;
 import dev.dworks.apps.anexplorer.fragment.CreateFileFragment;
 import dev.dworks.apps.anexplorer.fragment.DirectoryFragment;
+import dev.dworks.apps.anexplorer.fragment.AboutFragment;
 import dev.dworks.apps.anexplorer.fragment.HomeFragment;
 import dev.dworks.apps.anexplorer.fragment.MoveFragment;
 import dev.dworks.apps.anexplorer.fragment.PickFragment;
@@ -186,6 +187,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private static final String EXTRA_ACTIONMODE = "actionmode";
     private static final String EXTRA_SEARCH_STATE = "searchsate";
     private static final String EXTRA_SETTINGS = "settings";
+    private static final String EXTRA_ABOUT = "about";
     private static final int UPLOAD_FILE = 99;
 
     private static final int CODE_FORWARD = 42;
@@ -210,6 +212,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private boolean mSearchResultShown;
     /** Settings are shown in place of the current root, which stays as it was underneath */
     private boolean mShowingSettings;
+    /** About is shown the same way, instead of Settings */
+    private boolean mShowingAbout;
 
     private RootsCache mRoots;
     private State mState;
@@ -269,6 +273,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mAuthenticated = icicle.getBoolean(EXTRA_AUTHENTICATED);
             mActionMode = icicle.getBoolean(EXTRA_ACTIONMODE);
             mShowingSettings = icicle.getBoolean(EXTRA_SETTINGS);
+            mShowingAbout = icicle.getBoolean(EXTRA_ABOUT);
         } else {
             buildDefaultState();
         }
@@ -587,7 +592,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
         mStoppedAt = 0;
         final RootInfo root = getCurrentRoot();
-        if (!mLockedFolderOpen && null != root && root.isLockedFolder() && !mShowingSettings) {
+        if (!mLockedFolderOpen && null != root && root.isLockedFolder() && !mShowingSettings && !mShowingAbout) {
             askLockedFolderPin(null);
         }
     }
@@ -688,8 +693,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final RootInfo root = getCurrentRoot();
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
-        if (mShowingSettings) {
-            setTitle(getString(R.string.menu_settings));
+        if (mShowingSettings || mShowingAbout) {
+            setTitle(getString(mShowingAbout ? R.string.menu_about : R.string.menu_settings));
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
         } else if (mSearchExpanded) {
@@ -912,7 +917,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         emptyBin.getIcon().mutate().setAlpha(mMenuEmpty ? 97 : 255);
 
         // Settings have nothing to create, search, sort or lay out
-        if (mShowingSettings) {
+        if (mShowingSettings || mShowingAbout) {
             menu.findItem(R.id.menu_create_dir).setVisible(false);
             menu.findItem(R.id.menu_create_file).setVisible(false);
             search.setVisible(false);
@@ -955,8 +960,19 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return;
         }
         mShowingSettings = true;
+        mShowingAbout = false;
         onCurrentDirectoryChanged(ANIM_NONE);
         AnalyticsManager.logEvent("setting_open");
+    }
+
+    public boolean isShowingAbout() {
+        return mShowingAbout;
+    }
+
+    /** Back from About to the section that was open before. */
+    private void closeAbout() {
+        mShowingAbout = false;
+        onCurrentDirectoryChanged(ANIM_NONE);
     }
 
     public boolean isShowingSettings() {
@@ -971,7 +987,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     }
 
     public void openAbout() {
-        startActivity(new Intent(this, AboutActivity.class));
+        if (mShowingAbout) {
+            return;
+        }
+        mShowingAbout = true;
+        mShowingSettings = false;
+        onCurrentDirectoryChanged(ANIM_NONE);
         AnalyticsManager.logEvent("about_open");
     }
 
@@ -1523,6 +1544,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             closeSettings();
             return true;
         }
+        if (mShowingAbout) {
+            closeAbout();
+            return true;
+        }
         if (mState.stackTouched && mState.stack.size() > 1) {
             mState.stack.pop();
             onCurrentDirectoryChanged(ANIM_UP);
@@ -1551,6 +1576,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         state.putBoolean(EXTRA_ACTIONMODE, mActionMode);
         state.putBoolean(EXTRA_SEARCH_STATE, mSearchResultShown);
         state.putBoolean(EXTRA_SETTINGS, mShowingSettings);
+        state.putBoolean(EXTRA_ABOUT, mShowingAbout);
     }
 
     @Override
@@ -1698,8 +1724,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return;
         }
         final FragmentManager fm = getFragmentManager();
-        if (mShowingSettings) {
-            SettingsFragment.show(fm);
+        if (mShowingSettings || mShowingAbout) {
+            if (mShowingAbout) {
+                AboutFragment.show(fm);
+            } else {
+                SettingsFragment.show(fm);
+            }
             final RootsCommonFragment roots = RootsCommonFragment.get(fm);
             if (roots != null) {
                 roots.onCurrentRootChanged();
@@ -1824,6 +1854,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mLockedFolderOpen = false;
         }
         mShowingSettings = false;
+        mShowingAbout = false;
         // Connections to LAN servers need local network access on Android 17+
         if (root.isNetworkStorage() && !root.isServerStorage()
                 && !PermissionUtil.hasLocalNetworkPermission(this)) {

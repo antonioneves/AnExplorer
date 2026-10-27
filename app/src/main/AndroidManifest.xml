@@ -133,12 +133,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AboutActivity"
-            android:label="About"
-            android:theme="@style/DocumentsTheme.Document" >
-        </activity>
-
-        <activity
             android:name=".QuickShareReceiveActivity"
             android:theme="@style/DocumentsTheme.Document" >
         </activity>

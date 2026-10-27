@@ -269,19 +269,22 @@ public class RootsFragment extends Fragment {
         if (mAdapter == null || mList == null) return;
 
         final RootInfo root = ((BaseActivity) getActivity()).getCurrentRoot();
-        // Settings take the place of the current root while open, so their entry is the selected one
+        // Settings and About take the place of the current root while open, so their entry is the selected one
         final boolean settings = getActivity() instanceof DocumentsActivity
                 && ((DocumentsActivity) getActivity()).isShowingSettings();
+        final boolean about = getActivity() instanceof DocumentsActivity
+                && ((DocumentsActivity) getActivity()).isShowingAbout();
         for (int i = 0; i < mAdapter.getGroupCount(); i++) {
             final Item row = ((GroupInfo) mAdapter.getGroup(i)).item;
-            if (!settings && row instanceof RootItem && Objects.equal(((RootItem) row).root, root)) {
+            if (!settings && !about && row instanceof RootItem && Objects.equal(((RootItem) row).root, root)) {
                 check(mList.getFlatListPosition(ExpandableListView.getPackedPositionForGroup(i)));
                 return;
             }
             for (int j = 0; j < mAdapter.getChildrenCount(i); j++) {
                 final Object item = mAdapter.getChild(i,j);
-                if (settings) {
-                    if (item instanceof ActionItem && ((ActionItem) item).id == R.id.menu_settings) {
+                if (settings || about) {
+                    if (item instanceof ActionItem
+                            && ((ActionItem) item).id == (settings ? R.id.menu_settings : R.id.menu_about)) {
                         check(mList.getFlatListPosition(
                                 ExpandableListView.getPackedPositionForChild(i, j)));
                         return;

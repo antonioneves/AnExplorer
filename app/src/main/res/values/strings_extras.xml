@@ -286,11 +286,6 @@
     <string name="menu_cut">Cut</string>
     <string name="menu_select_all">Select all</string>
     <string name="menu_revert">Revert</string>
-    <string name="about_rate">Rate us on Play Store</string>
-    <string name="about_love">Show us more love</string>
-    <string name="about_sponsor">Our sponsor</string>
-    <string name="about_share">Spread the word</string>
-    <string name="about_feedback">Feed us back</string>
     <string name="connections_empty">No connections yet</string>
     <string name="detail_type">Type</string>
     <string name="detail_size">Size</string>
