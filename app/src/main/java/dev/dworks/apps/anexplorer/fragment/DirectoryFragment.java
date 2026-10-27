@@ -573,6 +573,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		updateDisplayState();
 	}
 
+    public boolean isEmpty() {
+        return null != mAdapter && mAdapter.isEmpty();
+    }
+
     /** Refreshes the star and bookmark badges after they change elsewhere, like the sidebar. */
     public void onMarksChanged() {
         if (mAdapter == null) {

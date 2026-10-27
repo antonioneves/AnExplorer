@@ -827,6 +827,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     public void updateMenuItems(Menu menu){
         mMenuMode = mState.derivedMode;
         mMenuShowSize = mState.showSize;
+        mMenuEmpty = isDirectoryEmpty();
         final FragmentManager fm = getFragmentManager();
         final RootInfo root = getCurrentRoot();
         final DocumentInfo cwd = getCurrentDirectory();
@@ -904,8 +905,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         search.setVisible(searchVisible);
 
         settings.setVisible(false);
-        menu.findItem(R.id.menu_empty_bin).setVisible(null != root && root.isRecycleBin()
+        final MenuItem emptyBin = menu.findItem(R.id.menu_empty_bin);
+        emptyBin.setVisible(null != root && root.isRecycleBin()
                 && null != cwd && TextUtils.equals(root.documentId, cwd.documentId));
+        emptyBin.setEnabled(!mMenuEmpty);
+        emptyBin.getIcon().mutate().setAlpha(mMenuEmpty ? 97 : 255);
 
         // Settings have nothing to create, search, sort or lay out
         if (mShowingSettings) {
@@ -1118,6 +1122,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     // What the toolbar menu was last prepared with; see onDirectoryLoaded
     private int mMenuMode = State.MODE_UNKNOWN;
     private boolean mMenuShowSize;
+    private boolean mMenuEmpty;
 
     /**
      * Rebuilding the toolbar menu takes ~80ms on a TV and would run between the folder loading and
@@ -1126,9 +1131,15 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
      */
     @Override
     public void onDirectoryLoaded() {
-        if (mState.derivedMode != mMenuMode || mState.showSize != mMenuShowSize) {
+        if (mState.derivedMode != mMenuMode || mState.showSize != mMenuShowSize
+                || isDirectoryEmpty() != mMenuEmpty) {
             invalidateMenu();
         }
+    }
+
+    private boolean isDirectoryEmpty() {
+        final Fragment fragment = DirectoryFragment.get(getFragmentManager());
+        return fragment instanceof DirectoryFragment && ((DirectoryFragment) fragment).isEmpty();
     }
 
     /**
