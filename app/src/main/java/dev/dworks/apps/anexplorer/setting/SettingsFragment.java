@@ -44,6 +44,7 @@ import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_LOCKED_FOLDER;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_ENABLED;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_SET;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECENT_MEDIA;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_STARRED;
 
 /**
  * Settings, shown in place of the file list (a tab of the main screen rather than a screen of its own):
@@ -106,6 +107,8 @@ public class SettingsFragment extends Fragment {
                 R.string.settings_recent_media_summary, AppSettings.getDisplayRecentMedia());
         addSwitch(inflater, section, KEY_RECYCLE_BIN, R.drawable.ic_root_recycle_bin, R.string.pref_recycle_bin,
                 R.string.settings_recycle_bin_summary, AppSettings.isRecycleBinEnabled(context));
+        addSwitch(inflater, section, KEY_STARRED, R.drawable.ic_root_starred, R.string.pref_starred,
+                R.string.settings_starred_summary, AppSettings.isStarredEnabled(context));
 
         section = addSection(inflater, R.string.pref_header_theme);
         addThemeStyle(inflater, section);
@@ -276,7 +279,8 @@ public class SettingsFragment extends Fragment {
                 activity.loadDisplaySettings();
                 break;
             case KEY_RECYCLE_BIN:
-                // Shows or hides the bin in the sidebar
+            case KEY_STARRED:
+                // Shows or hides it in the sidebar
                 RootsCache.updateRoots(activity, ExternalStorageProvider.AUTHORITY);
                 break;
             case KEY_ADVANCED_DEVICES:

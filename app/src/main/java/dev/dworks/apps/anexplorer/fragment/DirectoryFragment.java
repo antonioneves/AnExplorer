@@ -91,6 +91,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
+import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider;
@@ -779,6 +780,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			info.setVisible(count == 1);
 			bookmark.setVisible(count == 1 && !isRecycleBin());
+			updateStarItems(menu, getCheckedDocuments());
 
 			if (null != root && root.isApp()) {
 				for (int i = 0; i < menu.size(); i++) {
@@ -971,6 +973,67 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		}
 		return true;
+	}
+
+	/** Offers Star when some of these local files aren't starred yet, otherwise Unstar */
+	private void updateStarItems(Menu menu, ArrayList<DocumentInfo> docs) {
+		final MenuItem star = menu.findItem(R.id.menu_star);
+		final MenuItem unstar = menu.findItem(R.id.menu_unstar);
+		if (null == star || null == unstar) {
+			return;
+		}
+		final boolean canStar = canStar(docs);
+		final boolean allStarred = canStar && allStarred(docs);
+		star.setVisible(canStar && !allStarred);
+		unstar.setVisible(allStarred);
+	}
+
+	private boolean canStar(ArrayList<DocumentInfo> docs) {
+		if (!AppSettings.isStarredEnabled(getActivity()) || isRecycleBin()
+				|| (null != root && root.isLockedFolder()) || docs.isEmpty()) {
+			return false;
+		}
+		for (DocumentInfo doc : docs) {
+			if (!ExternalStorageProvider.AUTHORITY.equals(doc.authority) || TextUtils.isEmpty(doc.path)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean allStarred(ArrayList<DocumentInfo> docs) {
+		if (null != root && root.isStarred()) {
+			return true;
+		}
+		final ContentResolver resolver = getActivity().getContentResolver();
+		for (DocumentInfo doc : docs) {
+			Cursor cursor = null;
+			try {
+				cursor = resolver.query(ExplorerProvider.buildStarred(), null,
+						ExplorerProvider.StarredColumns.PATH + "=?", new String[]{doc.path}, null);
+				if (null == cursor || cursor.getCount() == 0) {
+					return false;
+				}
+			} finally {
+				IoUtils.closeQuietly(cursor);
+			}
+		}
+		return true;
+	}
+
+	private void starDocuments(ArrayList<DocumentInfo> docs, boolean star) {
+		final ContentResolver resolver = getActivity().getContentResolver();
+		for (DocumentInfo doc : docs) {
+			if (star) {
+				final ContentValues values = new ContentValues();
+				values.put(ExplorerProvider.StarredColumns.PATH, doc.path);
+				resolver.insert(ExplorerProvider.buildStarred(), values);
+			} else {
+				resolver.delete(ExplorerProvider.buildStarred(),
+						ExplorerProvider.StarredColumns.PATH + "=?", new String[]{doc.path});
+			}
+		}
+		Utils.showSnackBar(getActivity(), getString(star ? R.string.starred : R.string.unstarred));
 	}
 
 	/** Moves the files into the locked folder; true when some of them couldn't be */
@@ -1268,6 +1331,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			popup.getMenu().findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
 			popup.getMenu().findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
+			if (manageMode) {
+				updateStarItems(popup.getMenu(), single);
+			}
 			delete.setVisible(manageMode && doc.isDeleteSupported());
 			rename.setVisible(manageMode && doc.isRenameSupported());
 			copy.setVisible(manageMode && (doc.isCopySupported() || copiesAcross()));
@@ -1417,6 +1483,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return true;
 		} else if (id == R.id.menu_bookmark) {
 			bookmarkDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_star || id == R.id.menu_unstar) {
+			starDocuments(docs, id == R.id.menu_star);
+			clearSelection();
 			return true;
 		} else if (id == R.id.menu_save_apk) {
 			saveApks(docs);

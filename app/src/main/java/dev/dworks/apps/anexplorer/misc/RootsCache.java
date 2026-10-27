@@ -400,6 +400,15 @@ public class RootsCache {
         return null;
     }
 
+    public RootInfo getStarredRoot() {
+        for (RootInfo root : mRoots.get(ExternalStorageProvider.AUTHORITY)) {
+            if (root.isStarred()) {
+                return root;
+            }
+        }
+        return null;
+    }
+
     public RootInfo getRecycleBinRoot() {
         for (RootInfo root : mRoots.get(ExternalStorageProvider.AUTHORITY)) {
             if (root.isRecycleBin()) {

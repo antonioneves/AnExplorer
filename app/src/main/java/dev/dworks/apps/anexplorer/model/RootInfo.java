@@ -222,6 +222,10 @@ public class RootInfo implements Durable, Parcelable {
             derivedIcon = R.drawable.ic_root_recycle_bin;
             derivedColor = R.color.item_root_recycle_bin;
             derivedTag = "recycle_bin";
+        } else if (isStarred()) {
+            derivedIcon = R.drawable.ic_root_starred;
+            derivedColor = R.color.item_root_starred;
+            derivedTag = "starred";
         } else if (isLockedFolder()) {
             derivedIcon = R.drawable.ic_root_locked_folder;
             derivedColor = R.color.item_root_locked_folder;
@@ -378,6 +382,11 @@ public class RootInfo implements Durable, Parcelable {
     public boolean isRecycleBin() {
         return ExternalStorageProvider.AUTHORITY.equals(authority)
                 && ExternalStorageProvider.ROOT_ID_RECYCLE_BIN.equals(rootId);
+    }
+
+    public boolean isStarred() {
+        return ExternalStorageProvider.AUTHORITY.equals(authority)
+                && ExternalStorageProvider.ROOT_ID_STARRED.equals(rootId);
     }
 
     public boolean isLockedFolder() {

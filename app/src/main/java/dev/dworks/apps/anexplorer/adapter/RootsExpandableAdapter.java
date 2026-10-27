@@ -45,10 +45,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<Item> folders = new ArrayList<>();
         final List<Item> bookmarks = new ArrayList<>();
         final List<Item> libraryExtras = new ArrayList<>();
+        final List<Item> starred = new ArrayList<>();
 
         for (RootInfo root : roots) {
             if (root.isHome()) {
                 home.add(new RootItem(root));
+            } else if (root.isStarred()) {
+                starred.add(new RootItem(root));
             } else if (root.isLockedFolder()) {
                 libraryExtras.add(0, new RootItem(root));
             } else if (root.isRecycleBin()) {
@@ -105,12 +108,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Network & Cloud", connection));
         }
 
-        if(!library.isEmpty() || !libraryExtras.isEmpty()){
+        if(!library.isEmpty() || !starred.isEmpty() || !libraryExtras.isEmpty()){
             Collections.sort(library, RootInfo.LIBRARY_ORDER);
             final List<Item> libraryItems = new ArrayList<>();
             for (RootInfo root : library) {
                 libraryItems.add(new RootItem(root));
             }
+            libraryItems.addAll(starred);
             libraryItems.addAll(libraryExtras);
             groupRoots.add(new GroupInfo("Library", libraryItems));
         }

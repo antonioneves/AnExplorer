@@ -238,6 +238,14 @@
     <string name="menu_restore">Restore</string>
     <string name="menu_empty_bin">Empty Recycle Bin</string>
     <string name="moved_to_bin">Moved to the Recycle Bin</string>
+
+    <string name="root_starred">Starred</string>
+    <string name="pref_starred">Starred</string>
+    <string name="settings_starred_summary">Star files and folders to find them quickly under Library</string>
+    <string name="menu_star">Star</string>
+    <string name="menu_unstar">Unstar</string>
+    <string name="starred">Starred</string>
+    <string name="unstarred">Removed from Starred</string>
     <plurals name="delete_permanently">
         <item quantity="one">This item will be permanently deleted. Are you sure?</item>
         <item quantity="other">These %d items will be permanently deleted. Are you sure?</item>

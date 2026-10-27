@@ -36,6 +36,18 @@
         android:title="@string/menu_lock"
         android:visible="false"/>
     <item
+        android:id="@+id/menu_star"
+        android:icon="@drawable/ic_root_starred"
+        support:showAsAction="always"
+        android:title="@string/menu_star"
+        android:visible="false"/>
+    <item
+        android:id="@+id/menu_unstar"
+        android:icon="@drawable/ic_root_starred"
+        support:showAsAction="always"
+        android:title="@string/menu_unstar"
+        android:visible="false"/>
+    <item
         android:id="@+id/menu_bookmark"
         android:icon="@drawable/ic_menu_bookmark"
         support:showAsAction="always"

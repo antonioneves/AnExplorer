@@ -29,12 +29,14 @@ public class ExplorerProvider extends ContentProvider {
     private static final int URI_BOOKMARK_ID = 2;
     private static final int URI_CONNECTION = 3;
     private static final int URI_CONNECTION_ID = 4;
+    private static final int URI_STARRED = 5;
 
     static {
         sMatcher.addURI(AUTHORITY, "bookmark", URI_BOOKMARK);
         sMatcher.addURI(AUTHORITY, "bookmark/*", URI_BOOKMARK_ID);
         sMatcher.addURI(AUTHORITY, "connection", URI_CONNECTION);
         sMatcher.addURI(AUTHORITY, "connection/*", URI_CONNECTION_ID);
+        sMatcher.addURI(AUTHORITY, "starred", URI_STARRED);
     }
 
     public static final String TABLE_BOOKMARK = "bookmark";
@@ -63,6 +65,12 @@ public class ExplorerProvider extends ContentProvider {
         public static final String PRIVATE_KEY = "private_key";
     }
 
+    public static final String TABLE_STARRED = "starred";
+    public static class StarredColumns implements BaseColumns {
+        /** The starred file's absolute path */
+        public static final String PATH = "path";
+    }
+
     public static Uri buildBookmark() {
         return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(AUTHORITY).appendPath(TABLE_BOOKMARK).build();
@@ -71,6 +79,11 @@ public class ExplorerProvider extends ContentProvider {
     public static Uri buildConnection() {
         return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(AUTHORITY).appendPath(TABLE_CONNECTION).build();
+    }
+
+    public static Uri buildStarred() {
+        return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
+                .authority(AUTHORITY).appendPath(TABLE_STARRED).build();
     }
 
     private DatabaseHelper mHelper;
@@ -82,9 +95,10 @@ public class ExplorerProvider extends ContentProvider {
         private static final int VERSION_INIT = 5;
         private static final int VERSION_CONNECTIONS = 6;
         private static final int VERSION_PRIVATE_KEY = 7;
+        private static final int VERSION_STARRED = 8;
 
         public DatabaseHelper(Context context) {
-            super(context, DB_NAME, null, VERSION_PRIVATE_KEY);
+            super(context, DB_NAME, null, VERSION_STARRED);
             mContext = context;
         }
 
@@ -93,6 +107,7 @@ public class ExplorerProvider extends ContentProvider {
             createTablesV1(db);
             createTablesV2(db);
             addPrivateKey(db);
+            createStarred(db);
         }
 
         @Override
@@ -105,6 +120,9 @@ public class ExplorerProvider extends ContentProvider {
                         break;
                     case VERSION_PRIVATE_KEY:
                         addPrivateKey(db);
+                        break;
+                    case VERSION_STARRED:
+                        createStarred(db);
                         break;
                 }
                 upgradeTo++;
@@ -138,6 +156,14 @@ public class ExplorerProvider extends ContentProvider {
         private void addPrivateKey(SQLiteDatabase db) {
             db.execSQL("ALTER TABLE " + TABLE_CONNECTION + " ADD COLUMN "
                     + ConnectionColumns.PRIVATE_KEY + " TEXT");
+        }
+
+        private void createStarred(SQLiteDatabase db) {
+            db.execSQL("CREATE TABLE " + TABLE_STARRED + " (" +
+                    BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    StarredColumns.PATH + " TEXT," +
+                    "UNIQUE (" + StarredColumns.PATH + ") ON CONFLICT REPLACE " +
+                    ")");
         }
 
         private void createTablesV1(SQLiteDatabase db) {
@@ -192,6 +218,9 @@ public class ExplorerProvider extends ContentProvider {
             case URI_CONNECTION:
                 return db.query(TABLE_CONNECTION, projection, selection,
                         selectionArgs, null, null, sortOrder);
+            case URI_STARRED:
+                return db.query(TABLE_STARRED, projection, selection,
+                        selectionArgs, null, null, sortOrder);
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);
         }
@@ -215,6 +244,10 @@ public class ExplorerProvider extends ContentProvider {
             case URI_CONNECTION:
                 db.insert(TABLE_CONNECTION, null, values);
 
+                return uri;
+            case URI_STARRED:
+                db.insert(TABLE_STARRED, null, values);
+                ExternalStorageProvider.notifyStarredChanged(getContext());
                 return uri;
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);
@@ -264,6 +297,10 @@ public class ExplorerProvider extends ContentProvider {
                         selection,
                         selectionArgs);
 
+                break;
+            case URI_STARRED:
+                count = db.delete(TABLE_STARRED, selection, selectionArgs);
+                ExternalStorageProvider.notifyStarredChanged(getContext());
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);

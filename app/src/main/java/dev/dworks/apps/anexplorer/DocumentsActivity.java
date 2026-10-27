@@ -2586,6 +2586,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return (!RootInfo.isOtherRoot(root) || null != root && root.isNetworkStorage()) &&
                 isCreateSupported() &&
                 null != root
+                && !root.isStarred()
                 && mState.currentSearch == null;
     }
 

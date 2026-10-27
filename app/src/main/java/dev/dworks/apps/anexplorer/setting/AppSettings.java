@@ -53,6 +53,7 @@ public class AppSettings {
     public static final String KEY_RECENT_MEDIA = "recentMedia";
     public static final String KEY_RECYCLE_BIN = "recycleBin";
     public static final String KEY_LOCKED_FOLDER = "lockedFolder";
+    public static final String KEY_STARRED = "starred";
     public static final String KEY_VIEW_MODE = "viewMode";
     public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
 
@@ -86,6 +87,11 @@ public class AppSettings {
     /** Whether deleting moves files to the recycle bin instead of deleting them for good */
     public static boolean isRecycleBinEnabled(Context context) {
         return prefs(context).getBoolean(KEY_RECYCLE_BIN, true);
+    }
+
+    /** Whether files can be starred, and Starred is shown */
+    public static boolean isStarredEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_STARRED, true);
     }
 
     /** Whether the PIN-protected locked folder is shown */

@@ -123,6 +123,7 @@ public class ExternalStorageProvider extends StorageProvider {
     public static final String ROOT_ID_BOOKMARK = "bookmark";
     public static final String ROOT_ID_RECYCLE_BIN = "trash";
     public static final String ROOT_ID_LOCKED = "locked";
+    public static final String ROOT_ID_STARRED = "starred";
 
     /** {@link #call} methods for the recycle bin; arg is a document id, or a path to move */
     public static final String METHOD_RESTORE = "restoreFromBin";
@@ -172,6 +173,7 @@ public class ExternalStorageProvider extends StorageProvider {
             includeBookmarkRoot();
             includeRecycleBinRoot();
             includeLockedRoot();
+            includeStarredRoot();
             Log.d(TAG, "After updating volumes, found " + mRoots.size() + " active roots");
             notifyRootsChanged(getContext());
         }
@@ -492,6 +494,64 @@ public class ExternalStorageProvider extends StorageProvider {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Starred files stay where they are; the root lists them from the app's database. Its path is
+     * an empty folder of the app's own, so its document id resolves like any other.
+     */
+    private void includeStarredRoot() {
+        if (!AppSettings.isStarredEnabled(getContext())) {
+            return;
+        }
+        try {
+            final RootInfo root = new RootInfo();
+            root.rootId = ROOT_ID_STARRED;
+            root.flags = Root.FLAG_LOCAL_ONLY;
+            root.title = getContext().getString(R.string.root_starred);
+            root.path = new File(getContext().getFilesDir(), ROOT_ID_STARRED);
+            root.path.mkdirs();
+            mRoots.put(ROOT_ID_STARRED, root);
+            root.docId = getDocIdForFile(root.path);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static boolean isStarredRoot(String docId) {
+        return (ROOT_ID_STARRED + ':').equals(docId);
+    }
+
+    public static void notifyStarredChanged(Context context) {
+        context.getContentResolver().notifyChange(
+                DocumentsContract.buildChildDocumentsUri(AUTHORITY, ROOT_ID_STARRED + ':'), null, false);
+    }
+
+    /** Lists the starred files that still exist */
+    private Cursor queryStarred(String docId, String[] projection) {
+        final MatrixCursor result = new MatrixCursor(resolveDocumentProjection(projection));
+        result.setNotificationUri(getContext().getContentResolver(),
+                DocumentsContract.buildChildDocumentsUri(AUTHORITY, docId));
+        updateSettings();
+        Cursor cursor = null;
+        try {
+            cursor = getContext().getContentResolver().query(ExplorerProvider.buildStarred(),
+                    new String[]{ExplorerProvider.StarredColumns.PATH}, null, null, null);
+            while (null != cursor && cursor.moveToNext()) {
+                final File file = new File(cursor.getString(0));
+                if (!file.exists()) {
+                    continue;
+                }
+                try {
+                    includeFile(result, null, file);
+                } catch (FileNotFoundException e) {
+                    Log.w(TAG, "Failed to list starred " + file, e);
+                }
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        return result;
     }
 
     public static File getLockedFolder(Context context) {
@@ -1057,6 +1117,9 @@ public class ExternalStorageProvider extends StorageProvider {
         enforceLockedAccess(parentDocumentId);
         if (isRecycleBinRoot(parentDocumentId)) {
             return queryRecycleBin(parentDocumentId, projection);
+        }
+        if (isStarredRoot(parentDocumentId)) {
+            return queryStarred(parentDocumentId, projection);
         }
         if (mArchiveHelper.isArchivedDocument(parentDocumentId) ||
                 DocumentArchiveHelper.isSupportedArchiveType(getDocumentType(parentDocumentId))) {
