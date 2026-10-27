@@ -55,6 +55,8 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
                 libraryExtras.add(new RootItem(root));
             } else if (root.isRecents()) {
                 // Recent is a Home card instead
+            } else if (root.isApp()) {
+                // Reached from the tabs in APKs
             } else if (root.isConnections()) {
                 connection.add(new RootItem(root));
             } else if (root.isQuickShare()) {

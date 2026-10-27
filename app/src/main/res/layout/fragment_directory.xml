@@ -53,14 +53,43 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- Apps and APK files, shown only in APKs -->
+            <LinearLayout
+                android:id="@+id/app_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tab_apk_files"
+                    style="@style/AppTab"
+                    android:text="@string/root_apk_files" />
+
+                <TextView
+                    android:id="@+id/tab_user_apps"
+                    style="@style/AppTab"
+                    android:text="@string/root_apps" />
+
+                <TextView
+                    android:id="@+id/tab_system_apps"
+                    style="@style/AppTab"
+                    android:text="@string/root_system_apps" />
+            </LinearLayout>
 
             <dev.dworks.apps.anexplorer.ui.RecyclerViewPlus
                 android:id="@id/recyclerview"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:clipToPadding="false"
                 android:drawSelectorOnTop="true"
                 android:horizontalSpacing="@dimen/grid_item_padding"
@@ -68,7 +97,7 @@
                 app:columnWidth="@dimen/grid_item_width"
                 app:type="list" />
 
-        </FrameLayout>
+        </LinearLayout>
 
         <!-- An empty folder, or one that couldn't be opened and why -->
         <LinearLayout

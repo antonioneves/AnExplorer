@@ -31,6 +31,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.IntDef;
@@ -127,6 +128,10 @@ public class Utils extends UtilsFlavour{
 
     public static boolean hasNougat() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.N;
+    }
+
+    public static File getAppsBackupFile(Context context) {
+        return new File(Environment.getExternalStorageDirectory(), "AppBackup");
     }
 
     public static boolean hasNougatMR1() {

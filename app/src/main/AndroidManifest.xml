@@ -19,6 +19,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Quick Share over Bluetooth and Wi-Fi Direct, through Play services' Nearby Connections -->
     <uses-permission android:name="android.permission.BLUETOOTH"
@@ -244,6 +247,17 @@
         <provider
             android:name="dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider"
             android:authorities="${applicationId}.nonmedia.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENT">
+            <intent-filter>
+                <action android:name="dev.dworks.apps.anexplorer.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
+        <provider
+            android:name="dev.dworks.apps.anexplorer.provider.AppsProvider"
+            android:authorities="${applicationId}.apps.documents"
             android:exported="true"
             android:grantUriPermissions="true"
             android:permission="android.permission.MANAGE_DOCUMENT">

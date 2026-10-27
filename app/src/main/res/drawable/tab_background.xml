@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A tab in APKs: the PIN key's focus ring, and a tinted pill for the open tab -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <inset android:inset="4dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_pressed="true">
+        <inset android:inset="4dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_selected="true">
+        <inset android:inset="4dp">
+            <shape android:shape="rectangle">
+                <corners android:radius="28dp" />
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="1dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

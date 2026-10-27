@@ -86,4 +86,22 @@
         support:showAsAction="always"
         android:title="Info" />
 
+    <item
+        android:id="@+id/menu_save_apk"
+        android:icon="@drawable/ic_menu_save"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_save_apk"/>
+    <item
+        android:id="@+id/menu_uninstall"
+        android:icon="@drawable/ic_menu_delete"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_uninstall"/>
+    <item
+        android:id="@+id/menu_app_info"
+        android:icon="@drawable/ic_menu_info"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_app_info"/>
 </menu>

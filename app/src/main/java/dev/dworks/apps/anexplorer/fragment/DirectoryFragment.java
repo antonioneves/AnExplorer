@@ -23,6 +23,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.LoaderManager.LoaderCallbacks;
+import android.content.ActivityNotFoundException;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -37,6 +38,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.provider.Settings;
 import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -98,6 +100,8 @@ import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
+import dev.dworks.apps.anexplorer.provider.AppsProvider;
+import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
@@ -147,6 +151,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private boolean mKeepSidebarFocus;
 	// The row to focus once the selection bar closes and the files load again; -1 for none
 	private int mRefocusPosition = -1;
+	private boolean mReloadAppsOnResume;
 	private int mLastCheckedPosition = -1;
 
 	private int mLastMode = MODE_UNKNOWN;
@@ -166,6 +171,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private final int mLoaderId = 42;
 	private RootInfo root;
 	private DocumentInfo doc;
+	private View mAppTabs;
+	/** Packages still to uninstall; the system asks about one app at a time */
+	private final ArrayList<String> mUninstallQueue = new ArrayList<>();
 	/** Android TV's placeholder for apps it lacks, e.g. email; it can't open anything */
 	private static final String STUB_PACKAGE = "com.android.tv.frameworkpackagestubs";
     private int mDefaultColor;
@@ -254,6 +262,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mEmptyIcon = (ImageView) view.findViewById(R.id.empty_icon);
 		mEmptyView = (TextView) view.findViewById(android.R.id.empty);
 		mEmptyMessage = (TextView) view.findViewById(R.id.empty_message);
+		mAppTabs = view.findViewById(R.id.app_tabs);
 		getListView().setRecyclerListener(mRecycleListener);
 		// Reuse the previous folder's rows: inflating a card costs ~20ms on a TV
 		getListView().setRecycledViewPool(mActivity.getDirectoryViewPool());
@@ -376,7 +385,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					// The files changed after the selection bar closed, deleted ones gone
 					focusRow();
 					mRefocusPosition = -1;
-				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus) {
+				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus
+						&& !(mAdapter.isEmpty() && mAppTabs.getVisibility() == View.VISIBLE)) {
 					getListView().requestFocus();
 				}
 			}
@@ -392,6 +402,37 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
 
 		updateDisplayState();
+		setUpAppTabs();
+	}
+
+	/** APKs shows tabs for installed apps, system apps and APK files, like Google Files */
+	private void setUpAppTabs() {
+		if (null == root || !(root.isApp() || root.isApk())) {
+			return;
+		}
+		mAppTabs.setVisibility(View.VISIBLE);
+		setUpAppTab(R.id.tab_apk_files, NonMediaDocumentsProvider.AUTHORITY,
+				NonMediaDocumentsProvider.TYPE_APK_ROOT, root.isApk());
+		setUpAppTab(R.id.tab_user_apps, AppsProvider.AUTHORITY, AppsProvider.ROOT_ID_USER_APP,
+				root.isUserApp());
+		setUpAppTab(R.id.tab_system_apps, AppsProvider.AUTHORITY, AppsProvider.ROOT_ID_SYSTEM_APP,
+				root.isSystemApp());
+	}
+
+	private void setUpAppTab(int id, final String authority, final String rootId, boolean current) {
+		final View tab = mAppTabs.findViewById(id);
+		tab.setSelected(current);
+		tab.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				final Activity activity = getActivity();
+				final RootInfo target = DocumentsApplication.getRootsCache(activity)
+						.getRootInfo(rootId, authority);
+				if (null != target && !target.equals(root) && activity instanceof DocumentsActivity) {
+					((DocumentsActivity) activity).onRootPicked(target, false);
+				}
+			}
+		});
 	}
 
 	/**
@@ -485,6 +526,24 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public void onResume() {
 		super.onResume();
 		updateDisplayState();
+		if (!mUninstallQueue.isEmpty()) {
+			uninstallNext();
+		} else if (mReloadAppsOnResume) {
+			// Back from uninstall or App info, where the app may have gone; the reload refocuses its row
+			mReloadAppsOnResume = false;
+			AppsProvider.notifyDocumentsChanged(getActivity(), root.rootId);
+		}
+	}
+
+	/** Asks to uninstall the next queued app */
+	private void uninstallNext() {
+		final String packageName = mUninstallQueue.remove(0);
+		try {
+			startActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + packageName)));
+		} catch (ActivityNotFoundException e) {
+			mUninstallQueue.clear();
+			Utils.showSnackBar(getActivity(), getString(R.string.unable_to_open_app));
+		}
 	}
 
     public void onDisplayStateChanged() {
@@ -589,6 +648,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			= new RecyclerItemClickListener.OnItemClickListener() {
 		@Override
 		public void onItemClick(View view, int position) {
+			// An app can't be opened from here; its actions are in the menu
+			if (null != root && root.isApp()) {
+				showPopupMenu(view, position);
+				return;
+			}
 			final Cursor cursor = mAdapter.getItem(position);
 			if (cursor != null) {
 				final String docId = getCursorString(cursor, Document.COLUMN_DOCUMENT_ID);
@@ -716,6 +780,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			info.setVisible(count == 1);
 			bookmark.setVisible(count == 1 && !isRecycleBin());
 
+			if (null != root && root.isApp()) {
+				for (int i = 0; i < menu.size(); i++) {
+					menu.getItem(i).setVisible(false);
+				}
+				menu.findItem(R.id.menu_select_all).setVisible(true);
+				menu.findItem(R.id.menu_save_apk).setVisible(true);
+				menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
+			}
 			return true;
 		}
 
@@ -1105,6 +1177,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
     }
 
 	private void setEmptyState() {
+		// An empty list would swallow focus that should reach the APKs tabs
+		if (mAppTabs.getVisibility() == View.VISIBLE) {
+			getListView().setFocusable(!mAdapter.isEmpty());
+		}
 		if (!mAdapter.isEmpty()) {
 			mEmptyGroup.setVisibility(View.GONE);
 			return;
@@ -1112,7 +1188,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mEmptyGroup.setVisibility(View.VISIBLE);
 		final String error = mAdapter.getError();
 		int icon = R.drawable.ic_folder_empty;
-		int title = R.string.empty;
+		int title = null != root && (root.isApp() || root.isApk()) ? R.string.empty_nothing : R.string.empty;
 		String message = null;
 		if (error != null && error.equals(getString(R.string.server_connect_failed))) {
 			icon = R.drawable.ic_dialog_alert;
@@ -1199,6 +1275,17 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					|| (copiesAcross() && doc.isDeleteSupported())));
 		}
 
+		if (null != root && root.isApp()) {
+			final Menu menu = popup.getMenu();
+			for (int i = 0; i < menu.size(); i++) {
+				menu.getItem(i).setVisible(false);
+			}
+			menu.findItem(R.id.menu_select_item).setVisible(true);
+			menu.findItem(R.id.menu_save_apk).setVisible(true);
+			menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
+			menu.findItem(R.id.menu_app_info).setVisible(true);
+		}
+
 		// Beside the item, so every option fits on screen without scrolling
 		SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
 			@Override
@@ -1223,12 +1310,45 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			mMultiChoiceHelper.setItemChecked(position, true, true);
 			return true;
 		}
+		mLastCheckedPosition = position;
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();
 		final Cursor cursor = mAdapter.getItem(position);
 		final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
 		docs.add(doc);
 
 		return handleMenuAction(item, docs);
+	}
+
+	/** The system screen takes focus away; coming back, the list reloads and focus returns to the row */
+	private void leaveForApps() {
+		mReloadAppsOnResume = true;
+		mRefocusPosition = Math.max(mLastCheckedPosition, 0);
+	}
+
+	/** Copies the apps' APKs to the AppBackup folder, off the main thread since APKs can be large */
+	private void saveApks(final ArrayList<DocumentInfo> docs) {
+		final Activity activity = getActivity();
+		final ContentResolver resolver = activity.getContentResolver();
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				boolean saved = true;
+				for (DocumentInfo app : docs) {
+					try {
+						saved &= null != DocumentsContract.copyDocument(resolver, app.derivedUri, app.derivedUri);
+					} catch (Exception e) {
+						saved = false;
+					}
+				}
+				final boolean ok = saved;
+				activity.runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						Utils.showSnackBar(activity, activity.getString(ok ? R.string.apk_saved : R.string.apk_save_failed));
+					}
+				});
+			}
+		}).start();
 	}
 
 	/** Unselects everything; false when nothing was selected */
@@ -1297,6 +1417,28 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return true;
 		} else if (id == R.id.menu_bookmark) {
 			bookmarkDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_save_apk) {
+			saveApks(docs);
+			clearSelection();
+			return true;
+		} else if (id == R.id.menu_uninstall) {
+			mUninstallQueue.clear();
+			for (DocumentInfo app : docs) {
+				mUninstallQueue.add(AppsProvider.getPackageForDocId(app.documentId));
+			}
+			leaveForApps();
+			uninstallNext();
+			return true;
+		} else if (id == R.id.menu_app_info) {
+			final String packageName = AppsProvider.getPackageForDocId(docs.get(0).documentId);
+			leaveForApps();
+			try {
+				startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+						Uri.parse("package:" + packageName)));
+			} catch (ActivityNotFoundException e) {
+				Utils.showSnackBar(getActivity(), getString(R.string.unable_to_open_app));
+			}
 			return true;
 		} else if (id == R.id.menu_select_all) {
 			int count = mAdapter.getItemCount();

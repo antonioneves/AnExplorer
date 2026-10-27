@@ -89,6 +89,16 @@
 
     <!-- Text shown when a directory of documents is empty [CHAR LIMIT=24] -->
     <string name="empty">No items</string>
+    <string name="empty_nothing">There\'s nothing here.</string>
+    <string name="root_apps">Installed apps</string>
+    <string name="root_system_apps">System apps</string>
+    <string name="root_apk_files">App install files (APKs)</string>
+    <string name="menu_save_apk">Save APK</string>
+    <string name="menu_uninstall">Uninstall</string>
+    <string name="menu_app_info">App info</string>
+    <string name="unable_to_open_app">Unable to open the app</string>
+    <string name="apk_saved">Saved to the AppBackup folder</string>
+    <string name="apk_save_failed">Couldn\'t save the APK</string>
     <!-- How many items a folder holds, shown on its card -->
     <plurals name="folder_item_count">
         <item quantity="one">%d item</item>

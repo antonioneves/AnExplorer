@@ -98,4 +98,16 @@
         support:showAsAction="always"
         android:title="Select All"/>
 
+    <item
+        android:id="@+id/menu_save_apk"
+        android:icon="@drawable/ic_menu_save"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_save_apk"/>
+    <item
+        android:id="@+id/menu_uninstall"
+        android:icon="@drawable/ic_menu_delete"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_uninstall"/>
 </menu>

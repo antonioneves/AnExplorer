@@ -38,6 +38,7 @@ import dev.dworks.apps.anexplorer.libcore.util.Objects;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
+import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.DownloadStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
@@ -254,6 +255,14 @@ public class RootInfo implements Durable, Parcelable {
             derivedIcon = R.drawable.ic_root_archive;
             derivedColor = R.color.item_doc_compressed;
             derivedTag = "archive";
+        } else if (isUserApp()) {
+            derivedIcon = R.drawable.ic_root_apps;
+            derivedColor = R.color.item_doc_apk;
+            derivedTag = "user_apps";
+        } else if (isSystemApp()) {
+            derivedIcon = R.drawable.ic_root_system_apps;
+            derivedColor = R.color.item_doc_apk;
+            derivedTag = "system_apps";
         } else if (isApk()) {
             derivedIcon = R.drawable.ic_root_apk;
             derivedColor = R.color.item_doc_apk;
@@ -418,6 +427,18 @@ public class RootInfo implements Durable, Parcelable {
     public boolean isApk() {
         return NonMediaDocumentsProvider.AUTHORITY.equals(authority)
                 && NonMediaDocumentsProvider.TYPE_APK_ROOT.equals(rootId);
+    }
+
+    public boolean isApp() {
+        return AppsProvider.AUTHORITY.equals(authority);
+    }
+
+    public boolean isUserApp() {
+        return isApp() && AppsProvider.ROOT_ID_USER_APP.equals(rootId);
+    }
+
+    public boolean isSystemApp() {
+        return isApp() && AppsProvider.ROOT_ID_SYSTEM_APP.equals(rootId);
     }
 
     public boolean isNetworkStorage() {
