@@ -176,6 +176,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private RootInfo root;
 	private DocumentInfo doc;
 	private View mAppTabs;
+	private View mVideoTabs;
 	/** Packages still to uninstall; the system asks about one app at a time */
 	private final ArrayList<String> mUninstallQueue = new ArrayList<>();
 	/** Android TV's placeholder for apps it lacks, e.g. email; it can't open anything */
@@ -267,6 +268,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mEmptyView = (TextView) view.findViewById(android.R.id.empty);
 		mEmptyMessage = (TextView) view.findViewById(R.id.empty_message);
 		mAppTabs = view.findViewById(R.id.app_tabs);
+		mVideoTabs = view.findViewById(R.id.video_tabs);
 		getListView().setRecyclerListener(mRecycleListener);
 		// Reuse the previous folder's rows: inflating a card costs ~20ms on a TV
 		getListView().setRecycledViewPool(mActivity.getDirectoryViewPool());
@@ -391,7 +393,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					focusRow();
 					mRefocusPosition = -1;
 				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus
-						&& !(mAdapter.isEmpty() && mAppTabs.getVisibility() == View.VISIBLE)) {
+						&& !(mAdapter.isEmpty() && (mAppTabs.getVisibility() == View.VISIBLE
+						|| mVideoTabs.getVisibility() == View.VISIBLE))) {
 					getListView().requestFocus();
 				}
 			}
@@ -408,6 +411,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		updateDisplayState();
 		setUpAppTabs();
+		setUpVideoTabs();
 	}
 
 	/** APKs shows tabs for installed apps, system apps and APK files, like Google Files */
@@ -422,6 +426,42 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				root.isUserApp());
 		setUpAppTab(R.id.tab_system_apps, AppsProvider.AUTHORITY, AppsProvider.ROOT_ID_SYSTEM_APP,
 				root.isSystemApp());
+	}
+
+	/**
+	 * Videos shows Movies (the root itself), TV Shows and Folders as tabs. Inside a show or a
+	 * folder they are hidden: BACK returns to the tab it was opened from.
+	 */
+	private void setUpVideoTabs() {
+		if (null == root || !root.isVideos() || null == doc) {
+			return;
+		}
+		final String id = doc.documentId;
+		final boolean shows = MediaDocumentsProvider.TYPE_VIDEOS_SHOWS.equals(id);
+		final boolean folders = MediaDocumentsProvider.TYPE_VIDEOS_FOLDERS.equals(id);
+		final boolean movies = MediaDocumentsProvider.TYPE_VIDEOS_ROOT.equals(id)
+				|| MediaDocumentsProvider.TYPE_VIDEOS_MOVIES.equals(id);
+		if (!(shows || folders || movies)) {
+			return;
+		}
+		mVideoTabs.setVisibility(View.VISIBLE);
+		setUpVideoTab(R.id.tab_videos_movies, null, movies);
+		setUpVideoTab(R.id.tab_videos_shows, MediaDocumentsProvider.TYPE_VIDEOS_SHOWS, shows);
+		setUpVideoTab(R.id.tab_videos_folders, MediaDocumentsProvider.TYPE_VIDEOS_FOLDERS, folders);
+	}
+
+	private void setUpVideoTab(int id, final String groupId, boolean current) {
+		final View tab = mVideoTabs.findViewById(id);
+		tab.setSelected(current);
+		tab.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				final Activity activity = getActivity();
+				if (!v.isSelected() && activity instanceof DocumentsActivity) {
+					((DocumentsActivity) activity).onVideoTabPicked(groupId);
+				}
+			}
+		});
 	}
 
 	private void setUpAppTab(int id, final String authority, final String rootId, boolean current) {
@@ -1288,7 +1328,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void setEmptyState() {
 		// An empty list would swallow focus that should reach the APKs tabs
-		if (mAppTabs.getVisibility() == View.VISIBLE) {
+		if (mAppTabs.getVisibility() == View.VISIBLE || mVideoTabs.getVisibility() == View.VISIBLE) {
 			getListView().setFocusable(!mAdapter.isEmpty());
 		}
 		if (!mAdapter.isEmpty()) {

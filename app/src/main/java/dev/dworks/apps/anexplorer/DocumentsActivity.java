@@ -2003,6 +2003,28 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
+    /**
+     * Switches between the Videos tabs. Back to the root first, so switching doesn't pile up
+     * history and BACK from TV Shows or Folders lands on Movies, the root itself.
+     *
+     * @param groupId the tab's group document, or null for Movies
+     */
+    public void onVideoTabPicked(String groupId) {
+        while (mState.stack.size() > 1) {
+            mState.stack.pop();
+        }
+        if (null != groupId) {
+            try {
+                mState.stack.push(DocumentInfo.fromUri(getContentResolver(),
+                        DocumentsContract.buildDocumentUri(MediaDocumentsProvider.AUTHORITY, groupId)));
+            } catch (FileNotFoundException e) {
+                Log.w(TAG, "Failed to open video tab " + groupId, e);
+            }
+        }
+        mState.stackTouched = true;
+        onCurrentDirectoryChanged(ANIM_DOWN);
+    }
+
     public void onDocumentPicked(DocumentInfo doc) {
         final FragmentManager fm = getFragmentManager();
         if (doc.isDirectory() || DocumentArchiveHelper.isSupportedArchiveType(doc.mimeType)) {

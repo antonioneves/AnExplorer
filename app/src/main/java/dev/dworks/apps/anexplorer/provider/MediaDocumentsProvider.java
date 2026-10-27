@@ -365,12 +365,8 @@ public class MediaDocumentsProvider extends StorageProvider {
                 while (cursor.moveToNext()) {
                     includeImage(result, cursor);
                 }
-            } else if (TYPE_VIDEOS_ROOT.equals(ident.type)) {
-                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
-                includeVideosGroup(result, TYPE_VIDEOS_MOVIES);
-                includeVideosGroup(result, TYPE_VIDEOS_SHOWS);
-                includeVideosGroup(result, TYPE_VIDEOS_FOLDERS);
-            } else if (TYPE_VIDEOS_MOVIES.equals(ident.type)) {
+            } else if (TYPE_VIDEOS_ROOT.equals(ident.type) || TYPE_VIDEOS_MOVIES.equals(ident.type)) {
+                // The root is the Movies tab (TV Shows and Folders are the other tabs):
                 // whatever isn't named like an episode
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
                         VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);

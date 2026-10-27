@@ -85,6 +85,33 @@
                     android:text="@string/root_system_apps" />
             </LinearLayout>
 
+            <!-- Movies, TV shows and folders, shown only in Videos -->
+            <LinearLayout
+                android:id="@+id/video_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tab_videos_movies"
+                    style="@style/AppTab"
+                    android:text="@string/videos_movies" />
+
+                <TextView
+                    android:id="@+id/tab_videos_shows"
+                    style="@style/AppTab"
+                    android:text="@string/videos_shows" />
+
+                <TextView
+                    android:id="@+id/tab_videos_folders"
+                    style="@style/AppTab"
+                    android:text="@string/videos_folders" />
+            </LinearLayout>
+
             <dev.dworks.apps.anexplorer.ui.RecyclerViewPlus
                 android:id="@id/recyclerview"
                 android:layout_width="match_parent"
