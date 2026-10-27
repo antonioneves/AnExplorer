@@ -37,6 +37,7 @@ import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
+import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.misc.ThumbnailCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
@@ -137,6 +138,9 @@ public class DocumentsApplication extends AppFlavour {
         public void onReceive(Context context, Intent intent) {
             final Uri data = intent.getData();
             if (data != null) {
+                // The app lists may be open already, and the system reports the change after they reload
+                AppsProvider.notifyDocumentsChanged(context, AppsProvider.ROOT_ID_USER_APP);
+                AppsProvider.notifyDocumentsChanged(context, AppsProvider.ROOT_ID_SYSTEM_APP);
                 final String authority = data.getAuthority();
                 mRoots.updateAuthorityAsync(authority);
             } else {
