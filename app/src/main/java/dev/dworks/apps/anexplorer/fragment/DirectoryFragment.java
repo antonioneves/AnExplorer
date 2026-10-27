@@ -1534,6 +1534,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			bookmarkDocument(docs.get(0));
 			return true;
 		} else if (id == R.id.menu_star || id == R.id.menu_unstar) {
+			if (id == R.id.menu_unstar && null != root && root.isStarred()) {
+				// The row leaves Starred, and focus would fall to the sidebar
+				mRefocusPosition = Math.max(mLastCheckedPosition, 0);
+			}
 			starDocuments(docs, id == R.id.menu_star);
 			clearSelection();
 			return true;
