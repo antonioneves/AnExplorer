@@ -53,6 +53,7 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
+import dev.dworks.apps.anexplorer.misc.EpisodeName;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
@@ -93,6 +94,11 @@ public class MediaDocumentsProvider extends StorageProvider {
     public static final String TYPE_VIDEOS_ROOT = "videos_root";
     public static final String TYPE_VIDEOS_BUCKET = "videos_bucket";
     public static final String TYPE_VIDEO = "video";
+    // The videos root is split into these virtual folders; a show's id is a hash of its name
+    public static final String TYPE_VIDEOS_MOVIES = "videos_movies";
+    public static final String TYPE_VIDEOS_SHOWS = "videos_shows";
+    public static final String TYPE_VIDEOS_SHOW = "videos_show";
+    public static final String TYPE_VIDEOS_FOLDERS = "videos_folders";
 
     public static final String TYPE_AUDIO_ROOT = "audio_root";
     public static final String TYPE_AUDIO = "audio";
@@ -260,6 +266,20 @@ public class MediaDocumentsProvider extends StorageProvider {
             } else if (TYPE_VIDEOS_ROOT.equals(ident.type)) {
                 // single root
                 includeVideosRootDocument(result);
+            } else if (TYPE_VIDEOS_MOVIES.equals(ident.type) || TYPE_VIDEOS_SHOWS.equals(ident.type)
+                    || TYPE_VIDEOS_FOLDERS.equals(ident.type)) {
+                includeVideosGroup(result, ident.type);
+            } else if (TYPE_VIDEOS_SHOW.equals(ident.type)) {
+                cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                while (cursor.moveToNext()) {
+                    final EpisodeName episode = EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME));
+                    if (episode != null && episode.showId() == ident.id) {
+                        includeVideosShow(result, episode);
+                        break;
+                    }
+                }
             } else if (TYPE_VIDEOS_BUCKET.equals(ident.type)) {
                 // single bucket
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
@@ -346,12 +366,67 @@ public class MediaDocumentsProvider extends StorageProvider {
                     includeImage(result, cursor);
                 }
             } else if (TYPE_VIDEOS_ROOT.equals(ident.type)) {
-                // every video at the top level, not grouped in buckets
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                includeVideosGroup(result, TYPE_VIDEOS_MOVIES);
+                includeVideosGroup(result, TYPE_VIDEOS_SHOWS);
+                includeVideosGroup(result, TYPE_VIDEOS_FOLDERS);
+            } else if (TYPE_VIDEOS_MOVIES.equals(ident.type)) {
+                // whatever isn't named like an episode
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
-                        VideoQuery.PROJECTION, null, null, VideoColumns.DATE_MODIFIED + " DESC");
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
                 while (cursor.moveToNext()) {
+                    if (EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME)) == null) {
+                        includeVideo(result, cursor);
+                    }
+                }
+            } else if (TYPE_VIDEOS_SHOWS.equals(ident.type)) {
+                cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                final java.util.TreeMap<String, EpisodeName> shows = new java.util.TreeMap<>();
+                while (cursor.moveToNext()) {
+                    final EpisodeName episode = EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME));
+                    if (episode != null) {
+                        final String key = episode.show.toLowerCase(java.util.Locale.ROOT);
+                        if (!shows.containsKey(key)) {
+                            shows.put(key, episode);
+                        }
+                    }
+                }
+                for (EpisodeName show : shows.values()) {
+                    includeVideosShow(result, show);
+                }
+            } else if (TYPE_VIDEOS_SHOW.equals(ident.type)) {
+                // episodes in season order
+                cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                final java.util.ArrayList<long[]> episodes = new java.util.ArrayList<>();
+                while (cursor.moveToNext()) {
+                    final EpisodeName episode = EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME));
+                    if (episode != null && episode.showId() == ident.id) {
+                        episodes.add(new long[] { episode.season, episode.episode, cursor.getPosition() });
+                    }
+                }
+                java.util.Collections.sort(episodes, (a, b) ->
+                        a[0] != b[0] ? Long.compare(a[0], b[0]) : Long.compare(a[1], b[1]));
+                for (long[] episode : episodes) {
+                    cursor.moveToPosition((int) episode[2]);
                     includeVideo(result, cursor);
+                }
+            } else if (TYPE_VIDEOS_FOLDERS.equals(ident.type)) {
+                // the folders the videos are stored in
+                cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                        VideosBucketQuery.PROJECTION, null, null, VideosBucketQuery.SORT_ORDER);
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                long last = Long.MIN_VALUE;
+                while (cursor.moveToNext()) {
+                    final long bucket = cursor.getLong(VideosBucketQuery.BUCKET_ID);
+                    if (bucket != last) {
+                        last = bucket;
+                        includeVideosBucket(result, cursor);
+                    }
                 }
             } else if (TYPE_VIDEOS_BUCKET.equals(ident.type)) {
                 // include videos under bucket
@@ -745,6 +820,25 @@ public class MediaDocumentsProvider extends StorageProvider {
                 ? Math.max(modified, cursor.getLong(VideoQuery.DATE_ADDED)) : modified)
                 * DateUtils.SECOND_IN_MILLIS);
         row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
+    }
+
+    /** The Movies, TV Shows and Folders entries of the videos root; none of them can be deleted */
+    private void includeVideosGroup(MatrixCursor result, String type) {
+        final int name = TYPE_VIDEOS_MOVIES.equals(type) ? R.string.videos_movies
+                : TYPE_VIDEOS_SHOWS.equals(type) ? R.string.videos_shows : R.string.videos_folders;
+        final RowBuilder row = result.newRow();
+        row.add(Document.COLUMN_DOCUMENT_ID, type);
+        row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(name));
+        row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
+        row.add(Document.COLUMN_FLAGS, 0);
+    }
+
+    private void includeVideosShow(MatrixCursor result, EpisodeName episode) {
+        final RowBuilder row = result.newRow();
+        row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SHOW, episode.showId()));
+        row.add(Document.COLUMN_DISPLAY_NAME, episode.show);
+        row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
+        row.add(Document.COLUMN_FLAGS, 0);
     }
 
     private interface ArtistQuery {
