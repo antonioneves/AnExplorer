@@ -160,6 +160,15 @@
                 android:contentDescription="@string/made_with_love"
                 android:src="@drawable/made_with_love" />
 
+            <TextView
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="16dp"
+                android:gravity="center_horizontal"
+                android:text="@string/about_tmdb"
+                android:textAppearance="@style/TextAppearance.AppCompat.Caption" />
+
         </LinearLayout>
     </ScrollView>
 
