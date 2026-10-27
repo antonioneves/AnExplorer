@@ -58,7 +58,7 @@
                         android:layout_weight="1"
                         android:ellipsize="middle"
                         android:singleLine="true"
-                        android:text="Enjoying AnExplorer?"
+                        android:text="@string/feedback_title"
                         android:textAlignment="viewStart"
                         android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
                         android:textColor="?android:attr/textColorPrimary" />
@@ -91,7 +91,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="start"
                         android:ellipsize="end"
-                        android:text="Rate the app in Play Store or send us the feedback. Spread the love!"
+                        android:text="@string/feedback_message"
                         android:textAlignment="viewStart"
                         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
                         android:textColor="?android:attr/textColorSecondary" />
@@ -118,14 +118,14 @@
                         style="@style/Widget.AppCompat.Button.Borderless"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Feedback" />
+                        android:text="@string/feedback_feedback" />
 
                     <Button
                         android:id="@+id/action_rate"
                         style="@style/Widget.AppCompat.Button.Borderless"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Rate" />
+                        android:text="@string/feedback_rate" />
 
                     <Button
                         android:id="@+id/action_support"
@@ -133,7 +133,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:visibility="gone"
-                        android:text="Support" />
+                        android:text="@string/feedback_support" />
 
                 </androidx.appcompat.widget.ButtonBarLayout>
 

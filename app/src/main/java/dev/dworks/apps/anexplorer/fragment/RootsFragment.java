@@ -39,6 +39,7 @@ import android.provider.Settings;
 import androidx.appcompat.app.AlertDialog;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -135,6 +136,13 @@ public class RootsFragment extends Fragment {
         mList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         // Items draw their own selected and focused states (drawable-television/item_root)
         mList.setSelector(android.R.color.transparent);
+        // The list sits beside the content, so focus search can miss it; send RIGHT there directly
+        mList.setOnKeyListener((v, keyCode, event) -> {
+            final int toContent = Utils.isRTL() ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT;
+            if (keyCode != toContent || event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            final View content = getActivity().findViewById(R.id.container_directory);
+            return content != null && content.requestFocus();
+        });
 
         DisplayMetrics metrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
@@ -427,7 +435,7 @@ public class RootsFragment extends Fragment {
 
     private void removeBookark(final BookmarkItem item) {
         DialogBuilder builder = new DialogBuilder(getActivity());
-        builder.setMessage("Remove bookmark?")
+        builder.setMessage(R.string.bookmark_remove)
         .setCancelable(false)
         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int did) {
@@ -437,7 +445,7 @@ public class RootsFragment extends Fragment {
                         new String[]{item.root.path, item.root.title}
                 );
                 if (rows > 0) {
-                    Utils.showSnackBar(getActivity(), "Bookmark removed");
+                    Utils.showSnackBar(getActivity(), getString(R.string.bookmark_removed));
                     RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
                     final Fragment directory = DirectoryFragment.get(getActivity().getFragmentManager());
                     if (directory instanceof DirectoryFragment) {

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
 
+import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -139,12 +140,10 @@ public class SAFManager {
             }
         } else if(Utils.hasLollipop()){
             DialogBuilder builder = new DialogBuilder(activity);
-            Spanned message = Utils.fromHtml("Select root (outermost) folder of storage "
-                    + "<b>" + root.title + "</b>"
-                    + " to grant access from next screen");
-            builder.setTitle("Grant accesss to External Storage")
+            Spanned message = Utils.fromHtml(activity.getString(R.string.saf_message, root.title));
+            builder.setTitle(R.string.saf_title)
                     .setMessage(message.toString())
-                    .setPositiveButton("Give Access", new DialogInterface.OnClickListener() {
+                    .setPositiveButton(R.string.saf_give_access, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterfaceParam, int code) {
                             Intent intent = new Intent(ACTION_OPEN_DOCUMENT_TREE);
@@ -156,7 +155,7 @@ public class SAFManager {
                             }
                         }
                     })
-                    .setNegativeButton("Cancel", null);
+                    .setNegativeButton(android.R.string.cancel, null);
             builder.showDialog();
         }
     }
@@ -183,8 +182,8 @@ public class SAFManager {
                 }
             }
         }
-        Utils.showSnackBar(activity, "Access"+ (accessGranted ? "" : " was not") +" granted"
-                        + (primaryStorage ? ". Choose the external storage." : ""),
+        Utils.showSnackBar(activity, activity.getString(accessGranted ? R.string.saf_granted
+                        : primaryStorage ? R.string.saf_choose_external : R.string.saf_not_granted),
                 Snackbar.LENGTH_SHORT, null, null);
         return accessGranted;
     }

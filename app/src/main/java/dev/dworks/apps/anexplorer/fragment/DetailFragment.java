@@ -146,7 +146,7 @@ public class DetailFragment extends DialogFragment {
 		super.onActivityCreated(savedInstanceState);
 		if(isDialog){
             setShowsDialog(isDialog);
-			getDialog().setTitle("Details");
+			getDialog().setTitle(R.string.detail_title);
 			// Rounded M3 card instead of the default square dialog window
 			final MaterialShapeDrawable background = new MaterialShapeDrawable(
 					ShapeAppearanceModel.builder()

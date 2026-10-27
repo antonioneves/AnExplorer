@@ -1133,15 +1133,15 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			builder.setIndeterminate(true);
 
 			if (id == R.id.menu_delete) {
-				builder.setMessage("Deleting files...");
+				builder.setMessage(R.string.progress_deleting);
 			} else if (id == R.id.menu_uncompress) {
-				builder.setMessage("Uncompressing files...");
+				builder.setMessage(R.string.progress_uncompressing);
 			} else if (id == R.id.menu_compress) {
-				builder.setMessage("Compressing files...");
+				builder.setMessage(R.string.progress_compressing);
 			} else if (id == R.id.menu_restore) {
-				builder.setMessage("Restoring files...");
+				builder.setMessage(R.string.progress_restoring);
 			} else if (id == R.id.menu_lock) {
-				builder.setMessage("Moving files...");
+				builder.setMessage(R.string.progress_moving);
 			}
 			progressDialog = builder.create();
 		}
@@ -1584,7 +1584,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		contentValues.put(ExplorerProvider.BookmarkColumns.ROOT_ID, document.displayName);
 		Uri uri = getActivity().getContentResolver().insert(ExplorerProvider.buildBookmark(), contentValues);
 		if(null != uri) {
-			Utils.showSnackBar(getActivity(), "Bookmark added");
+			Utils.showSnackBar(getActivity(), getString(R.string.bookmark_added));
 			RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
 			loadMarkedPaths();
 			mAdapter.notifyDataSetChanged();

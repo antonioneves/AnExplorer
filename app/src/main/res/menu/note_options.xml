@@ -12,7 +12,7 @@
         android:id="@+id/menu_revert"
         android:icon="@drawable/ic_menu_undo"
         support:showAsAction="ifRoom|withText"
-        android:title="Revert"/>
+        android:title="@string/menu_revert"/>
     <item
         android:id="@+id/menu_delete"
         android:icon="@drawable/ic_menu_delete"

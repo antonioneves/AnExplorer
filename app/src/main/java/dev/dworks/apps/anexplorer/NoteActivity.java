@@ -154,7 +154,7 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
             try {
                 mInput.setText(mOriginal);
             } catch (OutOfMemoryError e){
-                showError("Unable to Load file");
+                showError(getString(R.string.note_load_failed));
             }
             setSaveProgress(false);
             AnalyticsManager.logEvent("text_revert");

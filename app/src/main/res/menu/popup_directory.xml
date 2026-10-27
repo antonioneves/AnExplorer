@@ -51,22 +51,22 @@
         android:id="@+id/menu_bookmark"
         android:icon="@drawable/ic_menu_bookmark"
         support:showAsAction="always"
-        android:title="Bookmark" />
+        android:title="@string/menu_bookmark" />
     <item
         android:id="@+id/menu_rename"
         android:icon="@drawable/ic_menu_rename_file"
         support:showAsAction="always"
-        android:title="Rename" />
+        android:title="@string/menu_rename" />
     <item
         android:id="@+id/menu_copy"
         android:icon="@drawable/ic_menu_copy"
         support:showAsAction="always"
-        android:title="Copy"/>
+        android:title="@string/menu_copy"/>
     <item
         android:id="@+id/menu_cut"
         android:icon="@drawable/ic_menu_cut"
         support:showAsAction="always"
-        android:title="Cut"/>
+        android:title="@string/menu_cut"/>
     <item
         android:id="@+id/menu_delete"
         android:icon="@drawable/ic_menu_delete"
@@ -96,7 +96,7 @@
         android:id="@+id/menu_info"
         android:icon="@drawable/ic_menu_info"
         support:showAsAction="always"
-        android:title="Info" />
+        android:title="@string/menu_info" />
 
     <item
         android:id="@+id/menu_save_apk"

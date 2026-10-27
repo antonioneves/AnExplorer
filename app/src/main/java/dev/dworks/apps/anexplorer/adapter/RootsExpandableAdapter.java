@@ -24,8 +24,10 @@ import dev.dworks.apps.anexplorer.model.RootInfo;
 public class RootsExpandableAdapter extends BaseExpandableListAdapter {
 
     final List<GroupInfo> group = new ArrayList<>();
+    private final Context context;
 
     public RootsExpandableAdapter(Context context, Collection<RootInfo> roots, Intent includeAppss) {
+        this.context = context;
         processRoots(roots);
     }
 
@@ -97,15 +99,15 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             storageItems.addAll(secondaryStorage);
             storageItems.addAll(usb);
             storageItems.addAll(phone);
-            groupRoots.add(new GroupInfo("Storage", storageItems));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_storage), storageItems));
         }
 
         connection.addAll(0, quickShare);
         if(!network.isEmpty()){
             network.addAll(connection);
-            groupRoots.add(new GroupInfo("Network & Cloud", network));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_network), network));
         } else if(!connection.isEmpty()){
-            groupRoots.add(new GroupInfo("Network & Cloud", connection));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_network), connection));
         }
 
         if(!library.isEmpty() || !starred.isEmpty() || !libraryExtras.isEmpty()){
@@ -116,18 +118,18 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             }
             libraryItems.addAll(starred);
             libraryItems.addAll(libraryExtras);
-            groupRoots.add(new GroupInfo("Library", libraryItems));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_library), libraryItems));
         }
 
         if(!folders.isEmpty() || !bookmarks.isEmpty()){
             folders.addAll(bookmarks);
-            groupRoots.add(new GroupInfo("Folders", folders));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_folders), folders));
         }
 
         final List<Item> more = new ArrayList<>();
         more.add(new ActionItem(R.id.menu_settings, R.drawable.ic_menu_settings, R.string.menu_settings));
         more.add(new ActionItem(R.id.menu_about, R.drawable.ic_menu_info, R.string.menu_about));
-        groupRoots.add(new GroupInfo("More", more));
+        groupRoots.add(new GroupInfo(context.getString(R.string.group_more), more));
 
         group.clear();
         group.addAll(groupRoots);

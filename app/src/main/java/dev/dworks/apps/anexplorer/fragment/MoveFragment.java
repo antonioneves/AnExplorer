@@ -99,7 +99,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		mCancel.setOnClickListener(this);
 
 		mMoveInfo = (TextView) view.findViewById(android.R.id.title);
-		mMoveInfo.setText("Paste " + FileUtils.formatFileCount(docs.size()) + " in ");
+		mMoveInfo.setText(getString(R.string.paste_in, FileUtils.formatFileCount(docs.size())));
 		mMoveInfo.setEnabled(false);
 		
 		mRootInfo = (TextView) view.findViewById(android.R.id.text1);

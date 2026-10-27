@@ -340,7 +340,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
         else if(action == ACTION_FTPSERVER_FAILEDTOSTART){
             setStatus(false);
-            setText(warning, "Oops! Something went wrong");
+            setText(warning, getString(R.string.server_error));
         }
         else if(action == ACTION_FTPSERVER_STOPPED){
             setStatus(false);

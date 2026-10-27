@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:paddingTop="4dip"
             android:singleLine="true"
-            android:text="Loading..."
+            android:text="@string/loading"
             android:textAppearance="?android:attr/textAppearanceSmall" />
     </LinearLayout>
 

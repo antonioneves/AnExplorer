@@ -402,7 +402,7 @@ public class Utils extends UtilsFlavour{
     }
 
     public static void showRetrySnackBar(Activity activity, String text, View.OnClickListener listener){
-        showSnackBar(activity, text, LENGTH_SHORT , "RETRY", listener);
+        showSnackBar(activity, text, LENGTH_SHORT , activity.getString(R.string.retry), listener);
     }
 
     public static void showSnackBar(Activity activity, String message){
