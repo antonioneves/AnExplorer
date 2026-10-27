@@ -18,10 +18,12 @@
 
     <item
         android:id="@+id/menu_edit"
+        android:icon="@drawable/ic_menu_edit"
         android:title="@string/menu_edit"
         support:showAsAction="always" />
     <item
         android:id="@+id/menu_delete"
+        android:icon="@drawable/ic_menu_delete"
         android:title="@string/menu_delete"
         support:showAsAction="always" />
 
