@@ -118,7 +118,7 @@
     <string name="network_ftp">FTP</string>
     <string name="network_webdav">WebDAV</string>
     <string name="connection_webdav_folder">Folder on the server (optional)</string>
-    <string name="network_smb">SMB (Windows share)</string>
+    <string name="network_smb">SMB</string>
     <string name="connection_smb_share">Share, or a folder in one (optional)</string>
 
     <!-- Menu item that starts the in-process Quick Share receiver -->

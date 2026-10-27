@@ -60,7 +60,7 @@
 
             <item
                 android:id="@+id/network_smb"
-                android:icon="@drawable/ic_connection_server"
+                android:icon="@drawable/ic_device_laptop"
                 android:orderInCategory="100"
                 support:iconTint="?attr/colorOnSurface"
                 android:title="@string/network_smb"

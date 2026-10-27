@@ -38,6 +38,7 @@ import android.util.TypedValue;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
+import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 
@@ -353,6 +354,9 @@ public class IconUtils {
         if (SERVER.equals(type)) {
             return ContextCompat.getDrawable(context, R.drawable.ic_connection_server);
         } else if (CLIENT.equals(type)) {
+            if (SmbNetworkClient.SCHEME.equals(scheme)) {
+                return ContextCompat.getDrawable(context, R.drawable.ic_connection_smb);
+            }
             return ContextCompat.getDrawable(context, WebDavNetworkClient.isWebDav(scheme)
                     ? R.drawable.ic_connection_webdav : R.drawable.ic_connection_ftp);
         } else {
@@ -360,8 +364,11 @@ public class IconUtils {
         }
     }
 
-    /** The sidebar icon of a connection: a server for FTP, FTPS and SFTP, the web for WebDAV */
+    /** The sidebar icon of a connection: a server for FTP, FTPS and SFTP, the web for WebDAV, a laptop for SMB */
     public static int schemeIcon(String scheme) {
+        if (SmbNetworkClient.SCHEME.equals(scheme)) {
+            return R.drawable.ic_device_laptop;
+        }
         return WebDavNetworkClient.isWebDav(scheme) ? R.drawable.ic_root_webdav : R.drawable.ic_root_ftp;
     }
 
