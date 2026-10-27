@@ -44,12 +44,15 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
         final List<RootInfo> library = new ArrayList<>();
         final List<Item> folders = new ArrayList<>();
         final List<Item> bookmarks = new ArrayList<>();
+        final List<Item> libraryExtras = new ArrayList<>();
 
         for (RootInfo root : roots) {
             if (root.isHome()) {
                 home.add(new RootItem(root));
-            } else if (root.isRecycleBin() || root.isLockedFolder()) {
-                // Media cards on Home, next to Images and Audio
+            } else if (root.isLockedFolder()) {
+                libraryExtras.add(0, new RootItem(root));
+            } else if (root.isRecycleBin()) {
+                libraryExtras.add(new RootItem(root));
             } else if (root.isRecents()) {
                 // Recent is a Home card instead
             } else if (root.isConnections()) {
@@ -100,12 +103,13 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Network & Cloud", connection));
         }
 
-        if(!library.isEmpty()){
+        if(!library.isEmpty() || !libraryExtras.isEmpty()){
             Collections.sort(library, RootInfo.LIBRARY_ORDER);
             final List<Item> libraryItems = new ArrayList<>();
             for (RootInfo root : library) {
                 libraryItems.add(new RootItem(root));
             }
+            libraryItems.addAll(libraryExtras);
             groupRoots.add(new GroupInfo("Library", libraryItems));
         }
 
