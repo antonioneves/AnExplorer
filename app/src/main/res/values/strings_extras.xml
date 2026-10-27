@@ -312,7 +312,7 @@
     <string name="group_storage">Storage</string>
     <string name="group_network">Network &amp; Cloud</string>
     <string name="group_library">Library</string>
-    <string name="group_folders">Folders</string>
+    <string name="group_bookmarks">Bookmarks</string>
     <string name="group_more">More</string>
     <string name="server_error">Something went wrong</string>
     <string name="delete_connection">Delete connection?</string>

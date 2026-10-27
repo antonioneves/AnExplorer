@@ -123,7 +123,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
 
         if(!folders.isEmpty() || !bookmarks.isEmpty()){
             folders.addAll(bookmarks);
-            groupRoots.add(new GroupInfo(context.getString(R.string.group_folders), folders));
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_bookmarks), folders));
         }
 
         final List<Item> more = new ArrayList<>();
