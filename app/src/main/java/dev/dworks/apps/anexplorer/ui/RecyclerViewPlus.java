@@ -106,6 +106,34 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
         }
     }
 
+    /**
+     * DOWN from the last row has nowhere to go inside the list, and the focus finder would
+     * otherwise pick the nearest view below it, often in the sidebar
+     */
+    @Override
+    public View focusSearch(View focused, int direction) {
+        final View next = super.focusSearch(focused, direction);
+        if (direction == View.FOCUS_DOWN && isVertical() && focused != null
+                && isDescendant(focused) && (next == null || !isDescendant(next))) {
+            return focused;
+        }
+        return next;
+    }
+
+    private boolean isVertical() {
+        return layoutManager instanceof LinearLayoutManager
+                && ((LinearLayoutManager) layoutManager).getOrientation() == LinearLayoutManager.VERTICAL;
+    }
+
+    private boolean isDescendant(View view) {
+        for (android.view.ViewParent parent = view.getParent(); parent != null; parent = parent.getParent()) {
+            if (parent == this) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         return super.dispatchTouchEvent(ev);
