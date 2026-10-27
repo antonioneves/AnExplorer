@@ -36,7 +36,6 @@ import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.IntDef;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
-import androidx.core.app.ShareCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.text.TextUtilsCompat;
@@ -482,20 +481,6 @@ public class Utils extends UtilsFlavour{
 
         int[] colors = new int[]{color, color, color, color};
         return new ColorStateList(states, colors);
-    }
-
-    public static String getSuffix(){
-        return Utils.isProVersion() ? " Pro" : " for Android TV";
-    }
-
-    public static void openFeedback(Activity activity){
-        ShareCompat.IntentBuilder
-                .from(activity)
-                .setEmailTo(new String[]{"hakr@dworks.in"})
-                .setSubject("AnExplorer Feedback" + getSuffix())
-                .setType("text/email")
-                .setChooserTitle("Send Feedback")
-                .startChooser();
     }
 
     public static void openPlaystore(Context çontext){

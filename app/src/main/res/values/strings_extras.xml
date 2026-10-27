@@ -295,8 +295,7 @@
     <string name="detail_title">Details</string>
     <string name="connection_path">Shared path</string>
     <string name="feedback_title">Enjoying AnExplorer?</string>
-    <string name="feedback_message">Rate the app in Play Store or send us feedback. Spread the love!</string>
-    <string name="feedback_feedback">Feedback</string>
+    <string name="feedback_message">Rate the app in Play Store. Spread the love!</string>
     <string name="feedback_rate">Rate</string>
     <string name="feedback_support">Support</string>
     <string name="note_load_failed">Unable to load the file</string>

@@ -17,10 +17,8 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.R.id.action_close;
-import static dev.dworks.apps.anexplorer.R.id.action_feedback;
 import static dev.dworks.apps.anexplorer.R.id.action_rate;
 import static dev.dworks.apps.anexplorer.R.id.action_support;
-import static dev.dworks.apps.anexplorer.misc.Utils.openFeedback;
 import static dev.dworks.apps.anexplorer.misc.Utils.openPlaystore;
 
 /**
@@ -184,7 +182,6 @@ public class AppRate implements View.OnClickListener{
         ImageView icon = (ImageView) mainView.findViewById(android.R.id.icon);
         ImageView action_close = (ImageView) mainView.findViewById(R.id.action_close);
         Button action_rate = (Button) mainView.findViewById(R.id.action_rate);
-        Button action_feedback = (Button) mainView.findViewById(R.id.action_feedback);
         Button action_support = (Button) mainView.findViewById(R.id.action_support);
 
         boolean hideSupport = DocumentsApplication.isPurchased();
@@ -194,12 +191,10 @@ public class AppRate implements View.OnClickListener{
         icon.setImageDrawable(IconUtils.applyTint(activity, R.drawable.ic_support, color));
         action_rate.setTextColor(color);
         action_support.setTextColor(color);
-        action_feedback.setTextColor(color);
 
         action_close.setOnClickListener(this);
         action_rate.setOnClickListener(this);
         action_support.setOnClickListener(this);
-        action_feedback.setOnClickListener(this);
 
         if (delay > 0) {
             activity.getWindow().getDecorView().postDelayed(new Runnable() {
@@ -266,11 +261,6 @@ public class AppRate implements View.OnClickListener{
         } else if (view.getId() == action_rate){
             openPlaystore(activity);
             if (onShowListener != null)onShowListener.onRateAppClicked();
-            hideAllViews(mainView);
-            editor.putBoolean(KEY_CLICKED, true);
-            editor.apply();
-        } else if (view.getId() == action_feedback){
-            openFeedback(activity);
             hideAllViews(mainView);
             editor.putBoolean(KEY_CLICKED, true);
             editor.apply();
