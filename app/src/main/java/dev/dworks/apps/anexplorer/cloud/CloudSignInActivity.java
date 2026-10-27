@@ -98,11 +98,8 @@ public class CloudSignInActivity extends ActionBarActivity {
         setTitle(getString(R.string.cloud_sign_in_title, mTypeName));
         showProgress();
 
-        if (!CloudConnection.isConfigured(mType)) {
-            final String key = TYPE_DROPBOX.equals(mType) ? "DROPBOX_CLIENT_ID"
-                    : TYPE_ONEDRIVE.equals(mType) ? "ONEDRIVE_CLIENT_ID"
-                    : "BOX_CLIENT_ID and BOX_CLIENT_KEY";
-            showError(getString(R.string.cloud_not_configured, mTypeName, key));
+        if (!CloudConnection.isConfigured(this, mType)) {
+            showError(getString(R.string.cloud_not_configured, mTypeName));
             return;
         }
         mState = randomString(16);
@@ -112,9 +109,9 @@ public class CloudSignInActivity extends ActionBarActivity {
             signInWithDeviceCode();
         } else if (TYPE_DROPBOX.equals(mType)) {
             mCodeVerifier = randomString(64);
-            signInOnWeb(DropboxService.getAuthorizeUrl(codeChallenge(mCodeVerifier), mState));
+            signInOnWeb(DropboxService.getAuthorizeUrl(this, codeChallenge(mCodeVerifier), mState));
         } else if (TYPE_BOX.equals(mType)) {
-            signInOnWeb(BoxService.getAuthorizeUrl(mState));
+            signInOnWeb(BoxService.getAuthorizeUrl(this, mState));
         }
     }
 
@@ -205,7 +202,7 @@ public class CloudSignInActivity extends ActionBarActivity {
         final OneDriveService service = (OneDriveService) mService;
         new Thread(() -> {
             try {
-                final JSONObject code = OneDriveService.requestDeviceCode();
+                final JSONObject code = OneDriveService.requestDeviceCode(this);
                 runOnUiThread(() -> showDeviceCode(code.optString("verification_uri"),
                         code.optString("user_code")));
 

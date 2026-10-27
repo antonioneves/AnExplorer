@@ -28,6 +28,7 @@ import android.text.TextUtils;
 import java.io.File;
 
 import dev.dworks.apps.anexplorer.BaseActivity.State;
+import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
@@ -56,6 +57,10 @@ public class AppSettings {
     public static final String KEY_STARRED = "starred";
     public static final String KEY_VIEW_MODE = "viewMode";
     public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
+    public static final String KEY_DROPBOX_CLIENT_ID = "dropboxClientId";
+    public static final String KEY_ONEDRIVE_CLIENT_ID = "oneDriveClientId";
+    public static final String KEY_BOX_CLIENT_ID = "boxClientId";
+    public static final String KEY_BOX_CLIENT_KEY = "boxClientKey";
 
     private AppSettings() {
     }
@@ -135,6 +140,37 @@ public class AppSettings {
             editor.remove(KEY_QUICKSHARE_FOLDER);
         } else {
             editor.putString(KEY_QUICKSHARE_FOLDER, folder.getAbsolutePath());
+        }
+        editor.apply();
+    }
+
+    /** The app key the user entered for a cloud service, or the one built in when there is none */
+    public static String getCloudKey(Context context, String key) {
+        final String value = prefs(context).getString(key, null);
+        return TextUtils.isEmpty(value) ? getBuiltInCloudKey(key) : value;
+    }
+
+    public static boolean hasUserCloudKey(Context context, String key) {
+        return !TextUtils.isEmpty(prefs(context).getString(key, null));
+    }
+
+    public static String getBuiltInCloudKey(String key) {
+        switch (key) {
+            case KEY_DROPBOX_CLIENT_ID: return BuildConfig.DROPBOX_CLIENT_ID;
+            case KEY_ONEDRIVE_CLIENT_ID: return BuildConfig.ONEDRIVE_CLIENT_ID;
+            case KEY_BOX_CLIENT_ID: return BuildConfig.BOX_CLIENT_ID;
+            case KEY_BOX_CLIENT_KEY: return BuildConfig.BOX_CLIENT_KEY;
+            default: return "";
+        }
+    }
+
+    /** Empty goes back to the built-in key */
+    public static void setCloudKey(Context context, String key, String value) {
+        final SharedPreferences.Editor editor = prefs(context).edit();
+        if (value == null || value.trim().isEmpty()) {
+            editor.remove(key);
+        } else {
+            editor.putString(key, value.trim());
         }
         editor.apply();
     }

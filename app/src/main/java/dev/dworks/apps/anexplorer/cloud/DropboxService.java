@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_DROPBOX;
 
@@ -31,14 +31,18 @@ public class DropboxService extends CloudService {
         super(context);
     }
 
-    public static boolean isConfigured() {
-        return !BuildConfig.DROPBOX_CLIENT_ID.isEmpty();
+    public static boolean isConfigured(Context context) {
+        return !clientId(context).isEmpty();
+    }
+
+    private static String clientId(Context context) {
+        return AppSettings.getCloudKey(context, AppSettings.KEY_DROPBOX_CLIENT_ID);
     }
 
     /** The page the user signs in on, using PKCE so the app needs no secret */
-    public static String getAuthorizeUrl(String codeChallenge, String state) {
+    public static String getAuthorizeUrl(Context context, String codeChallenge, String state) {
         return Uri.parse("https://www.dropbox.com/oauth2/authorize").buildUpon()
-                .appendQueryParameter("client_id", BuildConfig.DROPBOX_CLIENT_ID)
+                .appendQueryParameter("client_id", clientId(context))
                 .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("token_access_type", "offline")
                 .appendQueryParameter("code_challenge", codeChallenge)
@@ -52,7 +56,7 @@ public class DropboxService extends CloudService {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "authorization_code");
         params.put("code", code);
-        params.put("client_id", BuildConfig.DROPBOX_CLIENT_ID);
+        params.put("client_id", clientId(context));
         params.put("code_verifier", codeVerifier);
         params.put("redirect_uri", REDIRECT_URI);
         setTokens(postForm(TOKEN_URL, params));
@@ -63,7 +67,7 @@ public class DropboxService extends CloudService {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "refresh_token");
         params.put("refresh_token", refreshToken);
-        params.put("client_id", BuildConfig.DROPBOX_CLIENT_ID);
+        params.put("client_id", clientId(context));
         setTokens(postForm(TOKEN_URL, params));
     }
 

@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_BOX;
 
@@ -39,13 +39,21 @@ public class BoxService extends CloudService {
         super(context);
     }
 
-    public static boolean isConfigured() {
-        return !BuildConfig.BOX_CLIENT_ID.isEmpty() && !BuildConfig.BOX_CLIENT_KEY.isEmpty();
+    public static boolean isConfigured(Context context) {
+        return !clientId(context).isEmpty() && !clientSecret(context).isEmpty();
     }
 
-    public static String getAuthorizeUrl(String state) {
+    private static String clientId(Context context) {
+        return AppSettings.getCloudKey(context, AppSettings.KEY_BOX_CLIENT_ID);
+    }
+
+    private static String clientSecret(Context context) {
+        return AppSettings.getCloudKey(context, AppSettings.KEY_BOX_CLIENT_KEY);
+    }
+
+    public static String getAuthorizeUrl(Context context, String state) {
         return Uri.parse("https://account.box.com/api/oauth2/authorize").buildUpon()
-                .appendQueryParameter("client_id", BuildConfig.BOX_CLIENT_ID)
+                .appendQueryParameter("client_id", clientId(context))
                 .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("redirect_uri", REDIRECT_URI)
                 .appendQueryParameter("state", state)
@@ -56,8 +64,8 @@ public class BoxService extends CloudService {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "authorization_code");
         params.put("code", code);
-        params.put("client_id", BuildConfig.BOX_CLIENT_ID);
-        params.put("client_secret", BuildConfig.BOX_CLIENT_KEY);
+        params.put("client_id", clientId(context));
+        params.put("client_secret", clientSecret(context));
         params.put("redirect_uri", REDIRECT_URI);
         setTokens(postForm(TOKEN_URL, params));
     }
@@ -68,8 +76,8 @@ public class BoxService extends CloudService {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "refresh_token");
         params.put("refresh_token", refreshToken);
-        params.put("client_id", BuildConfig.BOX_CLIENT_ID);
-        params.put("client_secret", BuildConfig.BOX_CLIENT_KEY);
+        params.put("client_id", clientId(context));
+        params.put("client_secret", clientSecret(context));
         setTokens(postForm(TOKEN_URL, params));
     }
 

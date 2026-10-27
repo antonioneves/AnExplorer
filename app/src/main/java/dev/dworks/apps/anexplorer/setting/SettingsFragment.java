@@ -7,12 +7,16 @@ import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -158,6 +162,12 @@ public class SettingsFragment extends Fragment {
                 R.string.pref_folder_animations, R.string.settings_folder_animations_summary,
                 AppSettings.getFolderAnimation(context));
 
+        section = addSection(inflater, R.string.pref_header_cloud);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_DROPBOX_CLIENT_ID, R.string.pref_cloud_dropbox, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_ONEDRIVE_CLIENT_ID, R.string.pref_cloud_onedrive, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_BOX_CLIENT_ID, R.string.pref_cloud_box, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_BOX_CLIENT_KEY, R.string.pref_cloud_box_secret, true);
+
         // The D-pad stops at the ends of the list instead of jumping into the sidebar
         final ViewGroup first = (ViewGroup) mList.getChildAt(0).findViewById(R.id.settings_rows);
         final View firstRow = first.getChildAt(0);
@@ -172,6 +182,55 @@ public class SettingsFragment extends Fragment {
             }
         });
         stopFocus(section.getChildAt(section.getChildCount() - 1), View.FOCUS_DOWN);
+    }
+
+    /** The key itself is never shown again once saved, only whether one is set. */
+    private void addCloudKeyRow(LayoutInflater inflater, ViewGroup section, final String key, final int titleId,
+                                final boolean secret) {
+        final View row = addRow(inflater, section, R.drawable.ic_root_cloud, titleId, 0);
+        final TextView summary = (TextView) row.findViewById(android.R.id.summary);
+        updateCloudKeySummary(summary, key);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Context context = getActivity();
+                final EditText input = new EditText(context);
+                input.setSingleLine(true);
+                input.setHint(R.string.pref_cloud_key_hint);
+                input.setInputType(InputType.TYPE_CLASS_TEXT | (secret
+                        ? InputType.TYPE_TEXT_VARIATION_PASSWORD : InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS));
+                input.setTypeface(Typeface.DEFAULT);
+                final int padding = getResources().getDimensionPixelSize(R.dimen.abc_dialog_padding_material);
+                final FrameLayout frame = new FrameLayout(context);
+                frame.setPadding(padding, padding / 2, padding, 0);
+                frame.addView(input);
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle(titleId)
+                        .setView(frame)
+                        .setPositiveButton(R.string.save, (dialog, which) -> {
+                            AppSettings.setCloudKey(context, key, input.getText().toString());
+                            updateCloudKeySummary(summary, key);
+                        })
+                        .setNeutralButton(R.string.pref_cloud_clear, (dialog, which) -> {
+                            AppSettings.setCloudKey(context, key, "");
+                            updateCloudKeySummary(summary, key);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                input.requestFocus();
+            }
+        });
+    }
+
+    private void updateCloudKeySummary(TextView summary, String key) {
+        final Context context = getActivity();
+        if (AppSettings.hasUserCloudKey(context, key)) {
+            summary.setText(R.string.pref_cloud_key_set);
+        } else if (!AppSettings.getCloudKey(context, key).isEmpty()) {
+            summary.setText(R.string.pref_cloud_key_built_in);
+        } else {
+            summary.setText(R.string.pref_cloud_key_not_set);
+        }
     }
 
     private static void stopFocus(View row, int direction) {

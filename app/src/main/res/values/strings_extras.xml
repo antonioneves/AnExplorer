@@ -115,6 +115,16 @@
     <!-- Size unit, displayed in a button next to an attachment  [CHAR LIMIT=5] -->
     <string name="gigabytes"><xliff:g id="count">%s</xliff:g> GB</string>
     <string name="save">Save</string>
+    <string name="pref_header_cloud">Cloud services</string>
+    <string name="pref_cloud_dropbox">Dropbox app key</string>
+    <string name="pref_cloud_onedrive">OneDrive client ID</string>
+    <string name="pref_cloud_box">Box client ID</string>
+    <string name="pref_cloud_box_secret">Box client secret</string>
+    <string name="pref_cloud_key_not_set">Not set</string>
+    <string name="pref_cloud_key_built_in">Built in</string>
+    <string name="pref_cloud_key_set">Set</string>
+    <string name="pref_cloud_key_hint">Paste the key from the service\'s developer console</string>
+    <string name="pref_cloud_clear">Clear</string>
     <string name="unsaved_changes">Unsaved Changes</string>
     <string name="unsaved_changes_desc">You have unsaved changes, Save them?</string>
     <string name="saf_issue">Your System doesnt allow this operation on Secondary storage on Kitkat. Upgrade to Lollipop to solve this issue..</string>

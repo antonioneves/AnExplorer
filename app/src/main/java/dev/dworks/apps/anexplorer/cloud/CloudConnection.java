@@ -73,14 +73,14 @@ public class CloudConnection implements CloudService.TokenListener {
         return null;
     }
 
-    /** Whether this build carries the app keys the service needs */
-    public static boolean isConfigured(String type) {
+    /** Whether the service has the app keys it needs, built in or entered in Settings */
+    public static boolean isConfigured(Context context, String type) {
         if (TYPE_DROPBOX.equals(type)) {
-            return DropboxService.isConfigured();
+            return DropboxService.isConfigured(context);
         } else if (TYPE_ONEDRIVE.equals(type)) {
-            return OneDriveService.isConfigured();
+            return OneDriveService.isConfigured(context);
         } else if (TYPE_BOX.equals(type)) {
-            return BoxService.isConfigured();
+            return BoxService.isConfigured(context);
         }
         // Google Drive is set up in the Google Cloud console instead, by package and signature
         return TYPE_GDRIVE.equals(type);

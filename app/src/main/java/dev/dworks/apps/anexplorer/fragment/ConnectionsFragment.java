@@ -132,10 +132,19 @@ public class ConnectionsFragment extends RecyclerFragment
         final PopupMenu popup = new PopupMenu(getActivity(), anchor);
         popup.getMenuInflater().inflate(R.menu.connections_options, popup.getMenu());
         final Menu types = popup.getMenu().findItem(R.id.menu_add_connection).getSubMenu();
+        showConfiguredClouds(types);
         SideMenuPopup.show(anchor, types, item -> {
             menuItemAction(item);
             return true;
         });
+    }
+
+    /** A cloud service without an app key can't sign in, so it isn't offered. */
+    private void showConfiguredClouds(Menu types) {
+        final Context context = getActivity();
+        types.findItem(R.id.cloud_dropbox).setVisible(CloudConnection.isConfigured(context, TYPE_DROPBOX));
+        types.findItem(R.id.cloud_onedrive).setVisible(CloudConnection.isConfigured(context, TYPE_ONEDRIVE));
+        types.findItem(R.id.cloud_box).setVisible(CloudConnection.isConfigured(context, TYPE_BOX));
     }
 
 
@@ -221,6 +230,7 @@ public class ConnectionsFragment extends RecyclerFragment
         final MenuItem add = menu.findItem(R.id.menu_add_connection);
         if (add != null) {
             add.setVisible(!mEmpty);
+            showConfiguredClouds(add.getSubMenu());
         }
     }
 

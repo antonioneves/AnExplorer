@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 import static dev.dworks.apps.anexplorer.provider.CloudStorageProvider.TYPE_ONEDRIVE;
 
@@ -37,14 +37,18 @@ public class OneDriveService extends CloudService {
         super(context);
     }
 
-    public static boolean isConfigured() {
-        return !BuildConfig.ONEDRIVE_CLIENT_ID.isEmpty();
+    public static boolean isConfigured(Context context) {
+        return !clientId(context).isEmpty();
+    }
+
+    private static String clientId(Context context) {
+        return AppSettings.getCloudKey(context, AppSettings.KEY_ONEDRIVE_CLIENT_ID);
     }
 
     /** Asks for a code to show; the answer holds user_code, verification_uri and device_code */
-    public static JSONObject requestDeviceCode() throws IOException {
+    public static JSONObject requestDeviceCode(Context context) throws IOException {
         final Map<String, String> params = new ArrayMap<>();
-        params.put("client_id", BuildConfig.ONEDRIVE_CLIENT_ID);
+        params.put("client_id", clientId(context));
         params.put("scope", SCOPES);
         return postForm(LOGIN + "devicecode", params);
     }
@@ -56,7 +60,7 @@ public class OneDriveService extends CloudService {
     public void pollDeviceCode(String deviceCode) throws IOException {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
-        params.put("client_id", BuildConfig.ONEDRIVE_CLIENT_ID);
+        params.put("client_id", clientId(context));
         params.put("device_code", deviceCode);
         setTokens(postForm(LOGIN + "token", params));
     }
@@ -65,7 +69,7 @@ public class OneDriveService extends CloudService {
     protected void refreshAccessToken() throws IOException {
         final Map<String, String> params = new ArrayMap<>();
         params.put("grant_type", "refresh_token");
-        params.put("client_id", BuildConfig.ONEDRIVE_CLIENT_ID);
+        params.put("client_id", clientId(context));
         params.put("refresh_token", refreshToken);
         params.put("scope", SCOPES);
         setTokens(postForm(LOGIN + "token", params));
