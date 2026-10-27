@@ -118,3 +118,7 @@
 -dontwarn com.google.j2objc.annotations.**
 -dontwarn javax.el.**
 -dontwarn org.ietf.jgss.**
+
+# Media3 loads the ffmpeg renderers by reflection
+-keep class androidx.media3.decoder.ffmpeg.** { *; }
+-keep class org.jellyfin.media3.** { *; }

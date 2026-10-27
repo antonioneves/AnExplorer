@@ -2016,6 +2016,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 				}
             }
 
+            if (doc.mimeType != null && (doc.mimeType.startsWith("video/") || doc.mimeType.startsWith("audio/"))) {
+                view.setClass(this, PlayerActivity.class);
+            }
+
             if(Utils.isIntentAvailable(this, view)){
                 //TODO: This temporarily fixes crash when the Activity that is opened is not
                 // exported gives java.lang.SecurityException: Permission Denial:
