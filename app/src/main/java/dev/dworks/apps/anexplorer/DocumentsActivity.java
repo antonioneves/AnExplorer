@@ -702,9 +702,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
         } else {
-            // Videos keeps its tab level (Movies, TV Shows, Folders) in the top tabs, not the dropdown
-            final boolean videoTabLevel = null != root && root.isVideos() && mState.stack.size() <= 2;
-            if (mState.stack.size() <= 1 || videoTabLevel) {
+            if (mState.stack.size() <= 1) {
                 if(null != root){
                     setTitle(root.title);
                     AnalyticsManager.setCurrentScreen(this, root.derivedTag);
