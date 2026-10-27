@@ -218,4 +218,6 @@
     <string name="folder_open_failed">Can\'t open this folder</string>
     <string name="folder_open_failed_reason">It may have been moved or deleted, or its drive removed</string>
     <string name="server_connect_failed">Couldn\'t connect to the server</string>
+    <string name="server_login_refused">The server refused the login</string>
+    <string name="server_login_refused_hint">Check the username and password in the connection\'s Edit menu. Some services need a separate WebDAV password.</string>
 </resources>

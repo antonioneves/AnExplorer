@@ -33,7 +33,7 @@ import dev.dworks.apps.anexplorer.cloud.CloudConnection;
 import dev.dworks.apps.anexplorer.cloud.CloudSignInActivity;
 import dev.dworks.apps.anexplorer.common.DialogBuilder;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment;
-import dev.dworks.apps.anexplorer.directory.DividerItemDecoration;
+import dev.dworks.apps.anexplorer.directory.MarginDecoration;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
@@ -98,18 +98,7 @@ public class ConnectionsFragment extends RecyclerFragment
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
-        final Resources res = getActivity().getResources();
-
-        // Indent our list divider to align with text
-        final boolean insetLeft = res.getBoolean(R.bool.list_divider_inset_left);
-        final int insetSize = res.getDimensionPixelSize(R.dimen.list_divider_inset);
-        DividerItemDecoration decoration = new DividerItemDecoration(getActivity(), VERTICAL);
-        if (insetLeft) {
-            decoration.setInset(insetSize, 0);
-        } else {
-            decoration.setInset(0, insetSize);
-        }
-        getListView().addItemDecoration(decoration);
+        getListView().addItemDecoration(new MarginDecoration(getActivity()));
 
         mEmptyGroup = view.findViewById(R.id.empty_group);
         view.findViewById(R.id.add_connection).setOnClickListener(this::showAddMenu);
@@ -241,20 +230,16 @@ public class ConnectionsFragment extends RecyclerFragment
     }
 
     private void showPopupMenu(View view, final int position) {
-        PopupMenu popup = new PopupMenu(getActivity(), view);
-
+        final PopupMenu popup = new PopupMenu(getActivity(), view);
         popup.getMenuInflater().inflate(R.menu.popup_connections, popup.getMenu());
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem menuItem) {
-                return onPopupMenuItemClick(menuItem, position);
-            }
-        });
-        popup.show();
+        SideMenuPopup.show(view, popup.getMenu(), item -> onPopupMenuItemClick(item, position));
     }
 
     public boolean onPopupMenuItemClick(MenuItem item, int position) {
         final Cursor cursor = mAdapter.getItem(position);
+        if (cursor == null) {
+            return false;
+        }
         int connection_id = getCursorInt(cursor, BaseColumns._ID);
         NetworkConnection networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
         final int id = item.getItemId();

@@ -1305,6 +1305,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		} else if (error != null && error.equals(getString(R.string.server_connect_failed))) {
 			icon = R.drawable.ic_dialog_alert;
 			title = R.string.server_connect_failed;
+		} else if (error != null && error.equals(getString(R.string.server_login_refused))) {
+			icon = R.drawable.ic_dialog_alert;
+			title = R.string.server_login_refused;
+			message = getString(R.string.server_login_refused_hint);
 		} else if (error != null) {
 			final boolean restricted = error.equals(getString(R.string.folder_restricted));
 			icon = restricted ? R.drawable.ic_settings_lock : R.drawable.ic_dialog_alert;

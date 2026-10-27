@@ -61,6 +61,13 @@ public class WebDavNetworkClient extends NetworkClient {
     private static final int METHOD_NOT_ALLOWED = 405;
     private static final int UPLOAD_BUFFER = 64 * 1024;
 
+    /** The server answered, but not accepting the login */
+    public static class LoginRefusedException extends IOException {
+        LoginRefusedException(String message) {
+            super(message);
+        }
+    }
+
     private final OkHttpClient client;
     private final HttpUrl baseUrl;
     private String workingDirectory = NetworkFile.separator;
@@ -277,6 +284,9 @@ public class WebDavNetworkClient extends NetworkClient {
     public FTPFile[] listFiles() throws IOException {
         final HttpUrl url = urlFor(workingDirectory, true);
         try (Response response = propfind(url, "1")) {
+            if (response.code() == 401 || response.code() == 403) {
+                throw new LoginRefusedException("PROPFIND " + workingDirectory + " refused: " + response.code());
+            }
             if (response.code() != MULTI_STATUS) {
                 throw new IOException("PROPFIND " + workingDirectory + " failed: " + response.code());
             }

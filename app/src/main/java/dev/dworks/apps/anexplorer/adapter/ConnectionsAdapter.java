@@ -77,7 +77,8 @@ public class ConnectionsAdapter extends CursorRecyclerViewAdapter<ConnectionsAda
                     if(null != onItemClickListener) {
                         onItemClickListener.onItemLongClick(ViewHolder.this, v, getLayoutPosition());
                     }
-                    return false;
+                    // Or the release also opens the connection
+                    return true;
                 }
             });
 
