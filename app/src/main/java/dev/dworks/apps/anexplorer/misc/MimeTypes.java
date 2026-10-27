@@ -87,6 +87,43 @@ public final class MimeTypes {
         MIME_TYPES.put("flv", "video/x-flv");
         MIME_TYPES.put("mkv", "video/x-matroska");
 
+        // Formats Nova Video Player plays; the platform map lacks most of them
+        MIME_TYPES.put("ts", "video/mp2t");
+        MIME_TYPES.put("m2ts", "video/mp2t");
+        MIME_TYPES.put("mts", "video/mp2t");
+        MIME_TYPES.put("trp", "video/mp2t");
+        MIME_TYPES.put("vob", "video/mpeg");
+        MIME_TYPES.put("m2v", "video/mpeg");
+        MIME_TYPES.put("ps", "video/mp2p");
+        MIME_TYPES.put("f4v", "video/x-f4v");
+        MIME_TYPES.put("wmv", "video/x-ms-wmv");
+        MIME_TYPES.put("dvr-ms", "video/x-ms-wmv");
+        MIME_TYPES.put("asf", "video/x-ms-asf");
+        MIME_TYPES.put("rmvb", "video/vnd.rn-realvideo");
+        MIME_TYPES.put("rm", "video/vnd.rn-realvideo");
+        MIME_TYPES.put("divx", "video/x-msvideo");
+        MIME_TYPES.put("ogm", "video/ogg");
+        MIME_TYPES.put("wtv", "video/wtv");
+        MIME_TYPES.put("amv", "video/x-amv");
+        MIME_TYPES.put("h264", "video/h264");
+        MIME_TYPES.put("264", "video/h264");
+        MIME_TYPES.put("mpg4", "video/mp4");
+        MIME_TYPES.put("mpeg4", "video/mp4");
+        MIME_TYPES.put("3gp", "video/3gpp");
+        MIME_TYPES.put("3g2", "video/3gpp2");
+
+        MIME_TYPES.put("ac3", "audio/ac3");
+        MIME_TYPES.put("eac3", "audio/eac3");
+        MIME_TYPES.put("dts", "audio/vnd.dts");
+        MIME_TYPES.put("opus", "audio/ogg");
+        MIME_TYPES.put("ape", "audio/x-ape");
+        MIME_TYPES.put("wv", "audio/x-wavpack");
+        MIME_TYPES.put("dsf", "audio/x-dsf");
+        MIME_TYPES.put("wma", "audio/x-ms-wma");
+        MIME_TYPES.put("m4b", "audio/mp4");
+        MIME_TYPES.put("adts", "audio/aac");
+        MIME_TYPES.put("mid", "audio/midi");
+        MIME_TYPES.put("midi", "audio/midi");
     }
 
     public static String getMimeTypeFromExtension(String extension) {
