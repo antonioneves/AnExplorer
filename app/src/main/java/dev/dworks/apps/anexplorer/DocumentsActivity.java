@@ -701,6 +701,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             setTitle(null);
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
+        } else if (null != root && (root.isApp() || root.isApk()
+                || (root.isVideos() && mState.stack.size() <= 2))) {
+            // The top tabs name the screen, so no title or folder dropdown beside them
+            setTitle(null);
+            mToolbarStack.setVisibility(View.GONE);
+            mToolbarStack.setAdapter(null);
         } else {
             if (mState.stack.size() <= 1) {
                 if(null != root){
