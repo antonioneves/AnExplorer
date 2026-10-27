@@ -67,6 +67,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.network.SftpNetworkClient;
+import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
@@ -405,8 +406,8 @@ public class CreateConnectionFragment extends DialogFragment {
         if (null != editedServer) {
             // build() resets the path to the root; the server shares the folder in the form
             networkConnection.path = path.getText().toString();
-        } else if (WebDavNetworkClient.isWebDav(networkConnection.scheme)) {
-            // The share's folder, such as /remote.php/dav/files/me on Nextcloud
+        } else if (opensAtFolder(networkConnection.scheme)) {
+            // The share's folder, such as /remote.php/dav/files/me on Nextcloud, or an SMB share
             final String folder = path.getText().toString().trim();
             if (!TextUtils.isEmpty(folder)) {
                 networkConnection.path = folder.startsWith("/") ? folder : "/" + folder;
@@ -444,7 +445,7 @@ public class CreateConnectionFragment extends DialogFragment {
         host.setText(uri.getHost());
         port.setText(Integer.toString(uri.getPort() > 0 ? uri.getPort() : defaultPort(given)));
         final String folder = uri.getPath();
-        if (WebDavNetworkClient.isWebDav(given) && !TextUtils.isEmpty(folder) && !"/".equals(folder)
+        if (opensAtFolder(given) && !TextUtils.isEmpty(folder) && !"/".equals(folder)
                 && TextUtils.isEmpty(path.getText())) {
             path.setText(folder);
         }
@@ -465,10 +466,12 @@ public class CreateConnectionFragment extends DialogFragment {
     /** The kinds of the scheme's family, so the FTP dialog offers FTP, FTPS and SFTP */
     private void showSchemes(Context context, String given) {
         final boolean webDav = WebDavNetworkClient.isWebDav(given);
-        schemes = getResources().getStringArray(webDav
-                ? R.array.webdav_connection_schemes : R.array.ftp_connection_schemes);
+        final boolean smb = SmbNetworkClient.SCHEME.equals(given);
+        schemes = getResources().getStringArray(webDav ? R.array.webdav_connection_schemes
+                : smb ? R.array.smb_connection_schemes : R.array.ftp_connection_schemes);
         final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(context,
-                webDav ? R.array.webdav_connection_types : R.array.ftp_connection_types,
+                webDav ? R.array.webdav_connection_types
+                        : smb ? R.array.smb_connection_types : R.array.ftp_connection_types,
                 android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         scheme.setAdapter(adapter);
@@ -481,7 +484,8 @@ public class CreateConnectionFragment extends DialogFragment {
         }
         final String selected = schemes[position];
         final boolean webDav = WebDavNetworkClient.isWebDav(selected);
-        pathContainer.setVisibility(webDav ? View.VISIBLE : View.GONE);
+        final boolean smb = SmbNetworkClient.SCHEME.equals(selected);
+        pathContainer.setVisibility(opensAtFolder(selected) ? View.VISIBLE : View.GONE);
         // SSH always logs in as someone
         final boolean sftp = SftpNetworkClient.SCHEME.equals(selected);
         if (sftp) {
@@ -491,7 +495,8 @@ public class CreateConnectionFragment extends DialogFragment {
         view.findViewById(R.id.keyContainer).setVisibility(sftp ? View.VISIBLE : View.GONE);
         showKey();
         ((TextInputLayout) view.findViewById(R.id.pathLayout)).setHint(
-                webDav ? R.string.connection_webdav_folder : R.string.connection_shared_folder);
+                webDav ? R.string.connection_webdav_folder
+                        : smb ? R.string.connection_smb_share : R.string.connection_shared_folder);
 
         final String current = port.getText().toString();
         final boolean usualPort = shownScheme >= 0
@@ -555,9 +560,17 @@ public class CreateConnectionFragment extends DialogFragment {
                 .show();
     }
 
+    /** WebDAV and SMB connections can open at a folder of the server, or an SMB share */
+    private static boolean opensAtFolder(String scheme) {
+        return WebDavNetworkClient.isWebDav(scheme) || SmbNetworkClient.SCHEME.equals(scheme);
+    }
+
     private static int defaultPort(String scheme) {
         if (SftpNetworkClient.SCHEME.equals(scheme)) {
             return SftpNetworkClient.DEFAULT_PORT;
+        }
+        if (SmbNetworkClient.SCHEME.equals(scheme)) {
+            return SmbNetworkClient.DEFAULT_PORT;
         }
         return WebDavNetworkClient.isWebDav(scheme) ? WebDavNetworkClient.defaultPort(scheme) : 21;
     }

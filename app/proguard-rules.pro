@@ -106,3 +106,15 @@
 ## ---------------- End Project specifics ---------------- ##
 # JSch (SFTP) loads its ciphers and key exchanges by class name
 -keep class com.jcraft.jsch.** { *; }
+
+# smbj (SMB) and its share listing load classes by name and use BouncyCastle for NTLM
+-keep class com.hierynomus.** { *; }
+-keep class net.engio.mbassy.** { *; }
+-keep class com.rapid7.client.dcerpc.** { *; }
+-dontwarn com.hierynomus.**
+-dontwarn net.engio.mbassy.**
+-dontwarn com.rapid7.client.dcerpc.**
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.j2objc.annotations.**
+-dontwarn javax.el.**
+-dontwarn org.ietf.jgss.**

@@ -192,6 +192,14 @@
         <item>webdavs</item>
     </string-array>
 
+    <string-array name="smb_connection_types" translatable="false">
+        <item>SMB</item>
+    </string-array>
+
+    <string-array name="smb_connection_schemes" translatable="false">
+        <item>smb</item>
+    </string-array>
+
     <string name="primary_color">Primary Color</string>
     <string name="accent_color">Accent Color</string>
 

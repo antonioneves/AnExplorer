@@ -84,6 +84,11 @@ dependencies {
     // ed25519 keys, which JSch takes from Bouncy Castle where Java's own (15+) isn't there
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.hierynomus:smbj:0.15.0'
+    // A server's shares, listed over its srvsvc pipe
+    implementation('com.rapid7.client:dcerpc:0.12.13') {
+        exclude group: 'com.hierynomus', module: 'smbj'
+    }
     implementation 'com.zsoltsafrany:needle:1.0.0'
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
     implementation 'com.google.android.gms:play-services-nearby:19.3.0'

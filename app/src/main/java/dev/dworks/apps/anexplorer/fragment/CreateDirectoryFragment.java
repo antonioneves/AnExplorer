@@ -120,7 +120,7 @@ public class CreateDirectoryFragment extends DialogFragment {
 				client = DocumentsApplication.acquireUnstableProviderOrThrow(resolver, mCwd.derivedUri.getAuthority());
                 final Uri childUri = DocumentsContract.createDocument(
                 		resolver, mCwd.derivedUri, Document.MIME_TYPE_DIR, mDisplayName);
-                return DocumentInfo.fromUri(resolver, childUri);
+                return childUri == null ? null : DocumentInfo.fromUri(resolver, childUri);
             } catch (Exception e) {
                 Log.w(TAG, "Failed to create directory", e);
                 CrashReportingManager.logException(e);

@@ -60,11 +60,21 @@ public abstract class NetworkClient{
         return false;
     }
 
+    /** Whether files and folders can be made in this folder */
+    public boolean canCreateIn(String folder) {
+        return supportsEditing();
+    }
+
+    /** Whether the document at this path can be deleted */
+    public boolean canDelete(String path) {
+        return supportsEditing();
+    }
+
     public static NetworkClient create(String scheme, String host, int port, String userName, String password) {
         return create(scheme, host, port, userName, password, null);
     }
 
-    /** @param path the folder of the server a WebDAV connection opens at */
+    /** @param path the folder of the server a WebDAV or SMB connection opens at */
     public static NetworkClient create(String scheme, String host, int port, String userName,
                                        String password, String path) {
         if(WebDavNetworkClient.isWebDav(scheme)){
@@ -76,6 +86,8 @@ public abstract class NetworkClient{
             return new FTPSNetworkClient(host, port, userName, password);
         } else if(SftpNetworkClient.SCHEME.equals(scheme)){
             return new SftpNetworkClient(host, port, userName, password);
+        } else if(SmbNetworkClient.SCHEME.equals(scheme)){
+            return new SmbNetworkClient(host, port, path, userName, password);
         }
         return null;
     }

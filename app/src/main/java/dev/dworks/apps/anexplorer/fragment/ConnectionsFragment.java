@@ -39,6 +39,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
@@ -362,6 +363,9 @@ public class ConnectionsFragment extends RecyclerFragment
         } else if (itemId == R.id.network_webdav){
             addConnection(WebDavNetworkClient.SCHEME);
             AnalyticsManager.logEvent("add_webdav");
+        } else if (itemId == R.id.network_smb){
+            addConnection(SmbNetworkClient.SCHEME);
+            AnalyticsManager.logEvent("add_smb");
         }
     }
 }

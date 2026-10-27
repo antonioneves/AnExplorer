@@ -1114,14 +1114,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		int icon = R.drawable.ic_folder_empty;
 		int title = R.string.empty;
 		String message = null;
-		if (error != null) {
+		if (error != null && error.equals(getString(R.string.server_connect_failed))) {
+			icon = R.drawable.ic_dialog_alert;
+			title = R.string.server_connect_failed;
+		} else if (error != null) {
 			final boolean restricted = error.equals(getString(R.string.folder_restricted));
 			icon = restricted ? R.drawable.ic_settings_lock : R.drawable.ic_dialog_alert;
 			title = R.string.folder_open_failed;
 			message = restricted ? error : getString(R.string.folder_open_failed_reason);
-		} else if (null != root && root.isNetworkStorage()) {
-			icon = R.drawable.ic_dialog_alert;
-			title = R.string.server_connect_failed;
 		}
 		mEmptyIcon.setImageResource(icon);
 		mEmptyView.setText(title);

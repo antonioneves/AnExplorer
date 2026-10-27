@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
@@ -20,7 +21,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
@@ -72,6 +77,9 @@ public class NetworkStorageProvider extends DocumentsProvider {
 
     @GuardedBy("mRootsLock")
     private ArrayMap<String, NetworkConnection> mRoots = new ArrayMap<>();
+
+    /** Folders made here, which a lookup by ID alone would otherwise take for files */
+    private final Set<String> mMadeFolders = Collections.synchronizedSet(new HashSet<>());
 
     @Override
     public boolean onCreate() {
@@ -185,6 +193,11 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 files = listFiles(connection, parent);
             } catch (IOException again) {
                 CrashReportingManager.logException(again);
+                // Tells an unreachable server apart from an empty folder
+                final Bundle extras = new Bundle();
+                extras.putString(DocumentsContract.EXTRA_ERROR,
+                        getContext().getString(R.string.server_connect_failed));
+                result.setExtras(extras);
                 files = new FTPFile[0];
             }
         }
@@ -249,10 +262,15 @@ public class NetworkStorageProvider extends DocumentsProvider {
             if (!created) {
                 throw new IOException("Server refused to create " + file.getPath());
             }
+            if (Document.MIME_TYPE_DIR.equals(mimeType)) {
+                mMadeFolders.add(getDocIdForFile(file));
+            }
             notifyFolderChanged(documentId);
         } catch (IOException e) {
-            throw new FileNotFoundException("Failed to create document with name " +
-                    displayName +" and documentId " + documentId);
+            final FileNotFoundException failed = new FileNotFoundException(
+                    "Failed to create document with name " + displayName + " and documentId " + documentId);
+            failed.initCause(e);
+            throw failed;
         }
         return getDocIdForFile(file);
     }
@@ -449,16 +467,22 @@ public class NetworkStorageProvider extends DocumentsProvider {
             docId = getDocIdForFile(file);
         } else {
             file = getFileForDocId(docId);
+            if (mMadeFolders.contains(docId)) {
+                final FTPFile folder = new FTPFile();
+                folder.setName(file.getName());
+                folder.setType(FTPFile.DIRECTORY_TYPE);
+                folder.setTimestamp(Calendar.getInstance());
+                file = new NetworkFile(file.getParentFile(), folder);
+            }
         }
 
         int flags = 0;
 
         final NetworkConnection connection = getNetworkConnection(docId);
-        final boolean editable = null != connection && null != connection.getClient()
-                && connection.getClient().supportsEditing();
+        final NetworkClient client = null != connection ? connection.getClient() : null;
         if (file.canWrite()) {
             if (file.isDirectory()) {
-                if (editable) {
+                if (null != client && client.canCreateIn(file.getPath())) {
                     flags |= Document.FLAG_DIR_SUPPORTS_CREATE;
                 }
             } else {
@@ -468,7 +492,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
             flags |= Document.FLAG_SUPPORTS_RENAME;
             flags |= Document.FLAG_SUPPORTS_MOVE;
             flags |= Document.FLAG_SUPPORTS_EDIT;*/
-            if (editable) {
+            if (null != client && client.canDelete(file.getPath())) {
                 flags |= Document.FLAG_SUPPORTS_DELETE;
             }
         }
