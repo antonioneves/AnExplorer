@@ -151,6 +151,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private String mStateKey;
 	// Set when the folder was picked from the sidebar, so the user can keep moving through it
 	private boolean mKeepSidebarFocus;
+	private boolean mKeepTabFocus;
 	// The row to focus once the selection bar closes and the files load again; -1 for none
 	private int mRefocusPosition = -1;
 	private boolean mReloadAppsOnResume;
@@ -255,6 +256,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		// picked it from
 		if (context instanceof Activity) {
 			mKeepSidebarFocus = isInSidebar(((Activity) context).getCurrentFocus());
+			mKeepTabFocus = isInTabs((Activity) context, ((Activity) context).getCurrentFocus());
 		}
 	}
 
@@ -391,11 +393,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 				mLastSortOrder = state.derivedSortOrder;
 				// Don't take focus from the search field while the user is typing, or from the
-				// sidebar while the user is moving through it
+				// sidebar while the user is moving through it, or from the tab they just picked
 				if (mRefocusPosition >= 0) {
 					// The files changed after the selection bar closed, deleted ones gone
 					focusRow();
 					mRefocusPosition = -1;
+				} else if (mKeepTabFocus) {
+					focusSelectedTab();
 				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus
 						&& !(mAdapter.isEmpty() && (mAppTabs.getVisibility() == View.VISIBLE
 						|| mVideoTabs.getVisibility() == View.VISIBLE))) {
@@ -519,6 +523,33 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				(null != shown ? shown : list).requestFocus();
 			});
 		});
+	}
+
+	/** Puts focus back on the tab picked, as swapping the folder can drop it. */
+	private void focusSelectedTab() {
+		final View strip = mAppTabs.getVisibility() == View.VISIBLE ? mAppTabs
+				: mVideoTabs.getVisibility() == View.VISIBLE ? mVideoTabs : null;
+		if (null == strip) {
+			return;
+		}
+		final ViewGroup group = (ViewGroup) strip;
+		for (int i = 0; i < group.getChildCount(); i++) {
+			if (group.getChildAt(i).isSelected()) {
+				group.getChildAt(i).requestFocus();
+				return;
+			}
+		}
+	}
+
+	private static boolean isInTabs(Activity activity, View view) {
+		final View appTabs = activity.findViewById(R.id.app_tabs);
+		final View videoTabs = activity.findViewById(R.id.video_tabs);
+		for (View v = view; v != null; v = v.getParent() instanceof View ? (View) v.getParent() : null) {
+			if (v == appTabs || v == videoTabs) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean isInList(View view) {
