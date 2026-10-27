@@ -439,6 +439,10 @@ public class RootsFragment extends Fragment {
                 if (rows > 0) {
                     Utils.showSnackBar(getActivity(), "Bookmark removed");
                     RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
+                    final Fragment directory = DirectoryFragment.get(getActivity().getFragmentManager());
+                    if (directory instanceof DirectoryFragment) {
+                        ((DirectoryFragment) directory).onMarksChanged();
+                    }
                 }
             }
         }).setNegativeButton(android.R.string.cancel, null);

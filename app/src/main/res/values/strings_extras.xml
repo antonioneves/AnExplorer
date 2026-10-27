@@ -246,6 +246,7 @@
     <string name="menu_unstar">Unstar</string>
     <string name="starred">Starred</string>
     <string name="unstarred">Removed from Starred</string>
+    <string name="bookmarked">Bookmarked</string>
     <plurals name="delete_permanently">
         <item quantity="one">This item will be permanently deleted. Are you sure?</item>
         <item quantity="other">These %d items will be permanently deleted. Are you sure?</item>

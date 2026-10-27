@@ -140,6 +140,16 @@ public class ListDocumentHolder extends DocumentHolder {
             }
         }
 
+        final boolean local = !TextUtils.isEmpty(mDoc.path)
+                && ExternalStorageProvider.AUTHORITY.equals(mDoc.authority);
+        if (badgeStarred != null) {
+            badgeStarred.setVisibility(local && mEnv.isStarred(mDoc.path) ? View.VISIBLE : View.GONE);
+        }
+        if (badgeBookmarked != null) {
+            badgeBookmarked.setVisibility(local && Utils.isDir(mDoc.mimeType)
+                    && mEnv.isBookmarked(mDoc.path) ? View.VISIBLE : View.GONE);
+        }
+
         if (icon1 != null)
             icon1.setVisibility(View.GONE);
         if (icon2 != null)

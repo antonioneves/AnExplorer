@@ -59,6 +59,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.BaseActivity.State;
@@ -167,6 +168,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private boolean mHideGridTitles = false;
 
 	private DocumentsAdapter mAdapter;
+	private final HashSet<String> mStarredPaths = new HashSet<>();
+	private final HashSet<String> mBookmarkedPaths = new HashSet<>();
 	private LoaderCallbacks<DirectoryResult> mCallbacks;
 
 	private final int mLoaderId = 42;
@@ -359,6 +362,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					return;
 
 				saveDisplayState();
+				loadMarkedPaths();
 				mAdapter.swapResult(result);
 
 				// Push latest state up to UI
@@ -568,6 +572,15 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		updateDisplayState();
 	}
+
+    /** Refreshes the star and bookmark badges after they change elsewhere, like the sidebar. */
+    public void onMarksChanged() {
+        if (mAdapter == null) {
+            return;
+        }
+        loadMarkedPaths();
+        mAdapter.notifyDataSetChanged();
+    }
 
     private void updateUserState(String column) {
         final ContentResolver resolver = getActivity().getContentResolver();
@@ -1034,6 +1047,30 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		}
 		Utils.showSnackBar(getActivity(), getString(star ? R.string.starred : R.string.unstarred));
+		loadMarkedPaths();
+		mAdapter.notifyDataSetChanged();
+	}
+
+	/** Reads which paths are starred or bookmarked, for the badges on the rows */
+	private void loadMarkedPaths() {
+		mStarredPaths.clear();
+		mBookmarkedPaths.clear();
+		readPaths(ExplorerProvider.buildStarred(), ExplorerProvider.StarredColumns.PATH, mStarredPaths);
+		readPaths(ExplorerProvider.buildBookmark(), ExplorerProvider.BookmarkColumns.PATH, mBookmarkedPaths);
+	}
+
+	private void readPaths(Uri uri, String column, HashSet<String> paths) {
+		Cursor cursor = null;
+		try {
+			cursor = getActivity().getContentResolver().query(uri, new String[]{column}, null, null, null);
+			while (null != cursor && cursor.moveToNext()) {
+				paths.add(cursor.getString(0));
+			}
+		} catch (Exception e) {
+			Log.w(TAG, "Couldn't read " + uri, e);
+		} finally {
+			IoUtils.closeQuietly(cursor);
+		}
 	}
 
 	/** Moves the files into the locked folder; true when some of them couldn't be */
@@ -1533,6 +1570,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		if(null != uri) {
 			Utils.showSnackBar(getActivity(), "Bookmark added");
 			RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
+			loadMarkedPaths();
+			mAdapter.notifyDataSetChanged();
 		}
 		Bundle params = new Bundle();
 		AnalyticsManager.logEvent("bookmarked", root, params);
@@ -1654,6 +1693,16 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		@Override
 		public IconHelper getIconHelper() {
 			return mIconHelper;
+		}
+
+		@Override
+		public boolean isStarred(String path) {
+			return mStarredPaths.contains(path);
+		}
+
+		@Override
+		public boolean isBookmarked(String path) {
+			return mBookmarkedPaths.contains(path);
 		}
 	}
 

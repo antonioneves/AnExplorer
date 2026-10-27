@@ -103,6 +103,28 @@
                     android:contentDescription="@null"
                     android:scaleType="centerInside" />
 
+                <ImageView
+                    android:id="@+id/badge_starred"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_gravity="center_vertical"
+                    android:contentDescription="@string/starred"
+                    android:src="@drawable/ic_star"
+                    android:visibility="gone"
+                    app:tint="@color/defaultThemeColor" />
+
+                <ImageView
+                    android:id="@+id/badge_bookmarked"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_gravity="center_vertical"
+                    android:contentDescription="@string/bookmarked"
+                    android:src="@drawable/ic_menu_bookmark"
+                    android:visibility="gone"
+                    app:tint="@color/defaultThemeColor" />
+
             </LinearLayout>
 
             <!-- The date, then the size (or a folder's item count) on a line of its own -->

@@ -119,7 +119,7 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo("Library", libraryItems));
         }
 
-        if(!folders.isEmpty()){
+        if(!folders.isEmpty() || !bookmarks.isEmpty()){
             folders.addAll(bookmarks);
             groupRoots.add(new GroupInfo("Folders", folders));
         }

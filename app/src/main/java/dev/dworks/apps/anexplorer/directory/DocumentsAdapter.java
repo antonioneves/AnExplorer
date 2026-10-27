@@ -221,5 +221,9 @@ public class DocumentsAdapter extends RecyclerView.Adapter<BaseHolder> {
         MultiChoiceHelper getMultiChoiceHelper();
 
         IconHelper getIconHelper();
+
+        boolean isStarred(String path);
+
+        boolean isBookmarked(String path);
     }
 }
