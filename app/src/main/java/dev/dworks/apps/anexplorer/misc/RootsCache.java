@@ -564,7 +564,6 @@ public class RootsCache {
         for (RootInfo root : roots) {
             final boolean supportsCreate = (root.flags & Root.FLAG_SUPPORTS_CREATE) != 0;
             final boolean supportsIsChild = (root.flags & Root.FLAG_SUPPORTS_IS_CHILD) != 0;
-            final boolean advanced = (root.flags & DocumentsContract.Root.FLAG_ADVANCED) != 0;
             final boolean superAdvanced = (root.flags & Root.FLAG_SUPER_ADVANCED) != 0;
             final boolean localOnly = (root.flags & Root.FLAG_LOCAL_ONLY) != 0;
             final boolean empty = (root.flags & DocumentsContract.Root.FLAG_EMPTY) != 0;
@@ -573,8 +572,8 @@ public class RootsCache {
             if (state.action == State.ACTION_CREATE && !supportsCreate) continue;
             // Exclude roots that don't support directory picking
             if (state.action == State.ACTION_OPEN_TREE && !supportsIsChild) continue;
-            // Exclude advanced devices when not requested
-            if (!state.showAdvanced && advanced) continue;
+            // Only the System root is hidden when advanced storage is off
+            if (!state.showAdvanced && superAdvanced) continue;
             // Exclude non-local devices when local only
             if (state.localOnly && !localOnly) continue;
             // Only show empty roots when creating

@@ -239,7 +239,7 @@
     <string name="settings_recent_media_summary">List your newest photos, videos and music on Home</string>
     <string name="settings_primary_color_summary">Sets the colors of the whole app</string>
     <string name="settings_accent_color_summary">Highlights selections and progress</string>
-    <string name="settings_advanced_devices_summary">List every storage location, including the internal storage</string>
+    <string name="settings_advanced_devices_summary">Show system storage</string>
     <string name="settings_folder_animations_summary">Slide between folders as you open and close them</string>
 
     <string name="root_recycle_bin">Recycle Bin</string>
