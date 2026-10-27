@@ -66,6 +66,7 @@ import dev.dworks.apps.anexplorer.misc.DiskInfo;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.RecycleBin;
+import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
 import dev.dworks.apps.anexplorer.misc.StorageUtils;
 import dev.dworks.apps.anexplorer.misc.StorageVolume;
@@ -501,7 +502,7 @@ public class ExternalStorageProvider extends StorageProvider {
      * an empty folder of the app's own, so its document id resolves like any other.
      */
     private void includeStarredRoot() {
-        if (!AppSettings.isStarredEnabled(getContext())) {
+        if (!AppSettings.isStarredEnabled(getContext()) || !hasStarred()) {
             return;
         }
         try {
@@ -518,6 +519,23 @@ public class ExternalStorageProvider extends StorageProvider {
         }
     }
 
+    /** The root is only listed while something that still exists is starred */
+    private boolean hasStarred() {
+        Cursor cursor = null;
+        try {
+            cursor = getContext().getContentResolver().query(ExplorerProvider.buildStarred(),
+                    new String[]{ExplorerProvider.StarredColumns.PATH}, null, null, null);
+            while (null != cursor && cursor.moveToNext()) {
+                if (new File(cursor.getString(0)).exists()) {
+                    return true;
+                }
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        return false;
+    }
+
     private static boolean isStarredRoot(String docId) {
         return (ROOT_ID_STARRED + ':').equals(docId);
     }
@@ -525,6 +543,8 @@ public class ExternalStorageProvider extends StorageProvider {
     public static void notifyStarredChanged(Context context) {
         context.getContentResolver().notifyChange(
                 DocumentsContract.buildChildDocumentsUri(AUTHORITY, ROOT_ID_STARRED + ':'), null, false);
+        // The root appears with the first star and goes with the last
+        RootsCache.updateRoots(context, AUTHORITY);
     }
 
     /** Lists the starred files that still exist */

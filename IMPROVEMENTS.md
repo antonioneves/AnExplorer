@@ -26,8 +26,8 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Signing in to the cloud services with the build's keys.
 - The Menu key opening an item's menu.
 - Done or Enter creating and renaming.
-- The empty states of Starred and the Recycle Bin.
-- Focus staying in Starred after unstarring.
+- The empty state of the Recycle Bin.
+- The Starred folder showing up with the first star and going with the last (focus lands on the sidebar afterwards).
 - The interface text moved into string resources.
 - Right from the sidebar moving into the file list.
 
@@ -38,7 +38,7 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - A custom Quick Share download folder, and receiving text over Quick Share.
 - The APKs sidebar entry.
 - Right and Left from the sidebar in a right-to-left language.
-- Unstarring one of two Starred items.
+- Unstarring one of two Starred items, and focus in the list afterwards.
 
 ## Known issues
 - **APKs: Up from the app tabs goes to the view toggle in the toolbar.** Left as it is, because it's the only way to reach the toolbar from there. An explicit `nextFocusUp` could point it somewhere better.
