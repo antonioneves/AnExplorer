@@ -52,6 +52,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
 
     private TextView status;
     private TextView username;
+    private View passwordRow;
     private TextView password;
     private ImageButton passwordVisibility;
     private String passwordValue;
@@ -93,6 +94,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         status =(TextView) view.findViewById(R.id.status);
         username =(TextView) view.findViewById(R.id.username);
+        passwordRow = view.findViewById(R.id.password_row);
         password =(TextView) view.findViewById(R.id.password);
         passwordVisibility = (ImageButton) view.findViewById(R.id.password_visibility);
         if (null != passwordVisibility) {
@@ -142,21 +144,22 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
 
     private void showPassword() {
+        // Anonymous access has no password to show
         final boolean hasPassword = !TextUtils.isEmpty(passwordValue);
+        passwordRow.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
         if (!hasPassword) {
-            // Anonymous access has no password; say so instead of leaving the value blank
-            password.setText(R.string.ftp_no_password);
-        } else if (passwordShown || null == passwordVisibility) {
+            return;
+        }
+        if (passwordShown || null == passwordVisibility) {
             password.setText(passwordValue);
         } else {
             password.setText(maskedPassword());
         }
         // As wide shown as hidden, so the eye button beside it stays where it is
-        password.setMinWidth(!hasPassword ? 0 : (int) Math.ceil(Math.max(
+        password.setMinWidth((int) Math.ceil(Math.max(
                 password.getPaint().measureText(passwordValue),
                 password.getPaint().measureText(maskedPassword()))));
         if (null != passwordVisibility) {
-            passwordVisibility.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
             passwordVisibility.setImageResource(passwordShown
                     ? R.drawable.design_ic_visibility_off : R.drawable.design_ic_visibility);
             passwordVisibility.setContentDescription(getString(passwordShown

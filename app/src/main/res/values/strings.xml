@@ -133,7 +133,6 @@
     <string name="quickshare_receive_visible">Visible to nearby devices</string>
     <string name="quickshare_receive_stop">Stop</string>
     <string name="quickshare_receive_start">Start</string>
-    <string name="ftp_no_password">None</string>
     <string name="ftp_show_password">Show password</string>
     <string name="ftp_hide_password">Hide password</string>
     <string name="ftp_edit">Edit</string>
