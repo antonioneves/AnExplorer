@@ -1294,7 +1294,15 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		int icon = R.drawable.ic_folder_empty;
 		int title = null != root && (root.isApp() || root.isApk()) ? R.string.empty_nothing : R.string.empty;
 		String message = null;
-		if (error != null && error.equals(getString(R.string.server_connect_failed))) {
+		if (error == null && null != root && root.isStarred()) {
+			icon = R.drawable.ic_root_starred;
+			title = R.string.empty_starred;
+			message = getString(R.string.empty_starred_hint);
+		} else if (error == null && isRecycleBin()) {
+			icon = R.drawable.ic_root_recycle_bin;
+			title = R.string.empty_bin;
+			message = getString(R.string.empty_bin_hint);
+		} else if (error != null && error.equals(getString(R.string.server_connect_failed))) {
 			icon = R.drawable.ic_dialog_alert;
 			title = R.string.server_connect_failed;
 		} else if (error != null) {
