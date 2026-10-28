@@ -1138,8 +1138,18 @@ final class PptxSlides {
             css.append("border-radius:").append(fmt(Math.min(box.w, box.h)
                     * adjust(geom, "adj", 16667) / 100000)).append("px;");
         }
+        final Element cust = geom == null ? firstWith(sps, "a:custGeom") : null;
+        final String shapePath = cust == null ? null : custom(cust, box);
+        if (shapePath != null) {
+            css.append("clip-path:path('").append(shapePath).append("');");
+        }
+        final Element duotone = path(blipFill, "a:blip", "a:duotone");
+        final String filter = duotone == null ? null : duotoneFilter(duotone, ctx.theme, out);
+        if (filter != null) {
+            css.append("filter:url(#").append(filter).append(");");
+        }
         final Line line = line(new Element[]{pic}, null, ctx.theme);
-        if (visible(line)) {
+        if (visible(line) && shapePath == null) {
             css.append("border:").append(fmt(Math.max(line.width, 0.75))).append("px ").append(dashStyle(line.dash))
                     .append(' ').append(line.color).append(';');
         }
@@ -1152,6 +1162,58 @@ final class PptxSlides {
                 .append("px;height:").append(fmt(box.h / Math.max(kh, 0.01))).append("px;left:")
                 .append(fmt(-l / Math.max(kw, 0.01) * box.w)).append("px;top:")
                 .append(fmt(-t / Math.max(kh, 0.01) * box.h)).append("px\"></div>");
+    }
+
+    private int filters;
+
+    /**
+     * Writes an SVG filter that maps the picture's brightness from the duotone's first colour to its
+     * second, as Office does, and returns its id; null if the colours can't be read
+     */
+    private String duotoneFilter(Element duotone, OoxmlTheme theme, StringBuilder out) {
+        final List<Element> colors = children(duotone, null);
+        if (colors.size() < 2) {
+            return null;
+        }
+        final double[] dark = rgb(theme.colorElement(colors.get(0)));
+        final double[] light = rgb(theme.colorElement(colors.get(1)));
+        if (dark == null || light == null) {
+            return null;
+        }
+        final String id = "dt" + filters++;
+        out.append("<svg width=0 height=0 style=\"position:absolute\"><filter id=").append(id)
+                .append(" color-interpolation-filters=sRGB><feColorMatrix type=matrix values=\"")
+                .append("0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0\"/>")
+                .append("<feComponentTransfer>");
+        final String[] channel = {"R", "G", "B"};
+        for (int i = 0; i < 3; i++) {
+            out.append("<feFunc").append(channel[i]).append(" type=table tableValues=\"")
+                    .append(fmt(dark[i])).append(' ').append(fmt(light[i])).append("\"/>");
+        }
+        out.append("</feComponentTransfer></filter></svg>");
+        return id;
+    }
+
+    /** @return the channels of a #rrggbb or rgb(r,g,b) CSS colour from 0 to 1, or null */
+    private static double[] rgb(String css) {
+        if (css == null) {
+            return null;
+        }
+        try {
+            if (css.startsWith("#") && css.length() >= 7) {
+                return new double[]{Integer.parseInt(css.substring(1, 3), 16) / 255.0,
+                        Integer.parseInt(css.substring(3, 5), 16) / 255.0,
+                        Integer.parseInt(css.substring(5, 7), 16) / 255.0};
+            }
+            if (css.startsWith("rgb")) {
+                final String[] v = css.substring(css.indexOf('(') + 1, css.indexOf(')')).split(",");
+                return new double[]{Double.parseDouble(v[0].trim()) / 255.0,
+                        Double.parseDouble(v[1].trim()) / 255.0, Double.parseDouble(v[2].trim()) / 255.0};
+            }
+        } catch (RuntimeException e) {
+            return null;
+        }
+        return null;
     }
 
     // ---- graphic frames: tables, charts, diagrams ----
