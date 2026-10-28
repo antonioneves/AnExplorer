@@ -42,6 +42,7 @@ final class DocxPage {
     private final List<Element> tableParagraph = new ArrayList<>();
     private final List<Element> tableRun = new ArrayList<>();
     private int depth;
+    private Element bodyRoot;
     /** The text width of the page in px, from which right-aligned tab stops are placed */
     private double contentWidth = 624;
     /** Set while the runs of a paragraph with tab stops are written: what a tab writes, so the line can be split there */
@@ -65,6 +66,7 @@ final class DocxPage {
         loadNumbering();
         loadNotes();
         final Element body = child(pkg.xml(MAIN), "w:body");
+        bodyRoot = body;
         final Element sect = lastSection(body);
         final StringBuilder out = new StringBuilder(pageStyle(sect));
         reference(sect, "w:headerReference", "hd", out);
@@ -391,7 +393,9 @@ final class DocxPage {
     private void block(Element e, StringBuilder out) {
         switch (e.getNodeName()) {
             case "w:p":
-                paragraph(e, out);
+                if (!emptyToc(e, out)) {
+                    paragraph(e, out);
+                }
                 break;
             case "w:tbl":
                 table(e, out);
@@ -842,11 +846,32 @@ final class DocxPage {
     }
 
     private void inline(Element container, List<Element> base, StringBuilder out) {
+        // A complex field spans runs: its code, then its saved result. One saved with no result gets a stand-in
+        StringBuilder code = null;
+        boolean separated = false, result = false;
         for (Element e : children(container, null)) {
             switch (e.getNodeName()) {
-                case "w:r":
+                case "w:r": {
+                    final String kind = attr(child(e, "w:fldChar"), "w:fldCharType");
+                    if ("begin".equals(kind)) {
+                        code = new StringBuilder();
+                        separated = false;
+                        result = false;
+                    } else if (code != null && "separate".equals(kind)) {
+                        separated = true;
+                    } else if (code != null && "end".equals(kind)) {
+                        if (!result) {
+                            out.append(fieldValue(code.toString()));
+                        }
+                        code = null;
+                    } else if (code != null && !separated) {
+                        code.append(OoxmlPackage.text(child(e, "w:instrText")));
+                    } else if (code != null && !OoxmlPackage.text(e).trim().isEmpty()) {
+                        result = true;
+                    }
                     run(e, base, out);
                     break;
+                }
                 case "w:hyperlink": {
                     final String hl = theme.colors.get("hlink");
                     out.append("<a style=\"color:").append(hl == null ? "#0563c1" : "#" + hl)
@@ -868,8 +893,8 @@ final class DocxPage {
                     break;
                 case "w:fldSimple":
                     // A page number without a saved result: the preview is one continuous page
-                    if (OoxmlPackage.text(e).isEmpty() && attr(e, "w:instr") != null && attr(e, "w:instr").trim().startsWith("PAGE")) {
-                        out.append('1');
+                    if (OoxmlPackage.text(e).isEmpty() && attr(e, "w:instr") != null) {
+                        out.append(fieldValue(attr(e, "w:instr")));
                     } else {
                         inline(e, base, out);
                     }
@@ -887,6 +912,75 @@ final class DocxPage {
                     break;
             }
         }
+    }
+
+    /** @return what a page field shows when the file saved no result: the preview is one continuous page */
+    private String fieldValue(String code) {
+        final String name = code.trim().split("\\s+")[0].toUpperCase(java.util.Locale.ROOT);
+        if (name.equals("PAGE")) {
+            return "1";
+        }
+        if (name.equals("NUMPAGES") || name.equals("SECTIONPAGES")) {
+            final Element pages = child(pkg.xml("docProps/app.xml"), "Pages");
+            final String count = pages == null ? "" : OoxmlPackage.text(pages).trim();
+            return count.matches("\\d{1,5}") ? count : "1";
+        }
+        return "";
+    }
+
+    /**
+     * A table-of-contents field the file saved with no entries (or only Word's "right-click to update" note)
+     * is written from the document's headings, without page numbers since the preview has no pages.
+     *
+     * @return whether the paragraph was such a field and has been written
+     */
+    private boolean emptyToc(Element p, StringBuilder out) {
+        final StringBuilder code = new StringBuilder(), shown = new StringBuilder();
+        boolean ended = false;
+        for (Element r : children(p, "w:r")) {
+            final String kind = attr(child(r, "w:fldChar"), "w:fldCharType");
+            ended |= "end".equals(kind);
+            code.append(OoxmlPackage.text(child(r, "w:instrText")));
+            shown.append(OoxmlPackage.text(child(r, "w:t")));
+        }
+        final String instr = code.toString().trim();
+        if (!ended || !instr.startsWith("TOC") || (shown.length() > 0 && !shown.toString().toLowerCase(java.util.Locale.ROOT).contains("update"))) {
+            return false;
+        }
+        int from = 1, to = 3;
+        final java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\\\o\\s+\"(\\d)-(\\d)\"").matcher(instr);
+        if (m.find()) {
+            from = Integer.parseInt(m.group(1));
+            to = Integer.parseInt(m.group(2));
+        }
+        final org.w3c.dom.NodeList all = bodyRoot == null ? null : bodyRoot.getElementsByTagName("w:p");
+        for (int i = 0; all != null && i < all.getLength(); i++) {
+            final Element h = (Element) all.item(i);
+            final int level = headingLevel(h);
+            final StringBuilder text = new StringBuilder();
+            for (Element t : children(h, "w:r")) {
+                text.append(OoxmlPackage.text(child(t, "w:t")));
+            }
+            if (level >= from && level <= to && text.toString().trim().length() > 0) {
+                out.append("<p style=\"margin:4px 0 4px ").append(fmt(20 * (level - from))).append("px\">")
+                        .append(esc(text.toString().trim())).append("</p>");
+            }
+        }
+        return true;
+    }
+
+    /** @return 1 to 9 for a heading paragraph, by its style's name or outline level, else 0 */
+    private int headingLevel(Element p) {
+        final Element pPr = child(p, "w:pPr");
+        final String id = attr(child(pPr, "w:pStyle"), "w:val");
+        final Element style = id == null ? null : styles.get(id);
+        final String name = style == null ? "" : String.valueOf(attr(child(style, "w:name"), "w:val")).toLowerCase(java.util.Locale.ROOT);
+        if (name.matches("heading [1-9]")) {
+            return name.charAt(8) - '0';
+        }
+        final Element outline = child(pPr, "w:outlineLvl");
+        final long lvl = outline == null ? 9 : num(outline, "w:val", 9);
+        return lvl < 9 ? (int) lvl + 1 : 0;
     }
 
     private void run(Element r, List<Element> base, StringBuilder out) {
