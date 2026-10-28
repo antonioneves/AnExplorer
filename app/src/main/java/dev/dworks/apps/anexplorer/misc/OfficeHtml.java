@@ -45,7 +45,7 @@ public final class OfficeHtml {
             + "#deck{padding:20px 0}"
             + ".slide{position:relative;overflow:hidden;margin:0 auto 24px;background:#fff}"
             + ".slide p{line-height:1.2}.slide .t{box-sizing:border-box;width:100%;height:100%;display:flex;"
-            + "flex-direction:column}.slide img{max-width:none}"
+            + "flex-direction:column;overflow-wrap:break-word}.slide img{max-width:none}"
             + ".slide .o{position:absolute;box-sizing:border-box}.slide td{padding:0}.slide td p{margin:0}"
             + ".sh{display:inline-block;vertical-align:top;overflow:hidden}span.p{display:block;margin:0 0 .3em;"
             + "line-height:1.3}"

@@ -1098,9 +1098,10 @@ final class PptxSlides {
     }
 
     private void connectorSvg(StringBuilder out, String prst, Box box, Line line, Element geom) {
-        final double w = Math.max(box.w, 0.01), h = Math.max(box.h, 0.01);
-        final double x0 = box.flipH ? w : 0, x1 = box.flipH ? 0 : w;
-        final double y0 = box.flipV ? h : 0, y1 = box.flipV ? 0 : h;
+        // A straight line has no width or no height: the SVG still needs a size to be painted
+        final double w = Math.max(box.w, 1), h = Math.max(box.h, 1);
+        final double x0 = box.flipH ? box.w : 0, x1 = box.flipH ? 0 : box.w;
+        final double y0 = box.flipV ? box.h : 0, y1 = box.flipV ? 0 : box.h;
         final String d;
         if (prst != null && prst.startsWith("bentConnector")) {
             final double mid = adjust(geom, "adj1", 50000) / 100000;
