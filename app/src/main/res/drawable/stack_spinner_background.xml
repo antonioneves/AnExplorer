@@ -5,19 +5,20 @@
     <item android:state_focused="true">
         <layer-list>
             <item
-                android:width="36dp"
-                android:height="36dp"
+                android:width="40dp"
+                android:height="40dp"
                 android:gravity="end|center_vertical">
                 <shape android:shape="rectangle">
-                    <corners android:radius="18dp" />
+                    <corners android:radius="20dp" />
                     <solid android:color="@color/item_root_pressed" />
-                    <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+                    <stroke android:width="2dp" android:color="?attr/colorSecondary" />
                 </shape>
             </item>
             <item
                 android:width="24dp"
                 android:height="24dp"
-                android:right="6dp"
+                android:top="3dp"
+                android:right="8dp"
                 android:gravity="end|center_vertical"
                 android:drawable="@drawable/expander_open" />
         </layer-list>
@@ -28,7 +29,8 @@
             <item
                 android:width="24dp"
                 android:height="24dp"
-                android:right="6dp"
+                android:top="3dp"
+                android:right="8dp"
                 android:gravity="end|center_vertical"
                 android:drawable="@drawable/expander_open" />
         </layer-list>
