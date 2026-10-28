@@ -165,6 +165,32 @@ final class SheetFormat {
         return number(value, section, value < 0 && code.indexOf(';') >= 0);
     }
 
+    /** @return the value in scientific notation, as a code such as 0.00E+00 asks: its mantissa decimals and exponent digits */
+    private static String scientific(double value, String code) {
+        final int e = Math.max(code.indexOf('E'), code.indexOf('e'));
+        final int dot = code.indexOf('.');
+        int decimals = 0;
+        for (int i = dot < 0 ? e : dot + 1; dot >= 0 && i < e && "0#?".indexOf(code.charAt(i)) >= 0; i++) {
+            decimals++;
+        }
+        int width = 0;
+        for (int i = e + 2; i < code.length() && code.charAt(i) == '0'; i++) {
+            width++;
+        }
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            return general(value);
+        }
+        int exp = value == 0 ? 0 : (int) Math.floor(Math.log10(Math.abs(value)));
+        double mantissa = value == 0 ? 0 : value / Math.pow(10, exp);
+        if (Math.abs(Double.parseDouble(String.format(java.util.Locale.US, "%." + decimals + "f", mantissa))) >= 10) {
+            mantissa /= 10;
+            exp++;
+        }
+        final String digits = String.format(java.util.Locale.US, "%." + decimals + "f", mantissa);
+        final String number = String.format(java.util.Locale.US, "%0" + Math.max(width, 1) + "d", Math.abs(exp));
+        return digits + code.charAt(e) + (exp < 0 ? "-" : e + 1 < code.length() && code.charAt(e + 1) == '+' ? "+" : "") + number;
+    }
+
     static String general(double value) {
         if (Double.isNaN(value) || Double.isInfinite(value)) {
             return "#NUM";
@@ -218,7 +244,7 @@ final class SheetFormat {
                 percent = true;
                 side.append(c);
             } else if (c == 'E' || c == 'e') {
-                return general(value);
+                return scientific(value, code);
             } else {
                 side.append(c);
             }

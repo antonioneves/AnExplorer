@@ -134,7 +134,7 @@ final class PptxChart {
             out.append("</svg>");
             return;
         }
-        if (kind.startsWith("scatter") && !series.isEmpty()) {
+        if ((kind.startsWith("scatter") || kind.equals("bubbleChart")) && !series.isEmpty()) {
             scatter(out, plot, series, theme, title, hasLegend, w, h, top0, bot0);
             return;
         }
@@ -366,7 +366,7 @@ final class PptxChart {
 
     /**
      * Formats a number with the first section of an Excel format code: its digits, thousands separator,
-     * percent sign and any literal text around the number. Dates and scientific codes are shown plain.
+     * percent sign and any literal text around the number. Dates and scientific codes go to SheetFormat.
      */
     private static String axis(double v) {
         final String code = FORMAT.get();
@@ -412,7 +412,7 @@ final class PptxChart {
                 percent = true;
                 side.append('%');
             } else if (c == 'E' || c == 'e' || c == 'y' || c == 'd' || c == 'm' || c == 'h' || c == 's' || c == '@') {
-                return plain(v);
+                return SheetFormat.format(v, code, false);
             } else {
                 side.append(c);
             }
@@ -607,7 +607,8 @@ final class PptxChart {
     /** Points, and lines between them if the series has a line, on a numeric x axis */
     private static void scatter(StringBuilder out, Element plot, List<Element> series, OoxmlTheme theme, String title,
                                 boolean hasLegend, double w, double h, double top0, double bot0) {
-        final List<List<Double>> xs = new ArrayList<>(), ys = new ArrayList<>();
+        final List<List<Double>> xs = new ArrayList<>(), ys = new ArrayList<>(), sizes = new ArrayList<>();
+        double biggest = 0;
         double xmin = Double.MAX_VALUE, xmax = -Double.MAX_VALUE, ymin = 0, ymax = 0;
         final List<String> names = new ArrayList<>(), colors = new ArrayList<>();
         for (int s = 0; s < series.size(); s++) {
@@ -620,6 +621,11 @@ final class PptxChart {
             }
             xs.add(x);
             ys.add(y);
+            final List<Double> size = numbers(child(series.get(s), "c:bubbleSize"));
+            for (double d : size) {
+                biggest = Math.max(biggest, d);
+            }
+            sizes.add(size);
             names.add(seriesName(series.get(s), s));
             colors.add(color(theme, series.get(s), s));
         }
@@ -650,10 +656,13 @@ final class PptxChart {
                 final double x = left + pw * (xs.get(s).get(i) - xmin) / (xmax - xmin);
                 final double y = top + ph - ph * (ys.get(s).get(i) - ymin) / (ymax - ymin);
                 pts.append(fmt(x)).append(',').append(fmt(y)).append(' ');
-                dots.append("<circle cx=\"").append(fmt(x)).append("\" cy=\"").append(fmt(y)).append("\" r=\"4\" fill=\"")
-                        .append(colors.get(s)).append("\"/>");
+                final boolean bubble = biggest > 0 && i < sizes.get(s).size();
+                final double r = bubble ? 6 + 26 * Math.sqrt(Math.max(sizes.get(s).get(i), 0) / biggest) : 4;
+                dots.append("<circle cx=\"").append(fmt(x)).append("\" cy=\"").append(fmt(y)).append("\" r=\"")
+                        .append(fmt(r)).append("\" fill=\"").append(colors.get(s)).append(bubble ? "\" fill-opacity=\".6" : "")
+                        .append("\"/>");
             }
-            if (child(path(series.get(s), "c:spPr", "a:ln"), "a:noFill") == null
+            if (biggest == 0 && child(path(series.get(s), "c:spPr", "a:ln"), "a:noFill") == null
                     && !"marker".equals(attr(path(plot, "c:scatterChart", "c:scatterStyle"), "val"))) {
                 out.append("<polyline points=\"").append(pts).append("\" fill=\"none\" stroke=\"").append(colors.get(s))
                         .append("\" stroke-width=\"2\"/>");
