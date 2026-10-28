@@ -18,6 +18,9 @@ import java.util.List;
  */
 final class PptxChart {
 
+    /** The number format of the chart being drawn, an Excel format code, or null for plain numbers */
+    private static final ThreadLocal<String> FORMAT = new ThreadLocal<>();
+
     private static final String[] ACCENTS = {"accent1", "accent2", "accent3", "accent4", "accent5", "accent6"};
 
     private PptxChart() {
@@ -72,6 +75,7 @@ final class PptxChart {
                 }
             }
         }
+        FORMAT.set(formatCode(plot, chart));
         out.append("<svg width=\"").append(fmt(w)).append("\" height=\"").append(fmt(h)).append("\" font-size=\"12\" ")
                 .append("font-family=\"sans-serif\">");
         if (chart == null) {
@@ -150,6 +154,9 @@ final class PptxChart {
             n = Math.max(n, v.size());
         }
         if (percent) {
+            // The values below are shares from 0 to 100, not fractions
+            final String code = FORMAT.get();
+            FORMAT.set(code != null && code.contains("%") ? "0\"%\"" : null);
             for (int i = 0; i < n; i++) {
                 double total = 0;
                 for (List<Double> v : data) {
@@ -343,7 +350,80 @@ final class PptxChart {
         return c == null ? "#4472c4" : "#" + c;
     }
 
+    /** @return the value axis' number format, or the one the series' values were cached with, unless it is plain */
+    private static String formatCode(Element plot, Element chart) {
+        String code = attr(path(plot, "c:valAx", "c:numFmt"), "formatCode");
+        if (code == null && chart != null) {
+            final Element cached = path(child(chart, "c:ser"), "c:val", "c:numRef", "c:numCache", "c:formatCode");
+            code = cached == null ? null : OoxmlPackage.text(cached).trim();
+        }
+        return code == null || code.isEmpty() || code.equalsIgnoreCase("General") ? null : code;
+    }
+
+    /**
+     * Formats a number with the first section of an Excel format code: its digits, thousands separator,
+     * percent sign and any literal text around the number. Dates and scientific codes are shown plain.
+     */
     private static String axis(double v) {
+        final String code = FORMAT.get();
+        if (code == null) {
+            return plain(v);
+        }
+        final String section = code.split(";")[0];
+        final StringBuilder before = new StringBuilder(), after = new StringBuilder();
+        int decimals = 0;
+        boolean grouping = false, number = false, percent = false, fraction = false;
+        for (int i = 0; i < section.length(); i++) {
+            final char c = section.charAt(i);
+            final StringBuilder side = number ? after : before;
+            if (c == '"') {
+                final int end = section.indexOf('"', i + 1);
+                side.append(section, i + 1, end < 0 ? section.length() : end);
+                i = end < 0 ? section.length() : end;
+            } else if (c == '[') {
+                final int end = section.indexOf(']', i);
+                final String inner = end < 0 ? "" : section.substring(i + 1, end);
+                if (inner.startsWith("$")) {
+                    side.append(inner.substring(1).split("-")[0]);
+                }
+                i = end < 0 ? section.length() : end;
+            } else if (c == '\\' || c == '_' || c == '*') {
+                if (c == '\\' && i + 1 < section.length()) {
+                    side.append(section.charAt(i + 1));
+                }
+                i++;
+            } else if (c == '0' || c == '#' || c == '?') {
+                if (number && after.length() > 0) {
+                    return plain(v);
+                }
+                number = true;
+                if (fraction) {
+                    decimals++;
+                }
+            } else if (c == ',' && number && !fraction) {
+                grouping = true;
+            } else if (c == '.' && number) {
+                fraction = true;
+            } else if (c == '%') {
+                percent = true;
+                side.append('%');
+            } else if (c == 'E' || c == 'e' || c == 'y' || c == 'd' || c == 'm' || c == 'h' || c == 's' || c == '@') {
+                return plain(v);
+            } else {
+                side.append(c);
+            }
+        }
+        if (!number) {
+            return plain(v);
+        }
+        final double shown = percent ? v * 100 : v;
+        final String digits = String.format(java.util.Locale.US, grouping ? "%,." + decimals + "f" : "%." + decimals + "f",
+                Math.abs(shown));
+        final boolean negative = shown < 0 && Double.parseDouble(digits.replace(",", "")) != 0;
+        return (negative ? "-" : "") + before + digits + after;
+    }
+
+    private static String plain(double v) {
         return Math.abs(v) >= 1000 ? fmt(Math.round(v)) : fmt(Math.round(v * 10) / 10.0);
     }
 
