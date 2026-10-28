@@ -104,7 +104,7 @@ final class DocxPage {
         if (width < 2880 || width - left - right < 1440) {
             return "";
         }
-        return "<style>#page{box-sizing:border-box;max-width:100%;width:" + fmt(width / 15) + "px;padding:"
+        return "<style>#page{box-sizing:border-box;max-width:calc(100% - 40px);width:" + fmt(width / 15) + "px;padding:"
                 + fmt(top / 15) + "px " + fmt(right / 15) + "px " + fmt(bottom / 15) + "px " + fmt(left / 15)
                 + "px}</style>";
     }

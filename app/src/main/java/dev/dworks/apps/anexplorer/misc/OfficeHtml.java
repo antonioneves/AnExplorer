@@ -20,7 +20,7 @@ public final class OfficeHtml {
 
     private static final String STYLE = "<style>"
             + "body{margin:0;background:#303030;font-family:sans-serif;color:#202020}"
-            + "#page{zoom:1.35;box-sizing:border-box;max-width:820px;margin:24px auto;padding:48px 56px;"
+            + "#page{zoom:1.35;box-sizing:border-box;max-width:min(820px,calc(100% - 40px));margin:24px auto;padding:48px 56px;"
             + "background:#fff;min-height:600px;font-size:10pt}"
             + "#wide{zoom:1.25;padding:20px}"
             + "p{margin:0;line-height:1.2}"
