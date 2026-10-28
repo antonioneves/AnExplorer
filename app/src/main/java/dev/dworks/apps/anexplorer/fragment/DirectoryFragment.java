@@ -439,8 +439,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	/**
-	 * Videos shows Movies (the root itself), TV Shows and Folders as tabs. Inside a show or a
-	 * folder they are hidden: BACK returns to the tab it was opened from.
+	 * Videos shows Movies (the root itself), TV Shows and Videos as tabs. Inside a show or a
+	 * season they are hidden: BACK returns to the tab it was opened from.
 	 */
 	private void setUpVideoTabs() {
 		mVideoTabs.setTag(this);
@@ -450,16 +450,16 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		}
 		final String id = doc.documentId;
 		final boolean shows = MediaDocumentsProvider.TYPE_VIDEOS_SHOWS.equals(id);
-		final boolean folders = MediaDocumentsProvider.TYPE_VIDEOS_FOLDERS.equals(id);
+		final boolean other = MediaDocumentsProvider.TYPE_VIDEOS_OTHER.equals(id);
 		final boolean movies = MediaDocumentsProvider.TYPE_VIDEOS_ROOT.equals(id)
 				|| MediaDocumentsProvider.TYPE_VIDEOS_MOVIES.equals(id);
-		if (!(shows || folders || movies)) {
+		if (!(shows || other || movies)) {
 			return;
 		}
 		mVideoTabs.setVisibility(View.VISIBLE);
 		setUpVideoTab(R.id.tab_videos_movies, null, movies);
 		setUpVideoTab(R.id.tab_videos_shows, MediaDocumentsProvider.TYPE_VIDEOS_SHOWS, shows);
-		setUpVideoTab(R.id.tab_videos_folders, MediaDocumentsProvider.TYPE_VIDEOS_FOLDERS, folders);
+		setUpVideoTab(R.id.tab_videos_other, MediaDocumentsProvider.TYPE_VIDEOS_OTHER, other);
 	}
 
 	private void setUpVideoTab(int id, final String groupId, boolean current) {

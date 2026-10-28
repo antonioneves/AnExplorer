@@ -105,9 +105,9 @@
                     android:text="@string/videos_shows" />
 
                 <TextView
-                    android:id="@+id/tab_videos_folders"
+                    android:id="@+id/tab_videos_other"
                     style="@style/AppTab"
-                    android:text="@string/videos_folders" />
+                    android:text="@string/videos_other" />
             </LinearLayout>
 
             </androidx.appcompat.widget.Toolbar>

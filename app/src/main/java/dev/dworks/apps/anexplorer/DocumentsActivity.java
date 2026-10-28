@@ -2054,7 +2054,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
     /**
      * Switches between the Videos tabs. Back to the root first, so switching doesn't pile up
-     * history and BACK from TV Shows or Folders lands on Movies, the root itself.
+     * history and BACK from TV Shows or Videos lands on Movies, the root itself.
      *
      * @param groupId the tab's group document, or null for Movies
      */

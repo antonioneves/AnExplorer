@@ -51,23 +51,35 @@ public final class TmdbPosters {
         return !TextUtils.isEmpty(BuildConfig.TMDB_API_KEY);
     }
 
-    /** @return the poster for the video's file name, or null when there is none or it can't be fetched */
-    public static Bitmap load(Context context, String fileName) {
-        if (!isEnabled() || TextUtils.isEmpty(fileName)) {
+    /** What the cache knows about a video: asked and found, asked and not found, or not asked yet */
+    public static final int UNKNOWN = 0;
+    public static final int RECOGNIZED = 1;
+    public static final int UNRECOGNIZED = 2;
+
+    /** The title, year and cache key that a file name stands for */
+    private static final class Query {
+        boolean show;
+        String title;
+        String year;
+        String key;
+    }
+
+    private static Query parse(String fileName) {
+        if (TextUtils.isEmpty(fileName)) {
             return null;
         }
         final String base = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
         final EpisodeName episode = EpisodeName.parse(base);
-        final boolean show = episode != null;
+        final Query q = new Query();
+        q.show = episode != null;
         String title;
-        String year = null;
-        if (show) {
+        if (q.show) {
             title = episode.show;
         } else {
             title = base;
             final Matcher y = YEAR.matcher(title);
             if (y.find() && y.start() > 0) {
-                year = y.group(1);
+                q.year = y.group(1);
                 title = title.substring(0, y.start());
             }
         }
@@ -75,12 +87,40 @@ public final class TmdbPosters {
         if (title.length() < 2) {
             return null;
         }
+        q.title = title;
+        q.key = (q.show ? "tv-" : "movie-") + title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
+                + (q.year == null ? "" : "-" + q.year);
+        return q;
+    }
 
-        final String key = (show ? "tv-" : "movie-") + title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
-                + (year == null ? "" : "-" + year);
+    /** Reads the cache only, so it is safe to call while listing */
+    public static int status(Context context, String fileName) {
+        final Query q = isEnabled() ? parse(fileName) : null;
+        if (q == null) {
+            return UNRECOGNIZED;
+        }
         final File folder = new File(context.getCacheDir(), FOLDER);
-        final File file = new File(folder, key + ".jpg");
-        final File miss = new File(folder, key + MISS);
+        if (new File(folder, q.key + ".jpg").isFile()) {
+            return RECOGNIZED;
+        }
+        return new File(folder, q.key + MISS).isFile() ? UNRECOGNIZED : UNKNOWN;
+    }
+
+    /** Asks TMDB if the cache doesn't know yet. Blocks on the network, so call it off the main thread. */
+    public static int resolve(Context context, String fileName) {
+        load(context, fileName);
+        return status(context, fileName);
+    }
+
+    /** @return the poster for the video's file name, or null when there is none or it can't be fetched */
+    public static Bitmap load(Context context, String fileName) {
+        final Query q = isEnabled() ? parse(fileName) : null;
+        if (q == null) {
+            return null;
+        }
+        final File folder = new File(context.getCacheDir(), FOLDER);
+        final File file = new File(folder, q.key + ".jpg");
+        final File miss = new File(folder, q.key + MISS);
         if (file.isFile()) {
             return BitmapFactory.decodeFile(file.getPath());
         }
@@ -88,7 +128,7 @@ public final class TmdbPosters {
             return null;
         }
         try {
-            final String path = findPosterPath(show, title, year);
+            final String path = findPosterPath(q.show, q.title, q.year);
             final byte[] bytes = path == null ? null : download(IMAGES + path);
             if (bytes == null) {
                 miss.createNewFile();

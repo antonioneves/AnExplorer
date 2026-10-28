@@ -15,6 +15,9 @@ public final class EpisodeName {
             "^(.+?)[ ._\\-\\[(]+(?:s(\\d{1,2})[ ._\\-]?e(\\d{1,3})|(\\d{1,2})x(\\d{2,3}))(?![0-9a-z])",
             Pattern.CASE_INSENSITIVE);
 
+    /** A year after the show name, so "Show 2019" and "Show (2019)" land in the "Show" folder */
+    private static final Pattern TRAILING_YEAR = Pattern.compile("[ (\\[]*(?:19|20)\\d{2}[)\\]]?$");
+
     public final String show;
     public final int season;
     public final int episode;
@@ -34,7 +37,11 @@ public final class EpisodeName {
         if (!m.find()) {
             return null;
         }
-        final String show = m.group(1).replace('.', ' ').replace('_', ' ').trim();
+        String show = m.group(1).replace('.', ' ').replace('_', ' ').replaceAll("\\s+", " ").trim();
+        final String noYear = TRAILING_YEAR.matcher(show).replaceFirst("").trim();
+        if (!noYear.isEmpty()) {
+            show = noYear;
+        }
         if (show.isEmpty()) {
             return null;
         }

@@ -54,6 +54,7 @@ import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.EpisodeName;
+import dev.dworks.apps.anexplorer.misc.TmdbPosters;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
@@ -94,11 +95,19 @@ public class MediaDocumentsProvider extends StorageProvider {
     public static final String TYPE_VIDEOS_ROOT = "videos_root";
     public static final String TYPE_VIDEOS_BUCKET = "videos_bucket";
     public static final String TYPE_VIDEO = "video";
-    // The videos root is split into these virtual folders; a show's id is a hash of its name
+    // The videos root is split into these virtual folders: Movies and TV Shows are what TMDB
+    // recognised, Videos is everything else. A show's id is a hash of its name and a season's
+    // is that id times 1000 plus the season number.
     public static final String TYPE_VIDEOS_MOVIES = "videos_movies";
     public static final String TYPE_VIDEOS_SHOWS = "videos_shows";
     public static final String TYPE_VIDEOS_SHOW = "videos_show";
-    public static final String TYPE_VIDEOS_FOLDERS = "videos_folders";
+    public static final String TYPE_VIDEOS_SEASON = "videos_season";
+    public static final String TYPE_VIDEOS_OTHER = "videos_other";
+
+    /** File names already looked up this session, so a failing network doesn't loop */
+    private final java.util.Set<String> mLookups = new java.util.HashSet<>();
+    private static final java.util.concurrent.ExecutorService sLookupExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
 
     public static final String TYPE_AUDIO_ROOT = "audio_root";
     public static final String TYPE_AUDIO = "audio";
@@ -267,8 +276,10 @@ public class MediaDocumentsProvider extends StorageProvider {
                 // single root
                 includeVideosRootDocument(result);
             } else if (TYPE_VIDEOS_MOVIES.equals(ident.type) || TYPE_VIDEOS_SHOWS.equals(ident.type)
-                    || TYPE_VIDEOS_FOLDERS.equals(ident.type)) {
+                    || TYPE_VIDEOS_OTHER.equals(ident.type)) {
                 includeVideosGroup(result, ident.type);
+            } else if (TYPE_VIDEOS_SEASON.equals(ident.type)) {
+                includeVideosSeason(result, ident.id / 1000, (int) (ident.id % 1000));
             } else if (TYPE_VIDEOS_SHOW.equals(ident.type)) {
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
                         VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
@@ -366,13 +377,13 @@ public class MediaDocumentsProvider extends StorageProvider {
                     includeImage(result, cursor);
                 }
             } else if (TYPE_VIDEOS_ROOT.equals(ident.type) || TYPE_VIDEOS_MOVIES.equals(ident.type)) {
-                // The root is the Movies tab (TV Shows and Folders are the other tabs):
-                // whatever isn't named like an episode
+                // The root is the Movies tab: videos TMDB recognised that aren't named like an episode
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
                         VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
                 while (cursor.moveToNext()) {
-                    if (EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME)) == null) {
+                    final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                    if (EpisodeName.parse(name) == null && isRecognized(name)) {
                         includeVideo(result, cursor);
                     }
                 }
@@ -382,8 +393,9 @@ public class MediaDocumentsProvider extends StorageProvider {
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
                 final java.util.TreeMap<String, EpisodeName> shows = new java.util.TreeMap<>();
                 while (cursor.moveToNext()) {
-                    final EpisodeName episode = EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME));
-                    if (episode != null) {
+                    final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                    final EpisodeName episode = EpisodeName.parse(name);
+                    if (episode != null && isRecognized(name)) {
                         final String key = episode.show.toLowerCase(java.util.Locale.ROOT);
                         if (!shows.containsKey(key)) {
                             shows.put(key, episode);
@@ -394,34 +406,50 @@ public class MediaDocumentsProvider extends StorageProvider {
                     includeVideosShow(result, show);
                 }
             } else if (TYPE_VIDEOS_SHOW.equals(ident.type)) {
-                // episodes in season order
+                // the seasons of a show, in order
+                cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
+                copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
+                final java.util.TreeSet<Integer> seasons = new java.util.TreeSet<>();
+                while (cursor.moveToNext()) {
+                    final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                    final EpisodeName episode = EpisodeName.parse(name);
+                    if (episode != null && episode.showId() == ident.id && isRecognized(name)) {
+                        seasons.add(episode.season);
+                    }
+                }
+                for (int season : seasons) {
+                    includeVideosSeason(result, ident.id, season);
+                }
+            } else if (TYPE_VIDEOS_SEASON.equals(ident.type)) {
+                // episodes in order
+                final long showId = ident.id / 1000;
+                final int season = (int) (ident.id % 1000);
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
                         VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
                 final java.util.ArrayList<long[]> episodes = new java.util.ArrayList<>();
                 while (cursor.moveToNext()) {
-                    final EpisodeName episode = EpisodeName.parse(cursor.getString(VideoQuery.DISPLAY_NAME));
-                    if (episode != null && episode.showId() == ident.id) {
-                        episodes.add(new long[] { episode.season, episode.episode, cursor.getPosition() });
+                    final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                    final EpisodeName episode = EpisodeName.parse(name);
+                    if (episode != null && episode.showId() == showId && episode.season == season
+                            && isRecognized(name)) {
+                        episodes.add(new long[] { episode.episode, cursor.getPosition() });
                     }
                 }
-                java.util.Collections.sort(episodes, (a, b) ->
-                        a[0] != b[0] ? Long.compare(a[0], b[0]) : Long.compare(a[1], b[1]));
+                java.util.Collections.sort(episodes, (x, y) -> Long.compare(x[0], y[0]));
                 for (long[] episode : episodes) {
-                    cursor.moveToPosition((int) episode[2]);
+                    cursor.moveToPosition((int) episode[1]);
                     includeVideo(result, cursor);
                 }
-            } else if (TYPE_VIDEOS_FOLDERS.equals(ident.type)) {
-                // the folders the videos are stored in
+            } else if (TYPE_VIDEOS_OTHER.equals(ident.type)) {
+                // every video TMDB didn't recognise, so nothing shows in two tabs
                 cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
-                        VideosBucketQuery.PROJECTION, null, null, VideosBucketQuery.SORT_ORDER);
+                        VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
                 copyNotificationUri(result, Video.Media.EXTERNAL_CONTENT_URI);
-                long last = Long.MIN_VALUE;
                 while (cursor.moveToNext()) {
-                    final long bucket = cursor.getLong(VideosBucketQuery.BUCKET_ID);
-                    if (bucket != last) {
-                        last = bucket;
-                        includeVideosBucket(result, cursor);
+                    if (!isRecognized(cursor.getString(VideoQuery.DISPLAY_NAME))) {
+                        includeVideo(result, cursor);
                     }
                 }
             } else if (TYPE_VIDEOS_BUCKET.equals(ident.type)) {
@@ -821,12 +849,45 @@ public class MediaDocumentsProvider extends StorageProvider {
     /** The Movies, TV Shows and Folders entries of the videos root; none of them can be deleted */
     private void includeVideosGroup(MatrixCursor result, String type) {
         final int name = TYPE_VIDEOS_MOVIES.equals(type) ? R.string.videos_movies
-                : TYPE_VIDEOS_SHOWS.equals(type) ? R.string.videos_shows : R.string.videos_folders;
+                : TYPE_VIDEOS_SHOWS.equals(type) ? R.string.videos_shows : R.string.videos_other;
         final RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, type);
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(name));
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
         row.add(Document.COLUMN_FLAGS, 0);
+    }
+
+    private void includeVideosSeason(MatrixCursor result, long showId, int season) {
+        final RowBuilder row = result.newRow();
+        row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SEASON, showId * 1000 + season));
+        row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.videos_season, season));
+        row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
+        row.add(Document.COLUMN_FLAGS, 0);
+    }
+
+    /**
+     * Whether TMDB knows this title, from the cache only. A title not looked up yet counts as
+     * unrecognised and is queued, then the lists reload when the answer is in.
+     */
+    private boolean isRecognized(String displayName) {
+        final int status = TmdbPosters.status(getContext(), displayName);
+        if (status == TmdbPosters.UNKNOWN) {
+            queueLookup(displayName);
+        }
+        return status == TmdbPosters.RECOGNIZED;
+    }
+
+    private void queueLookup(String displayName) {
+        final String key = displayName == null ? "" : displayName;
+        synchronized (mLookups) {
+            if (!mLookups.add(key)) {
+                return;
+            }
+        }
+        sLookupExecutor.execute(() -> {
+            TmdbPosters.resolve(getContext(), key);
+            getContext().getContentResolver().notifyChange(Video.Media.EXTERNAL_CONTENT_URI, null);
+        });
     }
 
     private void includeVideosShow(MatrixCursor result, EpisodeName episode) {

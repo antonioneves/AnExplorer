@@ -32,7 +32,8 @@
     <string name="root_videos">Videos</string>
     <string name="videos_movies">Movies</string>
     <string name="videos_shows">TV Shows</string>
-    <string name="videos_folders">Folders</string>
+    <string name="videos_other">Videos</string>
+    <string name="videos_season">Season %d</string>
     <string name="root_internal_storage">Internal Storage</string>
     <string name="root_external_storage">External Storage</string>
     <string name="root_phone_storage">System</string>
