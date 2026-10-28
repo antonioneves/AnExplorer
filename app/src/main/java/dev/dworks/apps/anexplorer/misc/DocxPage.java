@@ -866,8 +866,15 @@ final class DocxPage {
                     inline(e, base, out);
                     out.append("</del>");
                     break;
-                case "w:smartTag":
                 case "w:fldSimple":
+                    // A page number without a saved result: the preview is one continuous page
+                    if (OoxmlPackage.text(e).isEmpty() && attr(e, "w:instr") != null && attr(e, "w:instr").trim().startsWith("PAGE")) {
+                        out.append('1');
+                    } else {
+                        inline(e, base, out);
+                    }
+                    break;
+                case "w:smartTag":
                 case "w:customXml":
                 case "w:dir":
                 case "w:bdo":
