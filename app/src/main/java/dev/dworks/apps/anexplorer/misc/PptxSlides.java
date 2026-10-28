@@ -999,12 +999,8 @@ final class PptxSlides {
                         + fmt(Math.max(w - x, 1)) + ' ' + fmt(h / 2) + " 0 0 1 " + fmt(w) + " 0Z";
             }
             case "cloud":
-                return "M" + fmt(w * 0.2) + ' ' + fmt(h * 0.85) + "A" + fmt(w * 0.17) + ' ' + fmt(h * 0.25) + " 0 0 1 "
-                        + fmt(w * 0.15) + ' ' + fmt(h * 0.45) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.25) + " 0 0 1 "
-                        + fmt(w * 0.4) + ' ' + fmt(h * 0.2) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.2) + " 0 0 1 "
-                        + fmt(w * 0.75) + ' ' + fmt(h * 0.2) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.28) + " 0 0 1 "
-                        + fmt(w * 0.88) + ' ' + fmt(h * 0.6) + "A" + fmt(w * 0.15) + ' ' + fmt(h * 0.25) + " 0 0 1 "
-                        + fmt(w * 0.75) + ' ' + fmt(h * 0.85) + "Z";
+                // The preset's own outline: a chain of arcs on a 43200 square, as (width radius, height radius, start, swing)
+                return cloud(w, h);
             case "sun": {
                 final double[][] pts = star(8, 0.55, w, h);
                 final StringBuilder d = new StringBuilder();
@@ -1084,9 +1080,46 @@ final class PptxSlides {
                         + "A" + fmt(bd2) + ' ' + fmt(bd2) + " 0 0 0 " + fmt(x5) + ' ' + fmt(th) + "H" + fmt(x3) + "A"
                         + fmt(bd2) + ' ' + fmt(bd2) + " 0 0 0 " + fmt(th) + ' ' + fmt(x3) + "V" + fmt(h) + "Z";
             }
+            case "curvedRightArrow": {
+                // A band that sweeps down the left side and ends in an arrowhead pointing right
+                final double ss = Math.min(w, h);
+                final double t = ss * adjust(geom, "adj1", 25000) / 100000;
+                final double hw = Math.max(ss * adjust(geom, "adj2", 50000) / 100000, t);
+                final double hl = ss * adjust(geom, "adj3", 25000) / 100000;
+                final double xb = Math.max(w - hl, 1), yc = h - hw / 2;
+                final double ry = (yc + t / 2) / 2, rxIn = Math.max(xb - t, 1), ryIn = Math.max((yc - t / 2 - t) / 2, 1);
+                return "M" + fmt(xb) + " 0A" + fmt(xb) + ' ' + fmt(ry) + " 0 0 0 " + fmt(xb) + ' ' + fmt(yc + t / 2)
+                        + "L" + fmt(xb) + ' ' + fmt(h) + "L" + fmt(w) + ' ' + fmt(yc) + "L" + fmt(xb) + ' ' + fmt(h - hw)
+                        + "L" + fmt(xb) + ' ' + fmt(yc - t / 2) + "A" + fmt(rxIn) + ' ' + fmt(ryIn) + " 0 0 1 " + fmt(xb)
+                        + ' ' + fmt(t) + "Z";
+            }
             default:
                 return null;
         }
+    }
+
+    private static final double[][] CLOUD = {{6753, 9190, -11429249, 7426832}, {5333, 7267, -8646143, 5396714},
+            {4365, 5945, -8748475, 5983381}, {4857, 6595, -7859164, 7034504}, {5333, 7273, -4722533, 6541615},
+            {6775, 9220, -2776035, 7816140}, {5785, 7867, 37501, 6842000}, {6752, 9215, 1347096, 6910353},
+            {7720, 10543, 3974558, 4542661}, {4360, 5918, -16496525, 8804134}, {4345, 5945, -14809710, 9151131}};
+
+    private static String cloud(double w, double h) {
+        final double sx = w / 43200, sy = h / 43200;
+        double x = 3900, y = 14370;
+        final StringBuilder d = new StringBuilder("M").append(fmt(x * sx)).append(' ').append(fmt(y * sy));
+        for (double[] arc : CLOUD) {
+            final double st = Math.toRadians(arc[2] / 60000), en = Math.toRadians((arc[2] + arc[3]) / 60000);
+            // Angles in the preset are on the drawn ellipse, not the circle it is stretched from
+            final double t0 = Math.atan2(Math.sin(st) * arc[0], Math.cos(st) * arc[1]);
+            final double t1 = Math.atan2(Math.sin(en) * arc[0], Math.cos(en) * arc[1]);
+            final double cx = x - arc[0] * Math.cos(t0), cy = y - arc[1] * Math.sin(t0);
+            x = cx + arc[0] * Math.cos(t1);
+            y = cy + arc[1] * Math.sin(t1);
+            d.append("A").append(fmt(arc[0] * sx)).append(' ').append(fmt(arc[1] * sy)).append(" 0 ")
+                    .append(Math.abs(arc[3]) > 10800000 ? 1 : 0).append(' ').append(arc[3] > 0 ? 1 : 0).append(' ')
+                    .append(fmt(x * sx)).append(' ').append(fmt(y * sy));
+        }
+        return d.append("Z").toString();
     }
 
     /** @return the colour of a plain fill such as "background:#336699;", or null for gradients and pictures */
