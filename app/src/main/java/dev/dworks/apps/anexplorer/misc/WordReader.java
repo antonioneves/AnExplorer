@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -84,7 +85,9 @@ public final class WordReader {
         int istd;
         String align;
         boolean inTable, ttp, innerCell, innerTtp, pageBreakBefore, rtl;
-        int depth, ilvl, ilfo, indent;
+        int depth, ilvl, ilfo, indent, right, first, before, after, line;
+        boolean lineMultiple = true;
+        String shade;
         int[] edges;
         boolean[][] cells;
         String[] shades;
@@ -103,6 +106,13 @@ public final class WordReader {
             p.ilvl = ilvl;
             p.ilfo = ilfo;
             p.indent = indent;
+            p.right = right;
+            p.first = first;
+            p.before = before;
+            p.after = after;
+            p.line = line;
+            p.lineMultiple = lineMultiple;
+            p.shade = shade;
             return p;
         }
     }
@@ -327,6 +337,30 @@ public final class WordReader {
                 case 0x845E:
                     pap.indent = i16(b, s.at);
                     break;
+                case 0x840E:
+                case 0x845D:
+                    pap.right = i16(b, s.at);
+                    break;
+                case 0x8411:
+                case 0x8460:
+                    pap.first = i16(b, s.at);
+                    break;
+                case 0xA413:
+                    pap.before = u16(b, s.at);
+                    break;
+                case 0xA414:
+                    pap.after = u16(b, s.at);
+                    break;
+                case 0x6412:
+                    pap.line = i16(b, s.at);
+                    pap.lineMultiple = i16(b, s.at + 2) != 0;
+                    break;
+                case 0xC64D: {
+                    final int pattern = u16(b, s.at + 10);
+                    pap.shade = pattern == 0xFFFF || pattern == 0 ? null
+                            : pattern == 1 ? colorRef(b, s.at + 1) : colorRef(b, s.at + 5);
+                    break;
+                }
                 case 0x2407:
                     pap.pageBreakBefore = v != 0;
                     break;
@@ -1053,7 +1087,7 @@ public final class WordReader {
         final List<String> footnotes = readNotes(c, pairs[2], pairs[3], ccp[0], false, marks);
         final List<String> endnotes = readNotes(c, pairs[46], pairs[47], noteStart, true, marks);
 
-        final StringBuilder out = new StringBuilder();
+        final StringBuilder out = new StringBuilder(pageStyle(word, table, pairs[6]));
         final String[] band = headerAndFooter(c, pairs[11], headerStart, headerShapes);
         if (band[0] != null) {
             out.append("<div class=hd>").append(band[0]).append("</div>");
@@ -1065,6 +1099,47 @@ public final class WordReader {
             out.append("<div class=ft>").append(band[1]).append("</div>");
         }
         return out.toString();
+    }
+
+    /**
+     * The sheet of paper as a style rule: the first section's page size and margins, since a
+     * preview shows the whole file as one long page.
+     */
+    private static String pageStyle(byte[] word, byte[] table, int[] sed) {
+        int width = 12240, left = 1800, right = 1800, top = 1440, bottom = 1440;
+        final int n = sed[1] >= 4 ? (sed[1] - 4) / 16 : 0;
+        if (n > 0 && sed[0] >= 0 && sed[0] + sed[1] <= table.length) {
+            final int fc = u32(table, sed[0] + (n + 1) * 4 + 2);
+            if (fc > 0 && fc + 2 <= word.length) {
+                final int cb = u16(word, fc);
+                for (Sprm s : sprms(word, fc + 2, Math.min(word.length, fc + 2 + cb))) {
+                    switch (s.op) {
+                        case 0xB01F:
+                            width = u16(word, s.at);
+                            break;
+                        case 0xB021:
+                            left = u16(word, s.at);
+                            break;
+                        case 0xB022:
+                            right = u16(word, s.at);
+                            break;
+                        case 0x9023:
+                            top = Math.abs(i16(word, s.at));
+                            break;
+                        case 0x9024:
+                            bottom = Math.abs(i16(word, s.at));
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+        if (width < 2880 || width - left - right < 1440) {
+            return "";
+        }
+        return "<style>#page{box-sizing:border-box;max-width:100%;width:" + px(width) + "px;padding:" + px(top)
+                + "px " + px(right) + "px " + px(bottom) + "px " + px(left) + "px}</style>";
     }
 
     private static void appendNotes(StringBuilder out, List<String> notes) {
@@ -1379,6 +1454,11 @@ public final class WordReader {
         final Map<Integer, Cell> open = new HashMap<>();
     }
 
+    /** Twips to CSS pixels */
+    private static int px(int twips) {
+        return Math.round(twips / 15f);
+    }
+
     private static String block(Para p, List<Style> styles, Map<Integer, int[]> lists, Builder b) {
         final Style style = p.pap.istd >= 0 && p.pap.istd < styles.size() ? styles.get(p.pap.istd) : null;
         final int sti = style != null ? style.sti : 0;
@@ -1405,8 +1485,30 @@ public final class WordReader {
             final int nfc = nfcs != null && level < nfcs.length ? nfcs[level] : 23;
             css.append("margin-left:").append(28 * (level + 1)).append("px;text-indent:-22px;");
             content = "<span class=m>" + esc(marker(nfc, counts[level], level)) + "</span>" + content;
-        } else if (p.pap.indent > 0) {
-            css.append("margin-left:").append(Math.round(p.pap.indent / 1440f * 96)).append("px;");
+        } else {
+            if (p.pap.indent != 0) {
+                css.append("margin-left:").append(px(p.pap.indent)).append("px;");
+            }
+            if (p.pap.first != 0) {
+                css.append("text-indent:").append(px(p.pap.first)).append("px;");
+            }
+        }
+        if (p.pap.right > 0) {
+            css.append("margin-right:").append(px(p.pap.right)).append("px;");
+        }
+        if (p.pap.before > 0) {
+            css.append("margin-top:").append(px(p.pap.before)).append("px;");
+        }
+        if (p.pap.after > 0) {
+            css.append("margin-bottom:").append(px(p.pap.after)).append("px;");
+        }
+        if (p.pap.line != 0) {
+            // 240 is single spacing, which a browser draws at about 1.2 times the font size
+            css.append("line-height:").append(p.pap.lineMultiple ? String.format(Locale.ROOT, "%.2f", p.pap.line / 240f * 1.2f)
+                    : px(Math.abs(p.pap.line)) + "px").append(';');
+        }
+        if (p.pap.shade != null) {
+            css.append("background:").append(p.pap.shade).append(';');
         }
         final StringBuilder out = new StringBuilder();
         if (p.pap.pageBreakBefore || b.pendingBreak) {
