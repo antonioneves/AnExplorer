@@ -114,9 +114,12 @@ public final class ThumbnailLoader extends AsyncTask<Uri, Void, Bitmap> implemen
         ContentProviderClient client = null;
         Bitmap result = null;
         try {
-            if (Utils.isAPK(mMimeType)) {
+            if (mMimeType != null && mMimeType.startsWith("video/")) {
+                result = TmdbPosters.load(context, fileName());
+            }
+            if (result == null && Utils.isAPK(mMimeType)) {
                 result = ((BitmapDrawable) IconUtils.loadPackagePathIcon(context, mPath, DocumentsContract.Document.MIME_TYPE_APK)).getBitmap();
-            } else {
+            } else if (result == null) {
                 client = DocumentsApplication.acquireUnstableProviderOrThrow(resolver, mUri.getAuthority());
                 result = DocumentsContract.getDocumentThumbnail(resolver, mUri, mThumbSize, mSignal);
             }
@@ -136,6 +139,11 @@ public final class ThumbnailLoader extends AsyncTask<Uri, Void, Bitmap> implemen
             ContentProviderClientCompat.releaseQuietly(client);
         }
         return result;
+    }
+
+    private String fileName() {
+        final String name = mPath != null ? mPath : mUri.getLastPathSegment();
+        return name == null ? null : name.substring(name.lastIndexOf('/') + 1);
     }
 
     @Override
