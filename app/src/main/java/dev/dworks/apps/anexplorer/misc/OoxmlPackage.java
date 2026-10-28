@@ -306,7 +306,9 @@ final class OoxmlPackage {
     /** @return the concatenated text of a:t, w:t and similar leaves below the element */
     static String text(Element e) {
         final StringBuilder out = new StringBuilder();
-        collect(e, out);
+        if (e != null) {
+            collect(e, out);
+        }
         return out.toString();
     }
 

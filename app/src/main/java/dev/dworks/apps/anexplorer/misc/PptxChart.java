@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Draws a chart of a .pptx from the values cached in its chart part as a small SVG: bars, lines,
- * areas as lines, and pie or doughnut slices. Axes are plain; the series use the theme's accents.
+ * areas, scatter points, and pie or doughnut slices. Axes are plain; the series use the theme's accents.
  */
 final class PptxChart {
 
@@ -126,10 +126,17 @@ final class PptxChart {
             out.append("</svg>");
             return;
         }
+        if (kind.startsWith("scatter") && !series.isEmpty()) {
+            scatter(out, plot, series, theme, title, hasLegend, w, h, top0, bot0);
+            return;
+        }
         final boolean bars = kind.startsWith("bar");
+        final boolean area = kind.startsWith("area");
+        final boolean labels = labels(chart);
         final boolean horizontal = bars && "bar".equals(attr(child(chart, "c:barDir"), "val"));
         final boolean stacked = "stacked".equals(attr(child(chart, "c:grouping"), "val"))
                 || "percentStacked".equals(attr(child(chart, "c:grouping"), "val"));
+        final boolean percent = "percentStacked".equals(attr(child(chart, "c:grouping"), "val"));
         final List<List<Double>> data = new ArrayList<>();
         double max = 0, min = 0;
         int n = cats.size();
@@ -137,6 +144,19 @@ final class PptxChart {
             final List<Double> v = numbers(child(s, "c:val"));
             data.add(v);
             n = Math.max(n, v.size());
+        }
+        if (percent) {
+            for (int i = 0; i < n; i++) {
+                double total = 0;
+                for (List<Double> v : data) {
+                    total += i < v.size() ? Math.abs(v.get(i)) : 0;
+                }
+                for (List<Double> v : data) {
+                    if (i < v.size() && total > 0) {
+                        v.set(i, v.get(i) / total * 100);
+                    }
+                }
+            }
         }
         for (int i = 0; i < n; i++) {
             double pos = 0, neg = 0;
@@ -156,6 +176,11 @@ final class PptxChart {
             max = Math.max(max, pos);
             min = Math.min(min, neg);
         }
+        final Element scaling = path(plot, "c:valAx", "c:scaling");
+        if (scaling != null) {
+            max = number(child(scaling, "c:max"), max);
+            min = number(child(scaling, "c:min"), min);
+        }
         if (max == min) {
             max = min + 1;
         }
@@ -167,8 +192,18 @@ final class PptxChart {
             horizontalBars(out, series, data, cats, names, swatches, stacked, min, max, w, h, top0, bot0, hasLegend);
             return;
         }
-        final double left = 44, right = 10, top = top0, bottom = 28 + bot0;
+        final String catTitle = axisTitle(plot, "c:catAx"), valTitle = axisTitle(plot, "c:valAx");
+        final double left = valTitle == null ? 44 : 60, right = 10, top = top0;
+        final double bottom = 28 + bot0 + (catTitle == null ? 0 : 16);
         final double pw = w - left - right, ph = h - top - bottom;
+        if (valTitle != null) {
+            out.append("<text transform=\"translate(14 ").append(fmt(top + ph / 2)).append(") rotate(-90)\" ")
+                    .append("text-anchor=\"middle\" fill=\"#595959\">").append(esc(valTitle)).append("</text>");
+        }
+        if (catTitle != null) {
+            out.append("<text x=\"").append(fmt(left + pw / 2)).append("\" y=\"").append(fmt(h - bot0 - 6))
+                    .append("\" text-anchor=\"middle\" fill=\"#595959\">").append(esc(catTitle)).append("</text>");
+        }
         // Axis and grid
         for (int g = 0; g <= 4; g++) {
             final double val = min + (max - min) * g / 4;
@@ -182,7 +217,8 @@ final class PptxChart {
         final double zero = top + ph - ph * (0 - min) / (max - min);
         for (int i = 0; i < n; i++) {
             if (i < cats.size()) {
-                out.append("<text x=\"").append(fmt(left + slot * (i + 0.5))).append("\" y=\"").append(fmt(h - 10))
+                out.append("<text x=\"").append(fmt(left + slot * (i + 0.5))).append("\" y=\"")
+                        .append(fmt(h - bot0 - 10 - (catTitle == null ? 0 : 16)))
                         .append("\" text-anchor=\"middle\" fill=\"#595959\">").append(esc(cats.get(i)))
                         .append("</text>");
             }
@@ -205,16 +241,31 @@ final class PptxChart {
                     out.append("<rect x=\"").append(fmt(x)).append("\" y=\"").append(fmt(Math.min(y0, y1)))
                             .append("\" width=\"").append(fmt(bw)).append("\" height=\"")
                             .append(fmt(Math.abs(y0 - y1))).append("\" fill=\"").append(fill).append("\"/>");
+                    if (labels) {
+                        label(out, x + bw / 2, Math.min(y0, y1) - 3, d);
+                    }
                 }
             } else {
                 final StringBuilder pts = new StringBuilder();
+                final StringBuilder base = new StringBuilder();
                 for (int i = 0; i < v.size(); i++) {
                     final double x = left + slot * (i + 0.5);
-                    final double y = top + ph - ph * (v.get(i) - min) / (max - min);
+                    final double from = area && stacked ? acc[i] : 0;
+                    final double y = top + ph - ph * (from + v.get(i) - min) / (max - min);
                     pts.append(fmt(x)).append(',').append(fmt(y)).append(' ');
+                    base.insert(0, fmt(x) + "," + fmt(top + ph - ph * (from - min) / (max - min)) + " ");
+                    acc[i] += v.get(i);
+                    if (labels) {
+                        label(out, x, y - 6, v.get(i));
+                    }
                 }
-                out.append("<polyline points=\"").append(pts).append("\" fill=\"none\" stroke=\"").append(fill)
-                        .append("\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/>");
+                if (area) {
+                    out.append("<polygon points=\"").append(pts).append(base).append("\" fill=\"").append(fill)
+                            .append("\" fill-opacity=\"0.75\"/>");
+                } else {
+                    out.append("<polyline points=\"").append(pts).append("\" fill=\"none\" stroke=\"").append(fill)
+                            .append("\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/>");
+                }
             }
         }
         out.append("<line x1=\"").append(fmt(left)).append("\" x2=\"").append(fmt(left + pw)).append("\" y1=\"")
@@ -316,6 +367,100 @@ final class PptxChart {
                         .append(fmt(Math.abs(x1 - x0))).append("\" height=\"").append(fmt(bh)).append("\" fill=\"")
                         .append(colors.get(s)).append("\"/>");
             }
+        }
+        if (hasLegend) {
+            legend(out, names, colors, w, h);
+        }
+        out.append("</svg>");
+    }
+
+    private static double number(Element e, double fallback) {
+        try {
+            return e == null ? fallback : Double.parseDouble(attr(e, "val"));
+        } catch (RuntimeException x) {
+            return fallback;
+        }
+    }
+
+    /** @return true if the chart or one of its series asks for the values to be written on the marks */
+    private static boolean labels(Element chart) {
+        if ("1".equals(attr(path(chart, "c:dLbls", "c:showVal"), "val"))) {
+            return true;
+        }
+        for (Element ser : children(chart, "c:ser")) {
+            if ("1".equals(attr(path(ser, "c:dLbls", "c:showVal"), "val"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void label(StringBuilder out, double x, double y, double v) {
+        out.append("<text x=\"").append(fmt(x)).append("\" y=\"").append(fmt(y))
+                .append("\" text-anchor=\"middle\" font-size=\"11\" fill=\"#404040\">").append(esc(axis(v))).append("</text>");
+    }
+
+    private static String axisTitle(Element plot, String axis) {
+        final Element t = path(plot, axis, "c:title");
+        final String text = t == null ? "" : OoxmlPackage.text(child(t, "c:tx")).trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    /** Points, and lines between them if the series has a line, on a numeric x axis */
+    private static void scatter(StringBuilder out, Element plot, List<Element> series, OoxmlTheme theme, String title,
+                                boolean hasLegend, double w, double h, double top0, double bot0) {
+        final List<List<Double>> xs = new ArrayList<>(), ys = new ArrayList<>();
+        double xmin = Double.MAX_VALUE, xmax = -Double.MAX_VALUE, ymin = 0, ymax = 0;
+        final List<String> names = new ArrayList<>(), colors = new ArrayList<>();
+        for (int s = 0; s < series.size(); s++) {
+            final List<Double> x = numbers(child(series.get(s), "c:xVal")), y = numbers(child(series.get(s), "c:yVal"));
+            for (int i = 0; i < Math.min(x.size(), y.size()); i++) {
+                xmin = Math.min(xmin, x.get(i));
+                xmax = Math.max(xmax, x.get(i));
+                ymin = Math.min(ymin, y.get(i));
+                ymax = Math.max(ymax, y.get(i));
+            }
+            xs.add(x);
+            ys.add(y);
+            names.add(seriesName(series.get(s), s));
+            colors.add(color(theme, series.get(s), s));
+        }
+        if (xmin > xmax) {
+            xmin = 0;
+            xmax = 1;
+        }
+        if (xmax == xmin) {
+            xmax = xmin + 1;
+        }
+        if (ymax == ymin) {
+            ymax = ymin + 1;
+        }
+        final double left = 50, right = 14, top = top0, bottom = 26 + bot0;
+        final double pw = w - left - right, ph = h - top - bottom;
+        for (int g = 0; g <= 4; g++) {
+            final double y = top + ph - ph * g / 4, x = left + pw * g / 4;
+            out.append("<line x1=\"").append(fmt(left)).append("\" x2=\"").append(fmt(left + pw)).append("\" y1=\"").append(fmt(y))
+                    .append("\" y2=\"").append(fmt(y)).append("\" stroke=\"#d9d9d9\"/><text x=\"").append(fmt(left - 4))
+                    .append("\" y=\"").append(fmt(y + 4)).append("\" text-anchor=\"end\" fill=\"#595959\">")
+                    .append(esc(axis(ymin + (ymax - ymin) * g / 4))).append("</text><text x=\"").append(fmt(x))
+                    .append("\" y=\"").append(fmt(h - bot0 - 8)).append("\" text-anchor=\"middle\" fill=\"#595959\">")
+                    .append(esc(axis(xmin + (xmax - xmin) * g / 4))).append("</text>");
+        }
+        for (int s = 0; s < series.size(); s++) {
+            final StringBuilder pts = new StringBuilder(), dots = new StringBuilder();
+            for (int i = 0; i < Math.min(xs.get(s).size(), ys.get(s).size()); i++) {
+                final double x = left + pw * (xs.get(s).get(i) - xmin) / (xmax - xmin);
+                final double y = top + ph - ph * (ys.get(s).get(i) - ymin) / (ymax - ymin);
+                pts.append(fmt(x)).append(',').append(fmt(y)).append(' ');
+                dots.append("<circle cx=\"").append(fmt(x)).append("\" cy=\"").append(fmt(y)).append("\" r=\"4\" fill=\"")
+                        .append(colors.get(s)).append("\"/>");
+            }
+            if (child(path(series.get(s), "c:spPr", "a:ln"), "a:noFill") == null
+                    && !"marker".equals(attr(path(plot, "c:scatterChart", "c:scatterStyle"), "val"))) {
+                out.append("<polyline points=\"").append(pts).append("\" fill=\"none\" stroke=\"").append(colors.get(s))
+                        .append("\" stroke-width=\"2\"/>");
+            }
+            out.append(dots);
         }
         if (hasLegend) {
             legend(out, names, colors, w, h);

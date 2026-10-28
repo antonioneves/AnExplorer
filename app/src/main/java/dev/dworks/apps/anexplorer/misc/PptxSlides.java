@@ -864,14 +864,38 @@ final class PptxSlides {
                 }
                 return d.append('Z').toString();
             }
-            case "chord":
             case "pie":
-            case "blockArc":
+            case "chord": {
+                final boolean pie = name.equals("pie");
+                final double a0 = adjust(geom, "adj1", pie ? 0 : 2700000) / 60000.0;
+                final double a1 = adjust(geom, "adj2", 16200000) / 60000.0;
+                final double sweep = ((a1 - a0) % 360 + 360) % 360;
+                final double cx = w / 2, cy = h / 2;
+                final String head = pie ? "M" + fmt(cx) + ' ' + fmt(cy) + "L" : "M";
+                return head + arcPoint(a0, cx, cy, w, h) + "A" + fmt(cx) + ' ' + fmt(cy) + " 0 " + (sweep > 180 ? 1 : 0)
+                        + " 1 " + arcPoint(a1, cx, cy, w, h) + "Z";
+            }
+            case "blockArc": {
+                final double a0 = adjust(geom, "adj1", 10800000) / 60000.0, a1 = adjust(geom, "adj2", 0) / 60000.0;
+                final double t = Math.min(w, h) * adjust(geom, "adj3", 25000) / 100000;
+                final double sweep = ((a1 - a0) % 360 + 360) % 360;
+                final double cx = w / 2, cy = h / 2, ix = Math.max(cx - t, 1), iy = Math.max(cy - t, 1);
+                final int big = sweep > 180 ? 1 : 0;
+                return "M" + arcPoint(a0, cx, cy, w, h) + "A" + fmt(cx) + ' ' + fmt(cy) + " 0 " + big + " 1 "
+                        + arcPoint(a1, cx, cy, w, h) + "L" + arcPoint(a1, cx, cy, 2 * ix, 2 * iy) + "A" + fmt(ix) + ' ' + fmt(iy)
+                        + " 0 " + big + " 0 " + arcPoint(a0, cx, cy, 2 * ix, 2 * iy) + "Z";
+            }
             case "arc":
                 return null;
             default:
                 return null;
         }
+    }
+
+    /** A point on the ellipse of a w by h box centred at cx, cy, at an angle in degrees clockwise from the right */
+    private static String arcPoint(double degrees, double cx, double cy, double w, double h) {
+        final double a = Math.toRadians(degrees);
+        return fmt(cx + w / 2 * Math.cos(a)) + ' ' + fmt(cy + h / 2 * Math.sin(a));
     }
 
     private static String ring(double w, double h, double x0, double y0, double x1, double y1, boolean clockwise) {
