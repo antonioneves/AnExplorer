@@ -1009,7 +1009,7 @@ public final class WordReader {
             style.append("background:").append(chp.highlight).append(';');
         }
         if (font != null && !font.isEmpty()) {
-            style.append("font-family:'").append(font.replace("'", "").replace("\"", "")).append("',sans-serif;");
+            style.append("font-family:").append(OfficeFonts.family(font, "sans-serif")).append(';');
         }
         String html = esc(text);
         if (chp.script == 1) {

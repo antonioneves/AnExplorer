@@ -120,6 +120,8 @@ public final class OfficeHtml {
                 break;
             }
         }
+        // Stand-in fonts go in the head, before the slides, so a one-slide page keeps them
+        out.insert(out.indexOf(STYLE) + STYLE.length(), OfficeFonts.faces(out));
         return out.toString();
     }
 

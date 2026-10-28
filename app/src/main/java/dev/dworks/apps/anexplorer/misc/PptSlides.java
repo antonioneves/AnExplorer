@@ -737,8 +737,8 @@ final class PptSlides {
                     }
                     final String font = cf.font != UNSET ? fonts.get(cf.font) : null;
                     if (font != null && !font.isEmpty()) {
-                        runs.append(";font-family:'").append(font.replaceAll("[^\\p{L}\\p{N} \\-]", ""))
-                                .append("',sans-serif");
+                        runs.append(";font-family:").append(OfficeFonts.family(
+                                font.replaceAll("[^\\p{L}\\p{N} \\-]", ""), "sans-serif"));
                     }
                     // A vertical tab is a line break inside the paragraph
                     runs.append("\">").append(esc(piece).replace("\u000b", "<br>")).append("</span>");

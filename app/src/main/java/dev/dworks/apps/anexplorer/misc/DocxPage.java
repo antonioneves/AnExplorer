@@ -636,9 +636,9 @@ final class DocxPage {
             face = theme.minor;
         }
         if (face != null) {
-            css.append("font-family:'").append(face.replace("'", "")).append("',")
-                    .append(face.matches("(?i).*(times|georgia|cambria|garamond|palatino|book|serif).*")
-                            && !face.toLowerCase(Locale.ROOT).contains("sans") ? "serif" : "sans-serif").append(';');
+            css.append("font-family:").append(OfficeFonts.family(face,
+                    face.matches("(?i).*(times|georgia|cambria|garamond|palatino|book|serif).*")
+                            && !face.toLowerCase(Locale.ROOT).contains("sans") ? "serif" : "sans-serif")).append(';');
         }
         if (on(chain, "w:b")) {
             css.append("font-weight:bold;");
