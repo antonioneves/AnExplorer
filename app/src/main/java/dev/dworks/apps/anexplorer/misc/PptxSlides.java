@@ -1100,7 +1100,38 @@ final class PptxSlides {
                 final Tx inner = new Tx(tx.sx, tx.sy, tx.x(num(child(xfrm, "a:off"), "x", 0)),
                         tx.y(num(child(xfrm, "a:off"), "y", 0)));
                 tree(child(root, "dsp:spTree"), drawing, ctx, inner, false, out);
+            } else if (model != null) {
+                diagramNodes(model, ctx, box, out);
             }
+        }
+    }
+
+    /** SmartArt with no saved drawing: its text nodes as equal boxes in a row, the closest honest picture */
+    private void diagramNodes(Element model, Ctx ctx, Box box, StringBuilder out) {
+        final List<String> texts = new ArrayList<>();
+        for (Element pt : children(child(model, "dgm:ptLst"), "dgm:pt")) {
+            final String type = attr(pt, "type");
+            if (type == null || type.equals("node")) {
+                final String t = OoxmlPackage.text(child(pt, "dgm:t")).trim();
+                if (!t.isEmpty()) {
+                    texts.add(t);
+                }
+            }
+        }
+        if (texts.isEmpty()) {
+            return;
+        }
+        final String accent = ctx.theme.color(syntheticScheme("accent1"));
+        final boolean wide = box.w >= box.h;
+        final double gap = 8, cell = ((wide ? box.w : box.h) - gap * (texts.size() - 1)) / texts.size();
+        for (int i = 0; i < texts.size(); i++) {
+            final double off = i * (cell + gap);
+            out.append("<div class=o style=\"").append(place(box)).append("\"><div class=o style=\"")
+                    .append(wide ? "left:" + fmt(off) + "px;top:0;width:" + fmt(cell) + "px;height:" + fmt(box.h) + "px"
+                            : "top:" + fmt(off) + "px;left:0;height:" + fmt(cell) + "px;width:" + fmt(box.w) + "px")
+                    .append(";background:").append(accent == null ? "#4472c4" : accent)
+                    .append(";color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;")
+                    .append("font-size:16px;padding:6px\">").append(esc(texts.get(i))).append("</div></div>");
         }
     }
 

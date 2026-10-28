@@ -60,12 +60,16 @@ final class PptxChart {
         final Element plot = path(chartSpace, "c:chart", "c:plotArea");
         Element chart = null;
         String kind = null;
+        final List<Element> others = new ArrayList<>();
         for (Element c : children(plot, null)) {
             final String n = c.getNodeName();
             if (n.endsWith("Chart") && !n.equals("c:plotVisOnly")) {
-                chart = c;
-                kind = n.substring(2);
-                break;
+                if (chart == null) {
+                    chart = c;
+                    kind = n.substring(2);
+                } else if (n.equals("c:lineChart")) {
+                    others.add(c);
+                }
             }
         }
         out.append("<svg width=\"").append(fmt(w)).append("\" height=\"").append(fmt(h)).append("\" font-size=\"12\" ")
@@ -193,7 +197,8 @@ final class PptxChart {
             return;
         }
         final String catTitle = axisTitle(plot, "c:catAx"), valTitle = axisTitle(plot, "c:valAx");
-        final double left = valTitle == null ? 44 : 60, right = 10, top = top0;
+        final boolean secondary = !others.isEmpty() && !sameAxis(chart, others.get(0));
+        final double left = valTitle == null ? 44 : 60, right = secondary ? 44 : 10, top = top0;
         final double bottom = 28 + bot0 + (catTitle == null ? 0 : 16);
         final double pw = w - left - right, ph = h - top - bottom;
         if (valTitle != null) {
@@ -270,10 +275,58 @@ final class PptxChart {
         }
         out.append("<line x1=\"").append(fmt(left)).append("\" x2=\"").append(fmt(left + pw)).append("\" y1=\"")
                 .append(fmt(zero)).append("\" y2=\"").append(fmt(zero)).append("\" stroke=\"#868686\"/>");
+        int index = series.size();
+        for (Element other : others) {
+            final boolean same = sameAxis(chart, other);
+            final List<List<Double>> lines = new ArrayList<>();
+            double lo = same ? min : 0, hi = same ? max : 0;
+            for (Element ser : children(other, "c:ser")) {
+                final List<Double> v = numbers(child(ser, "c:val"));
+                lines.add(v);
+                if (!same) {
+                    for (double d : v) {
+                        lo = Math.min(lo, d);
+                        hi = Math.max(hi, d);
+                    }
+                }
+            }
+            if (hi == lo) {
+                hi = lo + 1;
+            }
+            if (!same) {
+                for (int g = 0; g <= 4; g++) {
+                    out.append("<text x=\"").append(fmt(left + pw + 4)).append("\" y=\"")
+                            .append(fmt(top + ph - ph * g / 4 + 4)).append("\" fill=\"#595959\">")
+                            .append(esc(axis(lo + (hi - lo) * g / 4))).append("</text>");
+                }
+            }
+            final List<Element> sers = children(other, "c:ser");
+            for (int k = 0; k < sers.size(); k++, index++) {
+                final String fill = color(theme, sers.get(k), index);
+                final StringBuilder pts = new StringBuilder(), dots = new StringBuilder();
+                final List<Double> v = lines.get(k);
+                for (int i = 0; i < v.size(); i++) {
+                    final double x = left + slot * (i + 0.5), y = top + ph - ph * (v.get(i) - lo) / (hi - lo);
+                    pts.append(fmt(x)).append(',').append(fmt(y)).append(' ');
+                    dots.append("<circle cx=\"").append(fmt(x)).append("\" cy=\"").append(fmt(y))
+                            .append("\" r=\"3.5\" fill=\"").append(fill).append("\"/>");
+                }
+                out.append("<polyline points=\"").append(pts).append("\" fill=\"none\" stroke=\"").append(fill)
+                        .append("\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/>").append(dots);
+                names.add(seriesName(sers.get(k), index));
+                swatches.add(fill);
+            }
+        }
         if (hasLegend) {
             legend(out, names, swatches, w, h);
         }
         out.append("</svg>");
+    }
+
+    /** @return true if both chart groups are plotted against the same value axis */
+    private static boolean sameAxis(Element a, Element b) {
+        final List<Element> x = children(a, "c:axId"), y = children(b, "c:axId");
+        return x.size() < 2 || y.size() < 2 || java.util.Objects.equals(attr(x.get(1), "val"), attr(y.get(1), "val"));
     }
 
     private static String point(OoxmlTheme theme, Element ser, int index) {
