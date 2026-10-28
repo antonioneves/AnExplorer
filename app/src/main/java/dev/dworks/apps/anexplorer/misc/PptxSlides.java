@@ -579,14 +579,25 @@ final class PptxSlides {
 
         final double ss = Math.min(box.w, box.h);
         String shapePath = null;
+        String calloutPath = null, calloutFill = null;
         double[][] polygon = null;
-        if (cust != null) {
+        // A callout's pointer sticks out of its box, so it is drawn as a picture rather than by clipping the box
+        if (prst != null && prst.startsWith("wedge") && prst.endsWith("Callout") && (fill == null || solid(fill) != null)) {
+            calloutPath = callout(prst, geom, box);
+            calloutFill = fill == null ? "none" : solid(fill);
+            fill = null;
+        }
+        if (calloutPath != null) {
+            // drawn below
+        } else if (cust != null) {
             shapePath = custom(cust, box);
         } else if (prst != null) {
             switch (prst) {
                 case "rect":
                 case "flowChartProcess":
                 case "wedgeRectCallout":
+                    break;
+                case "arc":
                     break;
                 case "round1Rect": {
                     final double r = ss * Math.min(adjust(geom, "adj", 16667), 50000) / 100000;
@@ -629,7 +640,7 @@ final class PptxSlides {
         }
         final boolean outline = visible(line);
         final double lw = Math.max(line.width < 0 ? 1 : line.width, 0.75);
-        if (outline && polygon == null && shapePath == null) {
+        if (outline && polygon == null && shapePath == null && calloutPath == null && !"arc".equals(prst)) {
             css.append("border:").append(fmt(lw)).append("px ").append(dashStyle(line.dash)).append(' ')
                     .append(line.color).append(';');
         }
@@ -646,6 +657,20 @@ final class PptxSlides {
 
         // Text sits above the outline, which is drawn separately for outlines that follow a clip path
         out.append("<div class=o style=\"").append(css).append("\">");
+        if (calloutPath != null) {
+            out.append("<svg style=\"position:absolute;left:0;top:0;overflow:visible\" width=\"").append(fmt(box.w))
+                    .append("\" height=\"").append(fmt(box.h)).append("\"><path d=\"").append(calloutPath).append("\" ")
+                    .append(outline ? stroke(line).replace("fill=\"none\"", "fill=\"" + calloutFill + "\"")
+                            : "fill=\"" + calloutFill + "\"").append("/></svg>");
+        } else if ("arc".equals(prst) && outline) {
+            final double a0 = adjust(geom, "adj1", 16200000) / 60000.0, a1 = adjust(geom, "adj2", 0) / 60000.0;
+            final double sweep = ((a1 - a0) % 360 + 360) % 360;
+            out.append("<svg style=\"position:absolute;left:0;top:0;overflow:visible\" width=\"").append(fmt(box.w))
+                    .append("\" height=\"").append(fmt(box.h)).append("\"><path d=\"M")
+                    .append(arcPoint(a0, box.w / 2, box.h / 2, box.w, box.h)).append("A").append(fmt(box.w / 2)).append(' ')
+                    .append(fmt(box.h / 2)).append(" 0 ").append(sweep > 180 ? 1 : 0).append(" 1 ")
+                    .append(arcPoint(a1, box.w / 2, box.h / 2, box.w, box.h)).append("\" ").append(stroke(line)).append("/></svg>");
+        }
         if ((polygon != null || shapePath != null) && outline) {
             out.append("<svg style=\"position:absolute;left:0;top:0;overflow:visible\" width=\"").append(fmt(box.w))
                     .append("\" height=\"").append(fmt(box.h)).append("\">");
@@ -849,9 +874,6 @@ final class PptxSlides {
                 return new double[][]{{0, y2 - bar}, {w, y2 - bar}, {w, y2}, {0, y2}, {0, y3}, {w, y3},
                         {w, y3 + bar}, {0, y3 + bar}};
             }
-            case "mathDivide":
-            case "mathNotEqual":
-                return null;
             case "flowChartPreparation":
                 return new double[][]{{w * 0.2, 0}, {w * 0.8, 0}, {w, h / 2}, {w * 0.8, h}, {w * 0.2, h}, {0, h / 2}};
             case "flowChartMerge":
@@ -870,10 +892,6 @@ final class PptxSlides {
                 return new double[][]{{w * 0.38, 0}, {w * 0.62, h * 0.33}, {w * 0.5, h * 0.36}, {w, h * 0.7},
                         {w * 0.62, h * 0.66}, {w * 0.7, h}, {w * 0.2, h * 0.58}, {w * 0.38, h * 0.55}, {w * 0.1, h * 0.28},
                         {w * 0.3, h * 0.3}};
-            case "bentArrow":
-            case "uturnArrow":
-            case "curvedRightArrow":
-                return null;
             case "rightArrowCallout": {
                 final double x = ss * adjust(geom, "adj3", 25000) / 100000;
                 final double body = w * adjust(geom, "adj4", 64977) / 100000;
@@ -965,11 +983,111 @@ final class PptxSlides {
                         + arcPoint(a1, cx, cy, w, h) + "L" + arcPoint(a1, cx, cy, 2 * ix, 2 * iy) + "A" + fmt(ix) + ' ' + fmt(iy)
                         + " 0 " + big + " 0 " + arcPoint(a0, cx, cy, 2 * ix, 2 * iy) + "Z";
             }
-            case "arc":
-                return null;
+            case "mathDivide": {
+                final double bar = h * adjust(geom, "adj1", 23520) / 100000;
+                final double r = h * adjust(geom, "adj3", 11760) / 100000;
+                final double offset = bar / 2 + h * adjust(geom, "adj2", 5880) / 100000 + r;
+                return "M0 " + fmt(h / 2 - bar / 2) + "H" + fmt(w) + "V" + fmt(h / 2 + bar / 2) + "H0Z"
+                        + ring(w, h, w / 2 - r, h / 2 - offset - r, w / 2 + r, h / 2 - offset + r, true)
+                        + ring(w, h, w / 2 - r, h / 2 + offset - r, w / 2 + r, h / 2 + offset + r, true);
+            }
+            case "mathNotEqual": {
+                final double bar = h * adjust(geom, "adj1", 23520) / 100000;
+                final double gap = h * adjust(geom, "adj2", 6600000) / 100000 > 0 ? h * 0.1176 : h * 0.1176;
+                final double y2 = h / 2 - gap, y3 = h / 2 + gap;
+                final double shift = h / 2 * Math.tan(Math.toRadians(20)), t = bar / Math.cos(Math.toRadians(20));
+                return "M0 " + fmt(y2 - bar) + "H" + fmt(w) + "V" + fmt(y2) + "H0Z"
+                        + "M0 " + fmt(y3) + "H" + fmt(w) + "V" + fmt(y3 + bar) + "H0Z"
+                        + "M" + fmt(w / 2 + shift - t / 2) + " 0H" + fmt(w / 2 + shift + t / 2) + "L"
+                        + fmt(w / 2 - shift + t / 2) + ' ' + fmt(h) + "H" + fmt(w / 2 - shift - t / 2) + "Z";
+            }
+            case "bentArrow": {
+                final double ss = Math.min(w, h);
+                final double th = ss * adjust(geom, "adj1", 25000) / 100000;
+                final double aw2 = ss * adjust(geom, "adj2", 25000) / 100000;
+                final double ah = ss * adjust(geom, "adj3", 25000) / 100000;
+                final double dh2 = aw2 - th / 2;
+                final double bs = Math.min(w - ah, h - dh2);
+                final double bd = Math.min(ss * adjust(geom, "adj4", 43750) / 100000, Math.max(bs, 0));
+                final double bd2 = Math.max(bd - th, 0), y3 = dh2 + th, x4 = w - ah;
+                return "M0 " + fmt(h) + "V" + fmt(dh2 + bd) + "A" + fmt(bd) + ' ' + fmt(bd) + " 0 0 1 " + fmt(bd) + ' '
+                        + fmt(dh2) + "H" + fmt(x4) + "V0L" + fmt(w) + ' ' + fmt(aw2) + "L" + fmt(x4) + ' ' + fmt(y3 + dh2)
+                        + "V" + fmt(y3) + "H" + fmt(th + bd2) + "A" + fmt(bd2) + ' ' + fmt(bd2) + " 0 0 0 " + fmt(th) + ' '
+                        + fmt(y3 + bd2) + "V" + fmt(h) + "Z";
+            }
+            case "uturnArrow": {
+                final double ss = Math.min(w, h);
+                final double a2 = Math.min(adjust(geom, "adj2", 25000), 25000);
+                final double a1 = Math.min(adjust(geom, "adj1", 25000), a2 * 2);
+                final double th = ss * a1 / 100000, aw2 = ss * a2 / 100000, dh2 = aw2 - th / 2;
+                final double a3 = Math.min(adjust(geom, "adj3", 25000), Math.max(0, (100000 - a1 * ss / h) * h / ss));
+                final double ah = ss * a3 / 100000;
+                final double a5 = Math.max(Math.min(100000, adjust(geom, "adj5", 75000)), (a3 + a1) * ss / h);
+                final double y5 = h * a5 / 100000, y4 = y5 - ah, x9 = w - dh2;
+                final double bd = Math.min(ss * adjust(geom, "adj4", 43750) / 100000, Math.max(0, Math.min(x9 / 2, y4)));
+                final double bd2 = Math.max(bd - th, 0), x3 = th + bd2, x8 = w - aw2, x6 = x8 - aw2, x7 = x6 + dh2;
+                final double x4 = x9 - bd, x5 = x7 - bd2;
+                return "M0 " + fmt(h) + "V" + fmt(bd) + "A" + fmt(bd) + ' ' + fmt(bd) + " 0 0 1 " + fmt(bd) + " 0H" + fmt(x4)
+                        + "A" + fmt(bd) + ' ' + fmt(bd) + " 0 0 1 " + fmt(x9) + ' ' + fmt(bd) + "V" + fmt(y4) + "H" + fmt(w)
+                        + "L" + fmt(x8) + ' ' + fmt(y5) + "L" + fmt(x6) + ' ' + fmt(y4) + "H" + fmt(x7) + "V" + fmt(x3)
+                        + "A" + fmt(bd2) + ' ' + fmt(bd2) + " 0 0 0 " + fmt(x5) + ' ' + fmt(th) + "H" + fmt(x3) + "A"
+                        + fmt(bd2) + ' ' + fmt(bd2) + " 0 0 0 " + fmt(th) + ' ' + fmt(x3) + "V" + fmt(h) + "Z";
+            }
             default:
                 return null;
         }
+    }
+
+    /** @return the colour of a plain fill such as "background:#336699;", or null for gradients and pictures */
+    private static String solid(String fill) {
+        final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^background:(#[0-9a-fA-F]{3,8}|rgba?\\([0-9 ,.%]+\\));$")
+                .matcher(fill);
+        return m.matches() ? m.group(1) : null;
+    }
+
+    /** The outline of a speech-bubble callout: its box with a pointer reaching to the point the adjustments name */
+    private static String callout(String name, Element geom, Box b) {
+        final double w = b.w, h = b.h;
+        final double dx = w * adjust(geom, "adj1", -20833) / 100000, dy = h * adjust(geom, "adj2", 62500) / 100000;
+        final double px = w / 2 + dx, py = h / 2 + dy;
+        if (name.equals("wedgeEllipseCallout")) {
+            final double theta = Math.atan2(dy / h, dx / w), d = 0.3;
+            final double[][] base = {{w / 2 + w / 2 * Math.cos(theta - d), h / 2 + h / 2 * Math.sin(theta - d)},
+                    {px, py}, {w / 2 + w / 2 * Math.cos(theta + d), h / 2 + h / 2 * Math.sin(theta + d)}};
+            return ring(w, h, 0, 0, w, h, true) + "M" + fmt(base[0][0]) + ' ' + fmt(base[0][1]) + "L" + fmt(base[1][0]) + ' '
+                    + fmt(base[1][1]) + "L" + fmt(base[2][0]) + ' ' + fmt(base[2][1]) + "Z";
+        }
+        final double r = name.equals("wedgeRoundRectCallout")
+                ? Math.min(w, h) * Math.min(adjust(geom, "adj3", 16667), 50000) / 100000 : 0;
+        final boolean vertical = Math.abs(dy) > Math.abs(dx * h / w);
+        final boolean top = vertical && dy < 0, bottom = vertical && dy >= 0, left = !vertical && dx < 0,
+                right = !vertical && dx >= 0;
+        final double x1 = w * (dx > 0 ? 7 : 2) / 12, x2 = w * (dx > 0 ? 10 : 5) / 12;
+        final double y1 = h * (dy > 0 ? 7 : 2) / 12, y2 = h * (dy > 0 ? 10 : 5) / 12;
+        final String tip = fmt(px) + ' ' + fmt(py);
+        final StringBuilder d = new StringBuilder("M").append(fmt(r)).append(" 0");
+        if (top) {
+            d.append("L").append(fmt(x1)).append(" 0L").append(tip).append("L").append(fmt(x2)).append(" 0");
+        }
+        d.append("H").append(fmt(w - r)).append("A").append(fmt(r)).append(' ').append(fmt(r)).append(" 0 0 1 ")
+                .append(fmt(w)).append(' ').append(fmt(r));
+        if (right) {
+            d.append("L").append(fmt(w)).append(' ').append(fmt(y1)).append("L").append(tip).append("L").append(fmt(w))
+                    .append(' ').append(fmt(y2));
+        }
+        d.append("V").append(fmt(h - r)).append("A").append(fmt(r)).append(' ').append(fmt(r)).append(" 0 0 1 ")
+                .append(fmt(w - r)).append(' ').append(fmt(h));
+        if (bottom) {
+            d.append("L").append(fmt(x2)).append(' ').append(fmt(h)).append("L").append(tip).append("L").append(fmt(x1))
+                    .append(' ').append(fmt(h));
+        }
+        d.append("H").append(fmt(r)).append("A").append(fmt(r)).append(' ').append(fmt(r)).append(" 0 0 1 0 ")
+                .append(fmt(h - r));
+        if (left) {
+            d.append("L0 ").append(fmt(y2)).append("L").append(tip).append("L0 ").append(fmt(y1));
+        }
+        return d.append("V").append(fmt(r)).append("A").append(fmt(r)).append(' ').append(fmt(r)).append(" 0 0 1 ")
+                .append(fmt(r)).append(" 0Z").toString();
     }
 
     /** A point on the ellipse of a w by h box centred at cx, cy, at an angle in degrees clockwise from the right */
