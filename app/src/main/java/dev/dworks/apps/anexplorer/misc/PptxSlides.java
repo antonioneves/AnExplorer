@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Draws the slides of a .pptx, .pptm or .ppsx as absolutely placed HTML: master, layout and slide
@@ -1425,33 +1426,70 @@ final class PptxSlides {
         }
     }
 
-    /** SmartArt with no saved drawing: its text nodes as equal boxes in a row, the closest honest picture */
+    /**
+     * SmartArt with no saved drawing: its top-level text nodes as equal boxes in a row, the closest
+     * honest picture, with the nodes below each stacked in smaller boxes under it
+     */
     private void diagramNodes(Element model, Ctx ctx, Box box, StringBuilder out) {
-        final List<String> texts = new ArrayList<>();
+        final Map<String, String> texts = new HashMap<>();
+        final List<String> order = new ArrayList<>();
         for (Element pt : children(child(model, "dgm:ptLst"), "dgm:pt")) {
-            final String type = attr(pt, "type");
-            if (type == null || type.equals("node")) {
-                final String t = OoxmlPackage.text(child(pt, "dgm:t")).trim();
-                if (!t.isEmpty()) {
-                    texts.add(t);
-                }
+            final String type = attr(pt, "type"), id = attr(pt, "modelId");
+            if ((type == null || type.equals("node")) && id != null) {
+                texts.put(id, OoxmlPackage.text(child(pt, "dgm:t")).trim());
+                order.add(id);
             }
         }
-        if (texts.isEmpty()) {
+        // Parent to children, in the order the file gives them
+        final Map<String, List<String>> kids = new HashMap<>();
+        final Map<String, Long> rank = new HashMap<>();
+        final Set<String> hasParent = new java.util.HashSet<>();
+        for (Element cxn : children(child(model, "dgm:cxnLst"), "dgm:cxn")) {
+            final String type = attr(cxn, "type"), src = attr(cxn, "srcId"), dest = attr(cxn, "destId");
+            if ((type != null && !type.equals("parOf")) || src == null || dest == null || !texts.containsKey(dest)) {
+                continue;
+            }
+            rank.put(dest, num(cxn, "srcOrd", 0));
+            if (texts.containsKey(src)) {
+                kids.computeIfAbsent(src, k -> new ArrayList<>()).add(dest);
+                hasParent.add(dest);
+            }
+        }
+        final List<String> tops = new ArrayList<>();
+        for (String id : order) {
+            if (!hasParent.contains(id)) {
+                tops.add(id);
+            }
+        }
+        for (List<String> list : kids.values()) {
+            java.util.Collections.sort(list, (x, y) -> Long.compare(rank.get(x), rank.get(y)));
+        }
+        java.util.Collections.sort(tops, (x, y) -> Long.compare(rank.containsKey(x) ? rank.get(x) : 0,
+                rank.containsKey(y) ? rank.get(y) : 0));
+        if (tops.isEmpty()) {
             return;
         }
         final String accent = ctx.theme.color(syntheticScheme("accent1"));
-        final boolean wide = box.w >= box.h;
-        final double gap = 8, cell = ((wide ? box.w : box.h) - gap * (texts.size() - 1)) / texts.size();
-        for (int i = 0; i < texts.size(); i++) {
-            final double off = i * (cell + gap);
-            out.append("<div class=o style=\"").append(place(box)).append("\"><div class=o style=\"")
-                    .append(wide ? "left:" + fmt(off) + "px;top:0;width:" + fmt(cell) + "px;height:" + fmt(box.h) + "px"
-                            : "top:" + fmt(off) + "px;left:0;height:" + fmt(cell) + "px;width:" + fmt(box.w) + "px")
-                    .append(";background:").append(accent == null ? "#4472c4" : accent)
-                    .append(";color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;")
-                    .append("font-size:16px;padding:6px\">").append(esc(texts.get(i))).append("</div></div>");
+        final String fill = ";background:" + (accent == null ? "#4472c4" : accent)
+                + ";color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;";
+        final double gap = 8, cell = (box.w - gap * (tops.size() - 1)) / tops.size();
+        out.append("<div class=o style=\"").append(place(box)).append("\">");
+        for (int i = 0; i < tops.size(); i++) {
+            final List<String> below = kids.containsKey(tops.get(i)) ? kids.get(tops.get(i)) : new ArrayList<>();
+            final double left = i * (cell + gap), head = below.isEmpty() ? box.h : box.h * 0.3;
+            out.append("<div class=o style=\"left:").append(fmt(left)).append("px;top:0;width:").append(fmt(cell))
+                    .append("px;height:").append(fmt(head)).append("px").append(fill)
+                    .append("font-size:16px;padding:6px\">").append(esc(texts.get(tops.get(i)))).append("</div>");
+            final double row = below.isEmpty() ? 0 : (box.h - head - gap - gap * (below.size() - 1)) / below.size();
+            for (int j = 0; j < below.size(); j++) {
+                out.append("<div class=o style=\"left:").append(fmt(left + cell * 0.08)).append("px;top:")
+                        .append(fmt(head + gap + j * (row + gap))).append("px;width:").append(fmt(cell * 0.84))
+                        .append("px;height:").append(fmt(row)).append("px").append(fill)
+                        .append("opacity:.75;font-size:14px;padding:4px\">").append(esc(texts.get(below.get(j))))
+                        .append("</div>");
+            }
         }
+        out.append("</div>");
     }
 
     private static Element find(Element root, String name) {
