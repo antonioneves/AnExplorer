@@ -41,7 +41,11 @@ public final class OfficeHtml {
             + ".card h1{margin:0 0 .6em;font-size:34px;color:#1f3864}"
             + ".card ul{margin:0;padding-left:1.2em}"
             + ".card li,.card p{font-size:22px;line-height:1.35;margin:0 0 .4em}"
-            + ".card .n{position:absolute;right:16px;bottom:8px;color:#888;font-size:14px}"
+            + ".card .n,.slide .n{position:absolute;right:16px;bottom:8px;color:#888;font-size:14px}"
+            + "#deck{padding:20px 0}"
+            + ".slide{position:relative;overflow:hidden;margin:0 auto 24px;background:#fff}"
+            + ".slide p{line-height:1.2}.slide .t{box-sizing:border-box;width:100%;height:100%;display:flex;"
+            + "flex-direction:column}.slide img{max-width:none}"
             + "</style>";
 
     private OfficeHtml() {
@@ -67,9 +71,22 @@ public final class OfficeHtml {
             case "xlsb":
                 sheets(out, BinaryOffice.xlsb(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
                 break;
-            default:
-                slides(out, BinaryOffice.ppt(PreviewFormatter.readAll(in, MAX_BYTES)));
+            default: {
+                final byte[] file = PreviewFormatter.readAll(in, MAX_BYTES);
+                String drawn;
+                try {
+                    drawn = PptSlides.html(file);
+                } catch (IOException | RuntimeException e) {
+                    // Encrypted or damaged drawing data: fall back to the text of the slides
+                    drawn = null;
+                }
+                if (drawn != null) {
+                    out.append(drawn);
+                } else {
+                    slides(out, BinaryOffice.ppt(file));
+                }
                 break;
+            }
         }
         return out.toString();
     }
