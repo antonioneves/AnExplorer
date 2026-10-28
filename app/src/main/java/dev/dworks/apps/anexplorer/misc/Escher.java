@@ -103,6 +103,117 @@ final class Escher {
         }
     }
 
+    /** @return [start, length] of a complex property's data (an array property includes its 6-byte header), or null */
+    static int[] complex(byte[] b, Rec rec, int id) {
+        int at = rec.body + rec.inst * 6;
+        for (int i = 0; i < rec.inst; i++) {
+            final int head = u16(b, rec.body + i * 6);
+            if ((head & 0x8000) != 0) {
+                final int length = u32(b, rec.body + i * 6 + 2);
+                if ((head & 0x3FFF) == id) {
+                    return length >= 0 && at + length <= rec.end ? new int[]{at, length} : null;
+                }
+                at += Math.max(0, length);
+            }
+        }
+        return null;
+    }
+
+    /** The points of an array property, as pairs: pVertices and the like hold 16 or 32 bit coordinates */
+    private static int[][] points(byte[] b, int[] data) {
+        if (data == null || data[1] < 6) {
+            return null;
+        }
+        final int count = u16(b, data[0]), size = u16(b, data[0] + 4) == 0xFFF0 ? 4 : u16(b, data[0] + 4);
+        if ((size != 4 && size != 8) || 6 + count * size > data[1]) {
+            return null;
+        }
+        final int[][] out = new int[count][2];
+        for (int i = 0; i < count; i++) {
+            final int at = data[0] + 6 + i * size;
+            out[i][0] = size == 4 ? (short) u16(b, at) : u32(b, at);
+            out[i][1] = size == 4 ? (short) u16(b, at + 2) : u32(b, at + 4);
+        }
+        return out;
+    }
+
+    /**
+     * A freeform shape's outline as an SVG path.
+     *
+     * @return [viewBox, path data], or null if the shape has no usable vertices
+     */
+    static String[] freeform(byte[] b, List<Rec> options, Map<Integer, Integer> props) {
+        int[][] vertices = null;
+        int[] segments = null;
+        for (Rec rec : options) {
+            if (rec.type != OPT) {
+                continue;
+            }
+            vertices = vertices != null ? vertices : points(b, complex(b, rec, 0x0145));
+            final int[] raw = complex(b, rec, 0x0146);
+            if (raw != null && segments == null && raw[1] >= 6 && 6 + u16(b, raw[0]) * 2 <= raw[1]) {
+                segments = new int[u16(b, raw[0])];
+                for (int i = 0; i < segments.length; i++) {
+                    segments[i] = u16(b, raw[0] + 6 + i * 2);
+                }
+            }
+        }
+        if (vertices == null || vertices.length < 2) {
+            return null;
+        }
+        final StringBuilder d = new StringBuilder();
+        int v = 0;
+        if (segments == null) {
+            d.append("M").append(vertices[0][0]).append(' ').append(vertices[0][1]);
+            for (int i = 1; i < vertices.length; i++) {
+                d.append("L").append(vertices[i][0]).append(' ').append(vertices[i][1]);
+            }
+            d.append('Z');
+        } else {
+            for (int w : segments) {
+                final int type = w >> 13, count = type >= 5 ? w & 0xFF : w & 0x1FFF;
+                if (type == 4) {
+                    break;
+                }
+                if (type == 3) {
+                    d.append('Z');
+                } else if (type >= 5) {
+                    final int code = w >> 8 & 0x1F;
+                    if (code != 0xA && code != 0xB) {
+                        return null;
+                    }
+                } else if (type == 2) {
+                    if (v >= vertices.length) {
+                        return null;
+                    }
+                    d.append("M").append(vertices[v][0]).append(' ').append(vertices[v][1]);
+                    v++;
+                } else {
+                    for (int i = 0; i < count; i++) {
+                        final int need = type == 1 ? 3 : 1;
+                        if (v + need > vertices.length) {
+                            return null;
+                        }
+                        d.append(type == 1 ? 'C' : 'L');
+                        for (int k = 0; k < need; k++, v++) {
+                            d.append(vertices[v][0]).append(' ').append(vertices[v][1]).append(' ');
+                        }
+                    }
+                }
+            }
+        }
+        final int left = orDefault(props.get(0x0140), 0), top = orDefault(props.get(0x0141), 0);
+        final int right = orDefault(props.get(0x0142), 21600), bottom = orDefault(props.get(0x0143), 21600);
+        if (right <= left || bottom <= top) {
+            return null;
+        }
+        return new String[]{left + " " + top + " " + (right - left) + " " + (bottom - top), d.toString()};
+    }
+
+    private static int orDefault(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
     /**
      * The picture store: one [offset in the delay stream or -1, size, embedded body, embedded end]
      * entry per picture, in blip-index order.
@@ -182,6 +293,24 @@ final class Escher {
                 return ";clip-path:polygon(0 0,75% 0,100% 50%,75% 100%,0 100%)";
             case 55:
                 return ";clip-path:polygon(0 0,75% 0,100% 50%,75% 100%,0 100%,25% 50%)";
+            case 7:
+                return ";clip-path:polygon(25% 0,100% 0,75% 100%,0 100%)";
+            case 8:
+                return ";clip-path:polygon(0 100%,20% 0,80% 0,100% 100%)";
+            case 9:
+                return ";clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)";
+            case 10:
+                return ";clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%)";
+            case 11:
+                return ";clip-path:polygon(33% 0,67% 0,67% 33%,100% 33%,100% 67%,67% 67%,67% 100%,33% 100%,33% 67%,0 67%,0 33%,33% 33%)";
+            case 12:
+                return ";clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)";
+            case 66:
+                return ";clip-path:polygon(0 50%,40% 0,40% 25%,100% 25%,100% 75%,40% 75%,40% 100%)";
+            case 67:
+                return ";clip-path:polygon(25% 0,75% 0,75% 60%,100% 60%,50% 100%,0 60%,25% 60%)";
+            case 68:
+                return ";clip-path:polygon(50% 0,100% 40%,75% 40%,75% 100%,25% 100%,25% 40%,0 40%)";
             default:
                 return "";
         }

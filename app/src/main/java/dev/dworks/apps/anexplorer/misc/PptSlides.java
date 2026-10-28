@@ -1102,6 +1102,25 @@ final class PptSlides {
             line(out, style.toString(), stroke == null ? context.scheme[1] : stroke, props);
             return;
         }
+        final List<Rec> options = new ArrayList<>();
+        for (Rec part : parts) {
+            if (part.type == OPT || part.type == TERTIARY_OPT) {
+                options.add(part);
+            }
+        }
+        final String[] path = geom == 0 || geom == 1 ? Escher.freeform(doc, options, props) : null;
+        if (path != null) {
+            final Integer width = props.get(0x01CB);
+            final String solid = fill != null && fill.startsWith("#") ? fill : filled ? context.scheme[4] : "none";
+            out.append("<div style=\"").append(style).append("\"><svg width=\"100%\" height=\"100%\" viewBox=\"")
+                    .append(path[0]).append("\" preserveAspectRatio=\"none\" style=\"position:absolute;left:0;top:0;overflow:visible\"><path d=\"")
+                    .append(path[1]).append("\" fill=\"").append(solid).append("\" stroke=\"")
+                    .append(stroke == null ? "none" : stroke).append("\" stroke-width=\"")
+                    .append(fmt(Math.max(0.5, (width == null ? 9525 : width) / 9525.0)))
+                    .append("\" vector-effect=\"non-scaling-stroke\"/></svg>")
+                    .append(text == null ? "" : text).append("</div>");
+            return;
+        }
         style.append(";box-sizing:border-box");
         if (fillPicture != null) {
             style.append(";background:url(").append(fillPicture).append(") center/100% 100%");
