@@ -284,7 +284,14 @@ public class IconHelper {
 
     private void setImage(ImageView imageView, Bitmap bitmap, String docMimeType, String docPath){
         imageView.setImageBitmap(bitmap);
-        imageView.setScaleType(getIconScaleType(docMimeType, docPath));
+        imageView.setScaleType(isPoster(bitmap, docMimeType)
+                ? ImageView.ScaleType.FIT_CENTER : getIconScaleType(docMimeType, docPath));
+    }
+
+    /** A portrait video thumbnail is a TMDB poster, which is shown whole instead of cropped to the tile */
+    private static boolean isPoster(Bitmap bitmap, String docMimeType) {
+        return bitmap != null && docMimeType != null && docMimeType.startsWith("video/")
+                && bitmap.getHeight() > bitmap.getWidth();
     }
 
     private ImageView.ScaleType getIconScaleType(String docMimeType, String docPath){
