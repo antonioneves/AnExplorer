@@ -75,6 +75,13 @@ final class OoxmlPackage {
         return pkg;
     }
 
+    /** @return a package over parts that are already read, keyed by their part names */
+    static OoxmlPackage of(Map<String, byte[]> parts) {
+        final OoxmlPackage pkg = new OoxmlPackage();
+        pkg.parts.putAll(parts);
+        return pkg;
+    }
+
     boolean has(String part) {
         return parts.containsKey(part);
     }

@@ -500,14 +500,25 @@ public final class PreviewFormatter {
 
     /** Reads the zip entries whose names start with the prefix; a zip can only be walked in order */
     static Map<String, byte[]> zip(InputStream in, String prefix) throws IOException {
+        return zip(in, prefix, false);
+    }
+
+    /** As {@link #zip(InputStream, String)}, and with the pictures too when asked, up to a total size */
+    static Map<String, byte[]> zip(InputStream in, String prefix, boolean pictures) throws IOException {
         final Map<String, byte[]> entries = new HashMap<>();
+        int pictureBytes = 0;
         try (ZipInputStream zip = new ZipInputStream(in)) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 final String name = entry.getName();
                 final boolean wanted = name.startsWith(prefix) || name.startsWith("META-INF/")
                         || prefix.isEmpty() || name.equals("word/document.xml");
-                if (!entry.isDirectory() && wanted && (name.endsWith(".xml") || name.endsWith(".rels") || name.endsWith(".bin")
+                if (pictures && !entry.isDirectory() && wanted && pictureBytes < 24 * 1024 * 1024
+                        && name.matches("(?i).*\\.(png|jpe?g|gif|webp|bmp|svg|emf|wmf)")) {
+                    final byte[] bytes = readAll(zip, 6 * 1024 * 1024);
+                    pictureBytes += bytes.length;
+                    entries.put(name, bytes);
+                } else if (!entry.isDirectory() && wanted && (name.endsWith(".xml") || name.endsWith(".rels") || name.endsWith(".bin")
                         || name.endsWith(".opf") || name.endsWith(".ncx") || name.endsWith("html"))) {
                     entries.put(name, readAll(zip, MAX_ENTRY_BYTES));
                 }

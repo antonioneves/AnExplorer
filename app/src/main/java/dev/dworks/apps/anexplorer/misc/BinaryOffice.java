@@ -35,6 +35,8 @@ public final class BinaryOffice {
         public final Map<Integer, Integer> columnWidths = new TreeMap<>();
         /** Merged ranges as first row, last row, first column, last column (0-based) */
         public final List<int[]> merges = new ArrayList<>();
+        /** The part name of an .xlsx worksheet, which is where its drawings are found; null for other formats */
+        String part;
 
         Sheet(String name) {
             this.name = name;
@@ -1086,7 +1088,9 @@ public final class BinaryOffice {
         for (String[] entry : listed) {
             p = xml(parts, entry[1]);
             if (p != null) {
-                sheets.add(xlsxSheet(p, entry[0], shared, wb, maxRows, maxColumns));
+                final Sheet sheet = xlsxSheet(p, entry[0], shared, wb, maxRows, maxColumns);
+                sheet.part = entry[1];
+                sheets.add(sheet);
             }
         }
         if (sheets.isEmpty()) {

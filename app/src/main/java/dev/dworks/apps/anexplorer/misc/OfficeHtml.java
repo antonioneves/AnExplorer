@@ -31,6 +31,7 @@ public final class OfficeHtml {
             + "#page td{box-sizing:border-box;border:1px solid #999;padding:2px 5px;vertical-align:top}"
             + "#page td p{margin:0}"
             + "h2.s{margin:0 0 8px;color:#fff;font-size:20px;font-weight:bold}"
+            + ".dr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin:-16px 0 32px}"
             + "table.g{background:#fff;font-size:15px;margin:0 0 32px}"
             + "table.g td,table.g th{border:1px solid #c8c8c8;padding:3px 10px;white-space:pre}"
             + "table.g th{background:#e6e6e6;color:#555;font-weight:normal;font-size:13px}"
@@ -87,15 +88,19 @@ public final class OfficeHtml {
                 break;
             }
             case "xls":
-                sheets(out, BinaryOffice.xls(PreviewFormatter.readAll(in, MAX_BYTES), MAX_ROWS, MAX_COLUMNS));
+                sheets(out, BinaryOffice.xls(PreviewFormatter.readAll(in, MAX_BYTES), MAX_ROWS, MAX_COLUMNS), null);
                 break;
             case "xlsx":
             case "xlsm":
             case "xltx":
-                sheets(out, BinaryOffice.xlsx(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
+            {
+                final Map<String, byte[]> parts = PreviewFormatter.zip(in, "xl/", true);
+                final List<BinaryOffice.Sheet> book = BinaryOffice.xlsx(parts, MAX_ROWS, MAX_COLUMNS);
+                sheets(out, book, SheetDrawings.html(parts, book));
+            }
                 break;
             case "xlsb":
-                sheets(out, BinaryOffice.xlsb(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
+                sheets(out, BinaryOffice.xlsb(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS), null);
                 break;
             case "pptx":
             case "pptm":
@@ -193,9 +198,10 @@ public final class OfficeHtml {
         return name.toString();
     }
 
-    private static void sheets(StringBuilder out, List<BinaryOffice.Sheet> sheets) {
+    private static void sheets(StringBuilder out, List<BinaryOffice.Sheet> sheets, List<String> drawings) {
         out.append("<div id=wide>");
-        for (BinaryOffice.Sheet sheet : sheets) {
+        for (int index = 0; index < sheets.size(); index++) {
+            final BinaryOffice.Sheet sheet = sheets.get(index);
             int columns = 0;
             for (List<String> row : sheet.rows) {
                 columns = Math.max(columns, row.size());
@@ -254,6 +260,9 @@ public final class OfficeHtml {
                 }
             }
             out.append("</table>");
+            if (drawings != null && !drawings.get(index).isEmpty()) {
+                out.append(drawings.get(index));
+            }
         }
         out.append("</div>");
     }
