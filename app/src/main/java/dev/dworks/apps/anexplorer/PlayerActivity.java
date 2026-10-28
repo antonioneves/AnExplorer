@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
@@ -35,6 +36,11 @@ public class PlayerActivity extends Activity {
         mPlayerView = new PlayerView(this);
         mPlayerView.setFocusable(true);
         mPlayerView.setControllerShowTimeoutMs(4000);
+        // A focusable time bar swallows LEFT/RIGHT, so focus could never reach the buttons after it
+        final View timeBar = mPlayerView.findViewById(androidx.media3.ui.R.id.exo_progress);
+        if (timeBar != null) {
+            timeBar.setFocusable(false);
+        }
         setContentView(mPlayerView);
     }
 

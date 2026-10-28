@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The player's settings popup: same dark rounded surface as the bar -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#F21C2024" />
+    <corners android:radius="20dp" />
+</shape>

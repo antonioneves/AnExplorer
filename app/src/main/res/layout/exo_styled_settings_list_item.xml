@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minWidth="@dimen/exo_setting_width"
+    android:minHeight="@dimen/exo_settings_height"
+    android:background="@drawable/player_popup_item"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:layoutDirection="locale"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="16dp">
+
+    <ImageView
+        android:id="@+id/exo_icon"
+        android:layout_width="@dimen/exo_settings_icon_size"
+        android:layout_height="@dimen/exo_settings_icon_size"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="12dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center|start"
+        android:orientation="vertical"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/exo_main_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/exo_white"
+            android:textDirection="locale"
+            android:textSize="@dimen/exo_settings_main_text_size" />
+
+        <TextView
+            android:id="@+id/exo_sub_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/exo_white_opacity_70"
+            android:textDirection="locale"
+            android:textSize="@dimen/exo_settings_sub_text_size" />
+    </LinearLayout>
+</LinearLayout>
