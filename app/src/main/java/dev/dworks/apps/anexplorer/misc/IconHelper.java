@@ -19,14 +19,18 @@ package dev.dworks.apps.anexplorer.misc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import androidx.annotation.Nullable;
 import androidx.collection.ArrayMap;
+import androidx.core.content.ContextCompat;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 
 import dev.dworks.apps.anexplorer.DocumentsApplication;
@@ -180,6 +184,7 @@ public class IconHelper {
             // Add a mime icon if the thumbnail is not shown.
             setMimeIcon(iconMime, mimeIcon);
             hideImageView(iconThumb);
+            setTextOverlay(iconThumb, false);
             iconThumb.setAlpha(0f);
             subIconMime.setVisibility(View.VISIBLE);
         }
@@ -284,8 +289,55 @@ public class IconHelper {
 
     private void setImage(ImageView imageView, Bitmap bitmap, String docMimeType, String docPath){
         imageView.setImageBitmap(bitmap);
-        imageView.setScaleType(isPoster(bitmap, docMimeType)
+        final boolean poster = isPoster(bitmap, docMimeType);
+        imageView.setScaleType(poster
                 ? ImageView.ScaleType.FIT_CENTER : getIconScaleType(docMimeType, docPath));
+        setTextOverlay(imageView, poster);
+    }
+
+    /**
+     * On a poster tile the poster runs the full height of the card and the name sits on a
+     * translucent band over its bottom; other tiles keep the opaque text section below the preview.
+     */
+    private void setTextOverlay(ImageView thumb, boolean overlay) {
+        if (!(thumb.getParent() instanceof View)) {
+            return;
+        }
+        final View preview = (View) thumb.getParent();
+        if (!(preview.getParent() instanceof ViewGroup)) {
+            return;
+        }
+        final View text = ((ViewGroup) preview.getParent()).findViewById(R.id.text_section);
+        if (text == null || !(text.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) {
+            return;
+        }
+        final Context context = thumb.getContext();
+        text.setTag(R.id.text_section, overlay);
+        text.setBackgroundColor(overlay ? 0xA6000000
+                : ContextCompat.getColor(context, R.color.item_doc_grid_protect_background));
+        final int textColor = overlay ? Color.WHITE
+                : ContextCompat.getColor(context, R.color.item_doc_grid_text);
+        for (int id : new int[]{android.R.id.title, R.id.date, R.id.size}) {
+            final TextView label = text.findViewById(id);
+            if (label != null) {
+                label.setTextColor(textColor);
+            }
+        }
+        final ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) text.getLayoutParams();
+        if (!overlay) {
+            if (lp.topMargin != 0) {
+                lp.topMargin = 0;
+                text.setLayoutParams(lp);
+            }
+            return;
+        }
+        text.post(() -> {
+            if (!Boolean.TRUE.equals(text.getTag(R.id.text_section))) {
+                return;
+            }
+            lp.topMargin = -text.getHeight();
+            text.setLayoutParams(lp);
+        });
     }
 
     /** A portrait video thumbnail is a TMDB poster, which is shown whole instead of cropped to the tile */

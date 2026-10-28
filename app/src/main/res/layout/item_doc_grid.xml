@@ -64,6 +64,7 @@
         </FrameLayout>
 
         <LinearLayout
+            android:id="@+id/text_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/item_doc_grid_protect_background"
