@@ -47,8 +47,6 @@ public final class OfficeHtml {
             + ".slide p{line-height:1.2}.slide .t{box-sizing:border-box;width:100%;height:100%;display:flex;"
             + "flex-direction:column}.slide img{max-width:none}"
             + ".slide .o{position:absolute;box-sizing:border-box}.slide td{padding:0}.slide td p{margin:0}"
-            + ".notes{box-sizing:border-box;margin:-12px auto 28px;padding:14px 22px;background:#424242;"
-            + "color:#eee;border-radius:0 0 6px 6px;font-size:20px}.notes p{margin:0 0 .4em;line-height:1.3}"
             + ".sh{display:inline-block;vertical-align:top;overflow:hidden}span.p{display:block;margin:0 0 .3em;"
             + "line-height:1.3}"
             + ".hd{border-bottom:1px dashed #bbb;margin-bottom:1.2em;color:#555}"
@@ -150,7 +148,7 @@ public final class OfficeHtml {
     }
 
     /**
-     * @return the slide deck page showing only slide number {@code index} (from 1) and its notes, scaled to
+     * @return the slide deck page showing only slide number {@code index} (from 1), scaled to
      * fit a screen of the given size in CSS pixels, with the shapes as they are after {@code step} clicks
      */
     public static String showSlide(String page, int index, int step, double screenW, double screenH) {
@@ -175,8 +173,7 @@ public final class OfficeHtml {
             // Shapes that enter on a later click, and shapes that already left, are hidden
             clicks.append(n > step ? ".k" : ".x").append(n).append("{visibility:hidden}");
         }
-        return page.substring(0, deck) + "<style>" + clicks + ".slide,.notes{display:none}#s" + index + ",#s" + index
-                + "+.notes{display:block}"
+        return page.substring(0, deck) + "<style>" + clicks + ".slide{display:none}#s" + index + "{display:block}"
                 + (zoom > 0 ? "#deck{zoom:" + zoom + "!important;padding:0!important}body{margin:0;display:flex;"
                 + "align-items:center;justify-content:center;min-height:100vh}.slide{margin:0 auto!important}" : "")
                 + "</style>" + page.substring(deck);

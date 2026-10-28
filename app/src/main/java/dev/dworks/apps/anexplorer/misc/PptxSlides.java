@@ -119,11 +119,6 @@ final class PptxSlides {
                 out.append("\">");
             }
             out.append("<span class=n>").append(count).append(" / ").append(slides.size()).append("</span></div>");
-            final String notes = notes(slide);
-            if (!notes.isEmpty()) {
-                out.append("<div class=notes style=\"width:").append(fmt(width)).append("px\">").append(notes)
-                        .append("</div>");
-            }
         }
         return out.append("</div>").toString();
     }
@@ -1741,30 +1736,5 @@ final class PptxSlides {
         }
         out.append("<span style=\"").append(css).append("\">").append(esc(text).replace("\u000b", "<br>"))
                 .append("</span>");
-    }
-
-    // ---- notes ----
-
-    private String notes(String slidePart) {
-        final String notesPart = pkg.targetOfType(slidePart, "notesSlide");
-        final Element root = notesPart == null ? null : pkg.xml(notesPart);
-        final Element tree = path(root, "p:cSld", "p:spTree");
-        if (tree == null) {
-            return "";
-        }
-        final StringBuilder out = new StringBuilder();
-        for (Element sp : children(tree, "p:sp")) {
-            final Element ph = path(sp, "p:nvSpPr", "p:nvPr", "p:ph");
-            if (ph == null || !"body".equals(attr(ph, "type"))) {
-                continue;
-            }
-            for (Element p : children(child(sp, "p:txBody"), "a:p")) {
-                final String t = OoxmlPackage.text(p).trim();
-                if (!t.isEmpty()) {
-                    out.append("<p>").append(esc(t)).append("</p>");
-                }
-            }
-        }
-        return out.toString();
     }
 }

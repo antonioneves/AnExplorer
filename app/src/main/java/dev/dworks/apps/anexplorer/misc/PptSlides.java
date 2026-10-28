@@ -35,7 +35,7 @@ import java.util.function.UnaryOperator;
  * It is a Java port of the legacy PowerPoint reader of Paperwren (MIT, Copyright (c) 2026
  * Paperwren contributors), which follows [MS-PPT] and [MS-ODRAW].
  * <p>
- * Speaker notes follow their slide. EMF and WMF pictures are drawn through {@link Metafile}, and
+ * EMF and WMF pictures are drawn through {@link Metafile}, and
  * an embedded chart or other OLE object shows the picture PowerPoint stored for it (an empty
  * dashed box if there is none). Shaded fills are two-colour gradients; patterns use the first
  * colour. Animations and transitions are not read: every shape shows as it ends up.
@@ -53,7 +53,6 @@ final class PptSlides {
     private static final int DOCUMENT_ATOM = 0x03E9;
     private static final int SLIDE = 0x03EE;
     private static final int SLIDE_ATOM = 0x03EF;
-    private static final int NOTES = 0x03F0;
     private static final int ENVIRONMENT = 0x03F2;
     private static final int SLIDE_PERSIST = 0x03F3;
     private static final int DRAWING_GROUP = 0x040B;
@@ -229,11 +228,6 @@ final class PptSlides {
             slide(rec, entry, out);
             out.append("<span class=n>").append(count).append(" / ").append(lists.get(0).size())
                     .append("</span></div>");
-            final String notes = notes(rec);
-            if (!notes.isEmpty()) {
-                out.append("<div class=notes style=\"width:").append(fmt(width)).append("px\">").append(notes)
-                        .append("</div>");
-            }
         }
         out.append("</div>");
         if (count == 0) {
@@ -267,38 +261,6 @@ final class PptSlides {
             out.append(master.shapes);
         }
         drawing(drawing, context, out);
-    }
-
-    /** @return the speaker notes of a slide as HTML paragraphs, or "" if it has none */
-    private String notes(Rec slide) {
-        final Rec atom = find(children(doc, slide.body, slide.end), SLIDE_ATOM);
-        final int notesId = atom == null ? 0 : u32(doc, atom.body + 16);
-        Integer offset = null;
-        // The slide holds the notes page's slide id, which the notes list maps to its persist id
-        for (Entry entry : lists.get(2)) {
-            if (entry.id == notesId) {
-                offset = persist.get(entry.ref);
-                break;
-            }
-        }
-        final Rec rec = recordAt(offset);
-        if (rec == null || rec.type != NOTES) {
-            return "";
-        }
-        final List<Rec> flat = new ArrayList<>();
-        flatten(rec, flat, 0);
-        final StringBuilder out = new StringBuilder();
-        for (TextBlock block : readTexts(flat)) {
-            if (block.type != 2 || block.text.trim().isEmpty()) {
-                continue;
-            }
-            for (String line : block.text.split("[\r\n]")) {
-                if (!line.trim().isEmpty()) {
-                    out.append("<p>").append(esc(line.replace('\u000b', ' ').trim())).append("</p>");
-                }
-            }
-        }
-        return out.toString();
     }
 
     /** The records under a container in document order, containers themselves left out */

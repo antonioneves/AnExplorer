@@ -138,6 +138,10 @@ final class PptxChart {
             scatter(out, plot, series, theme, title, hasLegend, w, h, top0, bot0);
             return;
         }
+        if (kind.startsWith("radar") && !series.isEmpty()) {
+            radar(out, chart, series, cats, theme, hasLegend, w, h, top0, bot0);
+            return;
+        }
         final boolean bars = kind.startsWith("bar");
         final boolean area = kind.startsWith("area");
         final boolean labels = labels(chart);
@@ -439,6 +443,67 @@ final class PptxChart {
     private static String seriesName(Element ser, int index) {
         final String n = OoxmlPackage.text(path(ser, "c:tx", "c:strRef", "c:strCache")).trim();
         return n.isEmpty() ? "Series " + (index + 1) : n;
+    }
+
+    /** Rings for the value scale, a spoke and label per category, and one polygon per series */
+    private static void radar(StringBuilder out, Element chart, List<Element> series, List<String> cats,
+                              OoxmlTheme theme, boolean hasLegend, double w, double h, double top0, double bot0) {
+        final List<List<Double>> data = new ArrayList<>();
+        final List<String> names = new ArrayList<>(), colors = new ArrayList<>();
+        int n = cats.size();
+        double max = 0;
+        for (int i = 0; i < series.size(); i++) {
+            final List<Double> v = numbers(child(series.get(i), "c:val"));
+            data.add(v);
+            n = Math.max(n, v.size());
+            for (double d : v) {
+                max = Math.max(max, d);
+            }
+            names.add(seriesName(series.get(i), i));
+            colors.add(color(theme, series.get(i), i));
+        }
+        if (max <= 0) {
+            max = 1;
+        }
+        final boolean filled = "filled".equals(attr(child(chart, "c:radarStyle"), "val"));
+        final double cx = w / 2, cy = top0 + (h - top0 - bot0) / 2, r = Math.min(w / 2 - 70, (h - top0 - bot0) / 2 - 22);
+        for (int g = 1; g <= 4; g++) {
+            final StringBuilder ring = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                final double a = -Math.PI / 2 + Math.PI * 2 * i / n;
+                ring.append(fmt(cx + r * g / 4 * Math.cos(a))).append(',').append(fmt(cy + r * g / 4 * Math.sin(a)))
+                        .append(' ');
+            }
+            out.append("<polygon points=\"").append(ring).append("\" fill=\"none\" stroke=\"#d9d9d9\"/>");
+            out.append("<text x=\"").append(fmt(cx - 4)).append("\" y=\"").append(fmt(cy - r * g / 4 + 3))
+                    .append("\" text-anchor=\"end\" fill=\"#595959\" font-size=\"10\">").append(esc(axis(max * g / 4))).append("</text>");
+        }
+        for (int i = 0; i < n; i++) {
+            final double a = -Math.PI / 2 + Math.PI * 2 * i / n, cos = Math.cos(a), sin = Math.sin(a);
+            out.append("<line x1=\"").append(fmt(cx)).append("\" y1=\"").append(fmt(cy)).append("\" x2=\"")
+                    .append(fmt(cx + r * cos)).append("\" y2=\"").append(fmt(cy + r * sin))
+                    .append("\" stroke=\"#d9d9d9\"/>");
+            out.append("<text x=\"").append(fmt(cx + (r + 10) * cos)).append("\" y=\"").append(fmt(cy + (r + 10) * sin + (sin < -0.9 ? -2 : 4)))
+                    .append("\" text-anchor=\"").append(cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle")
+                    .append("\" fill=\"#595959\">").append(esc(i < cats.size() ? cats.get(i) : String.valueOf(i + 1)))
+                    .append("</text>");
+        }
+        for (int s = 0; s < data.size(); s++) {
+            final StringBuilder points = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                final double d = i < data.get(s).size() ? Math.max(data.get(s).get(i), 0) : 0;
+                final double a = -Math.PI / 2 + Math.PI * 2 * i / n;
+                points.append(fmt(cx + r * d / max * Math.cos(a))).append(',')
+                        .append(fmt(cy + r * d / max * Math.sin(a))).append(' ');
+            }
+            out.append("<polygon points=\"").append(points).append("\" fill=\"").append(colors.get(s))
+                    .append("\" fill-opacity=\"").append(filled ? "0.45" : "0").append("\" stroke=\"").append(colors.get(s))
+                    .append("\" stroke-width=\"2\"/>");
+        }
+        if (hasLegend) {
+            legend(out, names, colors, w, h);
+        }
+        out.append("</svg>");
     }
 
     private static void legend(StringBuilder out, List<String> names, List<String> colors, double w, double h) {
