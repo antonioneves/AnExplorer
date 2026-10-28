@@ -47,6 +47,7 @@
                 android:background="@android:color/transparent"
                 app:contentInsetStart="4dp"
                 app:contentInsetLeft="4dp"
+                app:titleMarginStart="12dp"
                 app:popupTheme="?attr/actionBarPopupTheme"
                 app:theme="@style/DocumentsTheme.SurfaceBarOverlay">
 
