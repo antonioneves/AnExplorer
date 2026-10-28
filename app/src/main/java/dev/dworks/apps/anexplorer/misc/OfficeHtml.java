@@ -2,6 +2,7 @@ package dev.dworks.apps.anexplorer.misc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +32,7 @@ public final class OfficeHtml {
             + "#page td{box-sizing:border-box;border:1px solid #999;padding:2px 5px;vertical-align:top}"
             + "#page td p{margin:0}"
             + "h2.s{margin:0 0 8px;color:#fff;font-size:20px;font-weight:bold}"
-            + ".dr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin:-16px 0 32px}"
+            + ".dp{position:absolute;z-index:1;line-height:0}.dp img{max-width:none!important}.dr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin:-16px 0 32px}"
             + "table.g{background:#fff;font-size:15px;margin:0 0 32px}"
             + "table.g td,table.g th{border:1px solid #c8c8c8;padding:3px 10px;white-space:pre}"
             + "table.g th{background:#e6e6e6;color:#555;font-weight:normal;font-size:13px}"
@@ -256,7 +257,8 @@ public final class OfficeHtml {
         return name.toString();
     }
 
-    private static void sheets(StringBuilder out, List<BinaryOffice.Sheet> sheets, List<String> drawings) {
+    private static void sheets(StringBuilder out, List<BinaryOffice.Sheet> sheets,
+                               List<List<SheetDrawings.Item>> drawings) {
         out.append("<div id=wide>");
         for (int index = 0; index < sheets.size(); index++) {
             final BinaryOffice.Sheet sheet = sheets.get(index);
@@ -281,6 +283,18 @@ public final class OfficeHtml {
                             covered.add(key(r + 1, c));
                         }
                     }
+                }
+            }
+            // A picture goes over the cell it is anchored to; one whose cell is not in the table goes below it
+            final Map<Long, List<SheetDrawings.Item>> placed = new HashMap<>();
+            final StringBuilder below = new StringBuilder();
+            final List<SheetDrawings.Item> items = drawings == null ? new ArrayList<>() : drawings.get(index);
+            for (SheetDrawings.Item item : items) {
+                if (item.row > 0 && sheet.rowNumbers.contains(item.row) && item.column < columns
+                        && !covered.contains(key(item.row, item.column))) {
+                    placed.computeIfAbsent(key(item.row, item.column), k -> new ArrayList<>()).add(item);
+                } else {
+                    below.append(item.html);
                 }
             }
             out.append("<h2 class=s>").append(esc(sheet.name)).append("</h2><table class=g><colgroup><col class=h>");
@@ -311,15 +325,22 @@ public final class OfficeHtml {
                     if (span != null && span[1] > 1) {
                         out.append(" colspan=").append(span[1]);
                     }
-                    if (!style.isEmpty()) {
-                        out.append(" style=\"").append(style).append('"');
+                    final List<SheetDrawings.Item> over = placed.get(key(number, c));
+                    if (!style.isEmpty() || over != null) {
+                        out.append(" style=\"").append(over == null ? "" : "position:relative;").append(style).append('"');
                     }
                     out.append('>').append(esc(value));
+                    if (over != null) {
+                        for (SheetDrawings.Item item : over) {
+                            out.append("<div class=dp style=\"left:").append(OoxmlPackage.fmt(item.dx)).append("px;top:")
+                                    .append(OoxmlPackage.fmt(item.dy)).append("px\">").append(item.html).append("</div>");
+                        }
+                    }
                 }
             }
             out.append("</table>");
-            if (drawings != null && !drawings.get(index).isEmpty()) {
-                out.append(drawings.get(index));
+            if (below.length() > 0) {
+                out.append("<div class=dr>").append(below).append("</div>");
             }
         }
         out.append("</div>");

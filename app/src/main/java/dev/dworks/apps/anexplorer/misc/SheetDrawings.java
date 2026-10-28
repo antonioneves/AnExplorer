@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The pictures and charts that sit on Excel worksheets. They are not placed over the cells: each
- * sheet shows them in a row below its table, at the size the drawing gives them.
+ * The pictures and charts that sit on Excel worksheets, at the size the drawing gives them. Each is
+ * placed over the cell it is anchored to; one with no usable anchor goes below the table.
  */
 final class SheetDrawings {
 
@@ -25,31 +25,47 @@ final class SheetDrawings {
     private SheetDrawings() {
     }
 
-    /** @return for each sheet the HTML of its pictures and charts, empty if it has none */
-    static List<String> html(Map<String, byte[]> parts, List<BinaryOffice.Sheet> sheets) {
+    /** One picture or chart: its HTML, the 1-based sheet row and 0-based column it starts in, and its offset in px (row 0 if unanchored) */
+    static final class Item {
+        final String html;
+        final int row, column;
+        final double dx, dy;
+
+        Item(String html, int row, int column, double dx, double dy) {
+            this.html = html;
+            this.row = row;
+            this.column = column;
+            this.dx = dx;
+            this.dy = dy;
+        }
+    }
+
+    /** @return for each sheet its pictures and charts, empty if it has none */
+    static List<List<Item>> html(Map<String, byte[]> parts, List<BinaryOffice.Sheet> sheets) {
         final OoxmlPackage pkg = OoxmlPackage.of(parts);
         final OoxmlTheme theme = new OoxmlTheme(pkg.xml("xl/theme/theme1.xml"));
-        final List<String> out = new ArrayList<>();
+        final List<List<Item>> out = new ArrayList<>();
         for (BinaryOffice.Sheet sheet : sheets) {
-            String html = "";
+            List<Item> items = new ArrayList<>();
             try {
-                html = sheet.part == null ? "" : sheet(pkg, theme, sheet.part);
+                items = sheet.part == null ? items : sheet(pkg, theme, sheet.part);
             } catch (RuntimeException e) {
-                html = "";
+                items = new ArrayList<>();
             }
-            out.add(html);
+            out.add(items);
         }
         return out;
     }
 
-    private static String sheet(OoxmlPackage pkg, OoxmlTheme theme, String sheetPart) {
+    private static List<Item> sheet(OoxmlPackage pkg, OoxmlTheme theme, String sheetPart) {
+        final List<Item> items = new ArrayList<>();
         final String drawing = pkg.targetOfType(sheetPart, "drawing");
         final Element root = drawing == null ? null : pkg.xml(drawing);
         if (root == null) {
-            return "";
+            return items;
         }
-        final StringBuilder out = new StringBuilder();
         for (Element anchor : children(root, null)) {
+            final StringBuilder out = new StringBuilder();
             final Element pic = child(anchor, "xdr:pic");
             final Element frame = child(anchor, "xdr:graphicFrame");
             if (pic != null) {
@@ -71,8 +87,23 @@ final class SheetDrawings {
                     out.append("</div>");
                 }
             }
+            if (out.length() > 0) {
+                final Element from = child(anchor, "xdr:from");
+                items.add(from == null ? new Item(out.toString(), 0, 0, 0, 0)
+                        : new Item(out.toString(), (int) number(from, "xdr:row") + 1, (int) number(from, "xdr:col"),
+                        number(from, "xdr:colOff") / EMU_PER_PIXEL, number(from, "xdr:rowOff") / EMU_PER_PIXEL));
+            }
         }
-        return out.length() == 0 ? "" : "<div class=dr>" + out + "</div>";
+        return items;
+    }
+
+    /** @return the number in a child element's text, such as the row of an anchor, or 0 */
+    private static long number(Element parent, String name) {
+        try {
+            return Long.parseLong(OoxmlPackage.text(child(parent, name)).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** @return the width and height in pixels of a drawing's xfrm, or the fallback, scaled to fit the page */
