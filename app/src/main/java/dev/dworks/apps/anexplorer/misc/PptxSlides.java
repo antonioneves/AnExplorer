@@ -527,10 +527,20 @@ final class PptxSlides {
             switch (prst) {
                 case "rect":
                 case "flowChartProcess":
-                case "round1Rect":
-                case "round2SameRect":
                 case "wedgeRectCallout":
                     break;
+                case "round1Rect": {
+                    final double r = ss * Math.min(adjust(geom, "adj", 16667), 50000) / 100000;
+                    css.append("border-radius:0 ").append(fmt(r)).append("px 0 0;");
+                    break;
+                }
+                case "round2SameRect": {
+                    final double top = ss * Math.min(adjust(geom, "adj1", 16667), 50000) / 100000;
+                    final double bottom = ss * Math.min(adjust(geom, "adj2", 0), 50000) / 100000;
+                    css.append("border-radius:").append(fmt(top)).append("px ").append(fmt(top)).append("px ")
+                            .append(fmt(bottom)).append("px ").append(fmt(bottom)).append("px;");
+                    break;
+                }
                 case "roundRect":
                 case "wedgeRoundRectCallout":
                 case "flowChartAlternateProcess": {
@@ -767,9 +777,20 @@ final class PptxSlides {
                 final double y = h * (1 - adjust(geom, "adj1", 23520) / 50000 * 0.5) / 2;
                 return new double[][]{{0, y}, {w, y}, {w, h - y}, {0, h - y}};
             }
-            case "mathMultiply":
+            case "mathMultiply": {
+                final double u = ss * adjust(geom, "adj1", 23520) / 100000 / Math.sqrt(2);
+                return new double[][]{{u, 0}, {w / 2, h / 2 - u}, {w - u, 0}, {w, u}, {w / 2 + u, h / 2},
+                        {w, h - u}, {w - u, h}, {w / 2, h / 2 + u}, {u, h}, {0, h - u}, {w / 2 - u, h / 2}, {0, u}};
+            }
+            case "mathEqual": {
+                final double bar = h * adjust(geom, "adj1", 23520) / 100000;
+                final double gap = h * adjust(geom, "adj2", 11760) / 100000;
+                final double y2 = h / 2 - gap, y3 = h / 2 + gap;
+                // The two bars are joined along the left edge by a line with no width
+                return new double[][]{{0, y2 - bar}, {w, y2 - bar}, {w, y2}, {0, y2}, {0, y3}, {w, y3},
+                        {w, y3 + bar}, {0, y3 + bar}};
+            }
             case "mathDivide":
-            case "mathEqual":
             case "mathNotEqual":
                 return null;
             case "flowChartPreparation":
