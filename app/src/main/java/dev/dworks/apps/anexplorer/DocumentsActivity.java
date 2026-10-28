@@ -225,6 +225,22 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private RootInfo mParentRoot;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private static final String MEDIA_EXTENSIONS = "|mkv|mp4|m4v|avi|mov|webm|ts|m2ts|mts|mpg|mpeg|wmv|flv|3gp|ogv"
+            + "|mp3|flac|wav|ogg|oga|m4a|aac|opus|wma|";
+
+    /** Files whose mime type is generic are judged by extension, so Nova still gets them */
+    private static boolean isPlayable(String mimeType, String name) {
+        if (mimeType != null && (mimeType.startsWith("video/") || mimeType.startsWith("audio/"))) {
+            return true;
+        }
+        final int dot = name == null ? -1 : name.lastIndexOf('.');
+        if (dot < 0 || (mimeType != null && !"application/octet-stream".equals(mimeType)
+                && !"application/mp2t".equals(mimeType))) {
+            return false;
+        }
+        return MEDIA_EXTENSIONS.contains("|" + name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT) + "|");
+    }
+
     @Override
     public void onCreate(Bundle icicle) {
         setTheme(R.style.DocumentsTheme_Document);
@@ -2102,8 +2118,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 				}
             }
 
-            if (doc.mimeType != null && (doc.mimeType.startsWith("video/") || doc.mimeType.startsWith("audio/"))) {
+            // Nova always wins over the preview for formats it plays
+            if (isPlayable(doc.mimeType, doc.displayName)) {
                 view.setClass(this, PlayerActivity.class);
+            } else if (PreviewActivity.supports(doc.mimeType, doc.displayName)) {
+                view.setClass(this, PreviewActivity.class);
+                view.putExtra(PreviewActivity.EXTRA_NAME, doc.displayName);
             }
 
             if(Utils.isIntentAvailable(this, view)){

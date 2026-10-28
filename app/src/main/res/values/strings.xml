@@ -221,4 +221,8 @@
     <string name="server_connect_failed">Couldn\'t connect to the server</string>
     <string name="server_login_refused">The server refused the login</string>
     <string name="server_login_refused_hint">Check the username and password in the connection\'s Edit menu. Some services need a separate WebDAV password.</string>
+    <string name="preview_loading">Loading…</string>
+    <string name="preview_failed">Can\'t preview this file</string>
+    <string name="preview_page">Page %1$d of %2$d</string>
+    <string name="preview_truncated">… file continues, only the first 2 MB is shown</string>
 </resources>
