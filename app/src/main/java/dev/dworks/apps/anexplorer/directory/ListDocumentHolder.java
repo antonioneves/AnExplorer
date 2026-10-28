@@ -8,8 +8,10 @@ import android.net.Uri;
 import androidx.collection.ArrayMap;
 import android.text.TextUtils;
 import android.text.format.Formatter;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -30,6 +32,7 @@ import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
+import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.directory.DocumentsAdapter.Environment;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
@@ -41,6 +44,8 @@ import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorLong;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 
 public class ListDocumentHolder extends DocumentHolder {
+
+    private TextView mPosterLabel;
 
     public ListDocumentHolder(Context context, ViewGroup parent, int layout, OnItemClickListener onItemClickListener,
                               Environment environment) {
@@ -231,6 +236,55 @@ public class ListDocumentHolder extends DocumentHolder {
         if (line2 != null) {
             line2.setVisibility(hasLine2 ? View.VISIBLE : View.GONE);
         }
+        bindPosterLabel();
+    }
+
+    /** True in the Videos movie and show lists, which are shown as posters like the episodes */
+    private boolean isPosterList() {
+        final DocumentInfo dir = mEnv.getDocumentInfo();
+        if (dir == null || dir.documentId == null || mEnv.getDisplayState().derivedMode != MODE_GRID) {
+            return false;
+        }
+        return MediaDocumentsProvider.TYPE_VIDEOS_ROOT.equals(dir.documentId)
+                || MediaDocumentsProvider.TYPE_VIDEOS_MOVIES.equals(dir.documentId)
+                || MediaDocumentsProvider.TYPE_VIDEOS_SHOWS.equals(dir.documentId);
+    }
+
+    /** Swaps the date and size text for just the name on top of the poster, like the episode cards */
+    private void bindPosterLabel() {
+        final View textSection = itemView.findViewById(R.id.text_section);
+        if (textSection == null || !(iconThumb.getParent() instanceof FrameLayout)) {
+            return;
+        }
+        final boolean poster = isPosterList();
+        textSection.setVisibility(poster ? View.GONE : View.VISIBLE);
+        if (mPosterLabel == null) {
+            if (!poster) {
+                return;
+            }
+            final float density = mContext.getResources().getDisplayMetrics().density;
+            mPosterLabel = new TextView(mContext);
+            mPosterLabel.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
+            mPosterLabel.setBackgroundResource(R.drawable.recent_title_scrim_top);
+            mPosterLabel.setPadding((int) (12 * density), (int) (8 * density),
+                    (int) (12 * density), (int) (24 * density));
+            mPosterLabel.setSingleLine(true);
+            mPosterLabel.setEllipsize(TextUtils.TruncateAt.END);
+            mPosterLabel.setTextAppearance(mContext, R.style.TextAppearance_Material3_LabelLarge);
+            mPosterLabel.setTextColor(0xFFFFFFFF);
+            ((FrameLayout) iconThumb.getParent()).addView(mPosterLabel);
+        }
+        mPosterLabel.setVisibility(poster ? View.VISIBLE : View.GONE);
+        if (poster) {
+            mPosterLabel.setText(mDoc.isDirectory() ? mDoc.displayName
+                    : stripExtension(mDoc.displayName));
+        }
+    }
+
+    private static String stripExtension(String name) {
+        final int dot = name == null ? -1 : name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
     }
 
     @Override
