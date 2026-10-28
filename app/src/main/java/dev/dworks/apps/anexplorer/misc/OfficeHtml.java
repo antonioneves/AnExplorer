@@ -134,17 +134,32 @@ public final class OfficeHtml {
         return count;
     }
 
+    /** @return how many clicks reveal or remove shapes on slide number {@code index} (from 1) */
+    public static int slideSteps(String page, int index) {
+        final String key = "<div class=slide id=s" + index + " data-steps=";
+        final int at = page.indexOf(key);
+        if (at < 0) {
+            return 0;
+        }
+        final int from = at + key.length();
+        int to = from;
+        while (to < page.length() && Character.isDigit(page.charAt(to))) {
+            to++;
+        }
+        return to > from ? Integer.parseInt(page.substring(from, to)) : 0;
+    }
+
     /**
      * @return the slide deck page showing only slide number {@code index} (from 1) and its notes, scaled to
-     * fit a screen of the given size in CSS pixels
+     * fit a screen of the given size in CSS pixels, with the shapes as they are after {@code step} clicks
      */
-    public static String showSlide(String page, int index, double screenW, double screenH) {
+    public static String showSlide(String page, int index, int step, double screenW, double screenH) {
         final int deck = page.indexOf("<div id=deck");
         if (deck < 0) {
             return page;
         }
         double zoom = 0;
-        final int slide = page.indexOf("<div class=slide id=s" + index + " style=\"width:");
+        final int slide = page.indexOf("<div class=slide id=s" + index + " ");
         if (slide >= 0) {
             try {
                 final int w0 = page.indexOf("width:", slide) + 6, w1 = page.indexOf("px", w0);
@@ -155,7 +170,12 @@ public final class OfficeHtml {
                 zoom = 0;
             }
         }
-        return page.substring(0, deck) + "<style>.slide,.notes{display:none}#s" + index + ",#s" + index
+        final StringBuilder clicks = new StringBuilder();
+        for (int n = 1; n <= slideSteps(page, index); n++) {
+            // Shapes that enter on a later click, and shapes that already left, are hidden
+            clicks.append(n > step ? ".k" : ".x").append(n).append("{visibility:hidden}");
+        }
+        return page.substring(0, deck) + "<style>" + clicks + ".slide,.notes{display:none}#s" + index + ",#s" + index
                 + "+.notes{display:block}"
                 + (zoom > 0 ? "#deck{zoom:" + zoom + "!important;padding:0!important}body{margin:0;display:flex;"
                 + "align-items:center;justify-content:center;min-height:100vh}.slide{margin:0 auto!important}" : "")

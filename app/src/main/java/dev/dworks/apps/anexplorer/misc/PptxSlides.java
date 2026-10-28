@@ -10,6 +10,7 @@ import static dev.dworks.apps.anexplorer.misc.OoxmlPackage.num;
 import static dev.dworks.apps.anexplorer.misc.OoxmlPackage.path;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +32,9 @@ final class PptxSlides {
 
     private final OoxmlPackage pkg;
     private final Map<String, OoxmlTheme> themes = new HashMap<>();
+    /** Classes of the animated shapes of the slide being written, by shape id, and its number of clicks */
+    private final Map<String, String> animated = new HashMap<>();
+    private int clicks;
     private Element defaultText;
     private int markers;
 
@@ -105,7 +109,9 @@ final class PptxSlides {
             if (++count > MAX_SLIDES) {
                 break;
             }
-            out.append("<div class=slide id=s").append(count).append(" style=\"width:").append(fmt(width)).append("px;height:")
+            animations(slide);
+            out.append("<div class=slide id=s").append(count).append(" data-steps=").append(clicks)
+                    .append(" style=\"width:").append(fmt(width)).append("px;height:")
                     .append(fmt(height)).append("px;");
             try {
                 slide(slide, out);
@@ -120,6 +126,48 @@ final class PptxSlides {
             }
         }
         return out.append("</div>").toString();
+    }
+
+    /**
+     * Reads the slide's click sequence: a shape that enters on click n gets class k(n), shown from that
+     * click on; one that exits on click n gets class x(n), hidden from that click on
+     */
+    private void animations(String part) {
+        animated.clear();
+        clicks = 0;
+        final Element timing = child(pkg.xml(part), "p:timing");
+        if (timing == null) {
+            return;
+        }
+        final NodeList nodes = timing.getElementsByTagName("p:cTn");
+        for (int i = 0; i < nodes.getLength(); i++) {
+            final Element main = (Element) nodes.item(i);
+            if (!"mainSeq".equals(attr(main, "nodeType"))) {
+                continue;
+            }
+            for (Element step : children(child(main, "p:childTnLst"), "p:par")) {
+                final Element start = path(step, "p:cTn", "p:stCondLst", "p:cond");
+                if (start == null || "indefinite".equals(attr(start, "delay"))) {
+                    clicks++;
+                }
+                final NodeList effects = step.getElementsByTagName("p:cTn");
+                for (int j = 0; j < effects.getLength(); j++) {
+                    final String kind = attr((Element) effects.item(j), "presetClass");
+                    if (!"entr".equals(kind) && !"exit".equals(kind)) {
+                        continue;
+                    }
+                    final NodeList targets = ((Element) effects.item(j)).getElementsByTagName("p:spTgt");
+                    for (int k = 0; k < targets.getLength(); k++) {
+                        final String id = attr((Element) targets.item(k), "spid");
+                        final String mark = ("entr".equals(kind) ? "k" : "x") + clicks;
+                        final String had = animated.get(id);
+                        if (id != null && clicks > 0 && (had == null || !had.contains(mark.substring(0, 1)))) {
+                            animated.put(id, had == null ? mark : had + " " + mark);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private OoxmlTheme theme(String masterPart) {
@@ -207,6 +255,22 @@ final class PptxSlides {
     }
 
     private void element(Element e, String part, Ctx ctx, Tx tx, boolean template, StringBuilder out) {
+        final Element props = template ? null : path(e, "p:nvSpPr", "p:cNvPr") != null ? path(e, "p:nvSpPr", "p:cNvPr")
+                : path(e, "p:nvPicPr", "p:cNvPr") != null ? path(e, "p:nvPicPr", "p:cNvPr")
+                : path(e, "p:nvGrpSpPr", "p:cNvPr") != null ? path(e, "p:nvGrpSpPr", "p:cNvPr")
+                : path(e, "p:nvGraphicFramePr", "p:cNvPr") != null ? path(e, "p:nvGraphicFramePr", "p:cNvPr")
+                : path(e, "p:nvCxnSpPr", "p:cNvPr");
+        final String marks = props == null ? null : animated.get(attr(props, "id"));
+        if (marks != null) {
+            out.append("<div class=\"").append(marks).append("\" style=\"display:contents\">");
+            plain(e, part, ctx, tx, template, out);
+            out.append("</div>");
+        } else {
+            plain(e, part, ctx, tx, template, out);
+        }
+    }
+
+    private void plain(Element e, String part, Ctx ctx, Tx tx, boolean template, StringBuilder out) {
         switch (e.getNodeName()) {
             case "p:sp":
             case "dsp:sp":

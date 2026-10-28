@@ -69,7 +69,7 @@ public class PreviewActivity extends Activity {
     private ZoomImageView mImage;
     private WebView mWeb;
     private String mSlideshow;
-    private int mSlides, mSlide;
+    private int mSlides, mSlide, mStep;
     private ScrollView mScroll;
     private PdfRenderer mPdf;
     private File mPdfFile;
@@ -399,14 +399,31 @@ public class PreviewActivity extends Activity {
 
     private String slideHtml() {
         final android.util.DisplayMetrics m = getResources().getDisplayMetrics();
-        return OfficeHtml.showSlide(mSlideshow, mSlide, m.widthPixels / m.density, m.heightPixels / m.density);
+        return OfficeHtml.showSlide(mSlideshow, mSlide, mStep, m.widthPixels / m.density, m.heightPixels / m.density);
     }
 
-    /** Shows another slide of a presentation: the remote's left and right keys turn the pages */
-    private void turnSlide(int step) {
-        final int next = Math.max(1, Math.min(mSlides, mSlide + step));
-        if (next != mSlide) {
-            mSlide = next;
+    /**
+     * Moves through a presentation as a slideshow does: each step first plays the clicks of the slide's
+     * animations, then turns the page. Going back lands on the finished earlier slide.
+     */
+    private void turnSlide(int direction) {
+        int slide = mSlide, step = mStep;
+        if (direction > 0) {
+            if (step < OfficeHtml.slideSteps(mSlideshow, slide)) {
+                step++;
+            } else if (slide < mSlides) {
+                slide++;
+                step = 0;
+            }
+        } else if (step > 0) {
+            step--;
+        } else if (slide > 1) {
+            slide--;
+            step = OfficeHtml.slideSteps(mSlideshow, slide);
+        }
+        if (slide != mSlide || step != mStep) {
+            mSlide = slide;
+            mStep = step;
             mWeb.loadDataWithBaseURL(null, slideHtml(), "text/html", "UTF-8", null);
         }
     }
