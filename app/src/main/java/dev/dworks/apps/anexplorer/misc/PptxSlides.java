@@ -126,7 +126,7 @@ final class PptxSlides {
 
     private boolean avenir;
 
-    /** Avenir is a cloud font that isn't on Android: Nunito Sans, which is shaped alike, stands in for it */
+    /** Avenir is a cloud font that isn't on Android: Figtree, which is shaped alike, stands in for it */
     private String usesAvenir() {
         avenir = true;
         return "'" + AVENIR + "',";
@@ -136,7 +136,7 @@ final class PptxSlides {
 
     /** @return the style that defines the stand-in font from the copy bundled with the app, or "" if missing */
     private static String avenirFace() {
-        try (java.io.InputStream in = PptxSlides.class.getResourceAsStream("/fonts/nunito-sans.woff2")) {
+        try (java.io.InputStream in = PptxSlides.class.getResourceAsStream("/fonts/figtree.woff2")) {
             if (in == null) {
                 return "";
             }
