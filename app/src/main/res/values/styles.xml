@@ -46,6 +46,9 @@
         <item name="android:background">@drawable/abc_spinner_mtrl_am_alpha</item>
         <item name="android:popupBackground">@drawable/subdir_popup_background</item>
         <item name="android:dropDownSelector">@android:color/transparent</item>
+        <item name="android:popupElevation">8dp</item>
+        <item name="android:dropDownVerticalOffset">8dp</item>
+        <item name="android:dropDownHorizontalOffset">8dp</item>
     </style>
 
     <style name="Custom.Widget.ActionBar" parent="Widget.Material3.ActionBar.Solid">

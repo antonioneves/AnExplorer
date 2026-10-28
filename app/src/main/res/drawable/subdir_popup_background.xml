@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The folder path dropdown: the same rounded surface as the app's cards, in both themes -->
+<!-- The folder path dropdown: the same surface as the sort panel (ui/SideMenuPopup) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/surfaceContainerHighColor" />
-    <corners android:radius="20dp" />
+    <solid android:color="?attr/colorSurfaceContainerHigh" />
+    <corners android:radius="@dimen/card_corner_radius" />
     <padding android:top="8dp" android:bottom="8dp" />
 </shape>

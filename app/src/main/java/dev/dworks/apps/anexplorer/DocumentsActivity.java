@@ -92,7 +92,6 @@ import android.animation.ValueAnimator;
 import android.util.TypedValue;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.github.javiersantos.appupdater.AppUpdater;
@@ -157,6 +156,7 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider.RecentColumns;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.ResumeColumns;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.setting.SettingsFragment;
+import dev.dworks.apps.anexplorer.ui.PopupSpinner;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.ui.DirectoryContainerView;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -199,7 +199,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private int mToolbarInsetStart = -1;
 
     private Toolbar mToolbar;
-    private Spinner mToolbarStack;
+    private PopupSpinner mToolbarStack;
 
 
     private DirectoryContainerView mDirectoryContainer;
@@ -287,8 +287,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
 
 
-        mToolbarStack = (Spinner) findViewById(R.id.stack);
+        mToolbarStack = (PopupSpinner) findViewById(R.id.stack);
         mToolbarStack.setOnItemSelectedListener(mStackListener);
+        // The Spinner opens the same panel as the sort menu instead of its own list
+        mToolbarStack.setOnOpenListener(this::showStackPopup);
 
         setSupportActionBar(mToolbar);
 
@@ -1652,6 +1654,31 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return convertView;
         }
     };
+
+    private void showStackPopup(View anchor) {
+        final Menu menu = new PopupMenu(this, anchor).getMenu();
+        for (int i = 0; i < mStackAdapter.getCount(); i++) {
+            final String name = i == 0 ? getCurrentRoot().title : ((DocumentInfo) mStackAdapter.getItem(i)).displayName;
+            final MenuItem item = menu.add(0, i, i, name);
+            item.setCheckable(true).setChecked(i == mStackAdapter.getCount() - 1);
+            if (i > 0) {
+                // The arrow steps in one level further for each folder down
+                final Drawable arrow = ContextCompat.getDrawable(this, R.drawable.ic_subdirectory_arrow);
+                item.setIcon(new InsetDrawable(arrow, (i - 1) * (int) (16 * getResources().getDisplayMetrics().density), 0, 0, 0));
+            }
+        }
+        SideMenuPopup.showBelowStart(anchor, menu, item -> {
+            final int position = item.getItemId();
+            if (position < mStackAdapter.getCount() - 1) {
+                while (mState.stack.size() > position + 1) {
+                    mState.stackTouched = true;
+                    mState.stack.pop();
+                }
+                onCurrentDirectoryChanged(ANIM_UP);
+            }
+            return true;
+        });
+    }
 
     private AdapterView.OnItemSelectedListener mStackListener = new AdapterView.OnItemSelectedListener() {
         @Override

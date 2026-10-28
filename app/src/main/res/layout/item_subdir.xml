@@ -18,12 +18,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@drawable/subdir_item"
-    android:minHeight="?android:attr/listPreferredItemHeightSmall"
-    android:paddingLeft="?attr/listPreferredItemPaddingLeft"
-    android:paddingRight="?attr/listPreferredItemPaddingRight"
-    android:paddingStart="?attr/listPreferredItemPaddingLeft"
-    android:paddingEnd="?attr/listPreferredItemPaddingRight"
+    android:background="@drawable/item_root"
+    android:minWidth="220dp"
+    android:minHeight="48dp"
+    android:paddingStart="@dimen/root_item_padding"
+    android:paddingLeft="@dimen/root_item_padding"
+    android:paddingEnd="@dimen/root_item_padding"
+    android:paddingRight="@dimen/root_item_padding"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:baselineAligned="false">
@@ -49,7 +50,7 @@
         android:ellipsize="middle"
         android:layout_gravity="center_vertical|start"
         android:textAlignment="viewStart"
-        android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
         android:textColor="?android:attr/textColorPrimary" />
 
 </LinearLayout>

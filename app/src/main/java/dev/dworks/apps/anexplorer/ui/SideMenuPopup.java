@@ -48,6 +48,12 @@ public class SideMenuPopup {
         return show(anchor, null, menu, listener, false);
     }
 
+    /** Drops the panel under the anchor, lined up with its start (for a title that opens a list) */
+    public static PopupWindow showBelowStart(final View anchor, Menu menu,
+                                             final OnMenuItemClickListener listener) {
+        return show(anchor, null, menu, listener, true, true);
+    }
+
     /**
      * @param title  optional heading above the items
      * @param below  drop the panel just under the anchor, lined up with its end (for toolbar
@@ -55,6 +61,12 @@ public class SideMenuPopup {
      */
     public static PopupWindow show(final View anchor, CharSequence title, Menu menu,
                                    final OnMenuItemClickListener listener, boolean below) {
+        return show(anchor, title, menu, listener, below, false);
+    }
+
+    private static PopupWindow show(final View anchor, CharSequence title, Menu menu,
+                                    final OnMenuItemClickListener listener, boolean below,
+                                    boolean alignStart) {
         final Context context = anchor.getContext();
         final List<MenuItem> items = new ArrayList<>();
         for (int i = 0; i < menu.size(); i++) {
@@ -113,7 +125,8 @@ public class SideMenuPopup {
         int x;
         int y = anchorTop;
         if (below) {
-            x = Math.max(margin, Math.min(anchorRight - width, root.getWidth() - margin - width));
+            x = Math.max(margin, Math.min(alignStart ? anchorLeft : anchorRight - width,
+                    root.getWidth() - margin - width));
             y = anchorTop + anchor.getHeight() + gap;
         } else if (anchorRight + gap + width <= root.getWidth() - margin) {
             x = anchorRight + gap;
