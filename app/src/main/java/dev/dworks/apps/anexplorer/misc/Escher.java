@@ -260,18 +260,52 @@ final class Escher {
         return null;
     }
 
+    /**
+     * The colour stops of a shaded fill that has more than two colours (fillShadeColors), as CSS such as
+     * "#f00 0%,#0f0 50%,#00f 100%", or null if the shape has only the two fill colours
+     */
+    static String shadeStops(byte[] b, List<Rec> options, java.util.function.IntFunction<String> colors) {
+        for (Rec rec : options) {
+            final int[] data = complex(b, rec, 0x0197);
+            if (data == null || data[1] < 6 || u16(b, data[0] + 4) != 8) {
+                continue;
+            }
+            final int count = u16(b, data[0]);
+            if (count < 2 || 6 + count * 8 > data[1]) {
+                continue;
+            }
+            final StringBuilder out = new StringBuilder();
+            for (int i = 0; i < count; i++) {
+                final int at = data[0] + 6 + i * 8;
+                final String color = colors.apply(u32(b, at));
+                if (color == null) {
+                    return null;
+                }
+                out.append(i == 0 ? "" : ",").append(color).append(' ')
+                        .append(String.format(java.util.Locale.ROOT, "%.1f", u32(b, at + 4) / 655.36)).append('%');
+            }
+            return out.toString();
+        }
+        return null;
+    }
+
     /** CSS for a two-colour gradient fill (the shaded fill types), or null if the fill is not one */
     static String gradient(Map<Integer, Integer> props, String fore, String back) {
+        return gradient(props, fore + "," + back);
+    }
+
+    /** As above, with the colour stops given as CSS */
+    static String gradient(Map<Integer, Integer> props, String stops) {
         final Integer type = props.get(0x0180);
         if (type == null || type < 4 || type > 7) {
             return null;
         }
         if (type == 5 || type == 6) {
-            return "radial-gradient(" + fore + "," + back + ")";
+            return "radial-gradient(" + stops + ")";
         }
         final Integer angle = props.get(0x018B);
         // OfficeArt measures clockwise from the left-to-right direction, CSS from the top
-        return "linear-gradient(" + (90 + (angle == null ? 0 : angle / 65536.0)) + "deg," + fore + "," + back + ")";
+        return "linear-gradient(" + (90 + (angle == null ? 0 : angle / 65536.0)) + "deg," + stops + ")";
     }
 
     /** CSS (with a leading semicolon) that cuts a box to the preset geometry of that shape type, or "" */

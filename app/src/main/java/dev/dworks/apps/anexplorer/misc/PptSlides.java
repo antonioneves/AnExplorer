@@ -919,9 +919,11 @@ final class PptSlides {
             return null;
         }
         final Map<Integer, Integer> props = new HashMap<>();
+        final List<Rec> options = new ArrayList<>();
         for (Rec part : children(doc, shape.body, shape.end)) {
             if (part.type == OPT) {
                 readProps(doc, part, props);
+                options.add(part);
             }
         }
         final int type = props.containsKey(0x0180) ? props.get(0x0180) : 0;
@@ -935,7 +937,8 @@ final class PptSlides {
         final Integer color = props.get(0x0181);
         final String css = color == null ? null : artColor(color, scheme);
         final Integer back = props.get(0x0182);
-        final String gradient = Escher.gradient(props, orElse(css, scheme[0]),
+        final String stops = Escher.shadeStops(doc, options, value -> artColor(value, scheme));
+        final String gradient = stops != null ? Escher.gradient(props, stops) : Escher.gradient(props, orElse(css, scheme[0]),
                 orElse(back == null ? null : artColor(back, scheme), "#ffffff"));
         return gradient != null ? gradient : css != null ? css : scheme[0];
     }
@@ -1011,9 +1014,11 @@ final class PptSlides {
             return;
         }
         final Map<Integer, Integer> props = new HashMap<>();
+        final List<Rec> options = new ArrayList<>();
         for (Rec part : parts) {
             if (part.type == OPT || part.type == TERTIARY_OPT) {
                 readProps(doc, part, props);
+                options.add(part);
             }
         }
         final Rec clientData = find(parts, CLIENT_DATA);
@@ -1086,7 +1091,8 @@ final class PptSlides {
             final Integer color = props.get(0x0181);
             fill = color == null ? context.scheme[4] : artColor(color, context.scheme);
             final Integer back = props.get(0x0182);
-            final String gradient = Escher.gradient(props, fill,
+            final String stops = Escher.shadeStops(doc, options, value -> artColor(value, context.scheme));
+            final String gradient = stops != null ? Escher.gradient(props, stops) : Escher.gradient(props, fill,
                     orElse(back == null ? null : artColor(back, context.scheme), "#ffffff"));
             if (gradient != null) {
                 fill = gradient;
@@ -1104,12 +1110,6 @@ final class PptSlides {
         if (geom == 20 || geom == 32) {
             line(out, style.toString(), stroke == null ? context.scheme[1] : stroke, props, box);
             return;
-        }
-        final List<Rec> options = new ArrayList<>();
-        for (Rec part : parts) {
-            if (part.type == OPT || part.type == TERTIARY_OPT) {
-                options.add(part);
-            }
         }
         final String[] path = geom == 0 || geom == 1 ? Escher.freeform(doc, options, props) : null;
         if (path != null) {
