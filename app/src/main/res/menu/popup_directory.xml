@@ -81,11 +81,6 @@
         support:showAsAction="always"
         android:title="@string/menu_cut"/>
     <item
-        android:id="@+id/menu_delete"
-        android:icon="@drawable/ic_menu_delete"
-        support:showAsAction="always"
-        android:title="@string/menu_delete"/>
-    <item
         android:id="@+id/menu_compress"
         android:icon="@drawable/ic_menu_compressed"
         support:showAsAction="always"
@@ -105,6 +100,11 @@
         android:icon="@drawable/ic_root_quickshare"
         support:showAsAction="ifRoom"
         android:title="@string/menu_quickshare"/>
+    <item
+        android:id="@+id/menu_delete"
+        android:icon="@drawable/ic_menu_delete"
+        support:showAsAction="always"
+        android:title="@string/menu_delete"/>
     <item
         android:id="@+id/menu_info"
         android:icon="@drawable/ic_menu_info"
