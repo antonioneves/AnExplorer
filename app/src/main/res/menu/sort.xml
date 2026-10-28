@@ -15,5 +15,9 @@
             android:id="@+id/menu_sort_size"
             android:icon="@drawable/ic_sort_size"
             android:title="@string/sort_size" />
+        <item
+            android:id="@+id/menu_sort_played"
+            android:icon="@drawable/ic_sort_played"
+            android:title="@string/sort_played" />
     </group>
 </menu>

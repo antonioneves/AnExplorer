@@ -50,6 +50,7 @@ import dev.dworks.apps.anexplorer.provider.RecentsProvider.StateColumns;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_DISPLAY_NAME;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_LAST_MODIFIED;
+import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_PLAYED;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_SIZE;
 import static dev.dworks.apps.anexplorer.BaseActivity.TAG;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorInt;
@@ -153,12 +154,12 @@ public class DirectoryLoader extends AsyncTaskLoader<DirectoryResult> {
             cursor = new RootCursorWrapper(mUri.getAuthority(), mRoot.rootId, cursor, -1);
 
             if (mType == DirectoryFragment.TYPE_SEARCH) {
-                cursor = new SortingCursorWrapper(cursor, result.sortOrder);
+                cursor = new SortingCursorWrapper(cursor, result.sortOrder, getContext());
                 // Filter directories out of search results, for now
                 cursor = new FilteringCursorWrapper(cursor, null, SEARCH_REJECT_MIMES);
             } else {
                 // Normal directories should have sorting applied
-                cursor = new SortingCursorWrapper(cursor, result.sortOrder);
+                cursor = new SortingCursorWrapper(cursor, result.sortOrder, getContext());
             }
 
             result.client = client;
@@ -242,6 +243,7 @@ public class DirectoryLoader extends AsyncTaskLoader<DirectoryResult> {
     public static String getQuerySortOrder(int sortOrder) {
         switch (sortOrder) {
             case SORT_ORDER_DISPLAY_NAME:
+            case SORT_ORDER_PLAYED:
                 return Document.COLUMN_DISPLAY_NAME + " ASC";
             case SORT_ORDER_LAST_MODIFIED:
                 return Document.COLUMN_LAST_MODIFIED + " DESC";

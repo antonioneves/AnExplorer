@@ -16,16 +16,19 @@
 
 package dev.dworks.apps.anexplorer.cursor;
 
+import android.content.Context;
 import android.database.AbstractCursor;
 import android.database.Cursor;
 import android.os.Bundle;
 
 import dev.dworks.apps.anexplorer.misc.Utils;
+import dev.dworks.apps.anexplorer.misc.WatchHistory;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_DISPLAY_NAME;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_LAST_MODIFIED;
+import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_PLAYED;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.SORT_ORDER_SIZE;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorLong;
 import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
@@ -43,7 +46,14 @@ public class SortingCursorWrapper extends AbstractCursor {
     private final long[] mValueLong;
 
     public SortingCursorWrapper(Cursor cursor, int sortOrder) {
+        this(cursor, sortOrder, null);
+    }
+
+    /** @param context only needed to sort by played, where it reads the watch history */
+    public SortingCursorWrapper(Cursor cursor, int sortOrder, Context context) {
         mCursor = cursor;
+        final WatchHistory history = sortOrder == SORT_ORDER_PLAYED && context != null
+                ? new WatchHistory(context) : null;
 
         final int count = cursor.getCount();
         mPosition = new int[count];
@@ -54,6 +64,7 @@ public class SortingCursorWrapper extends AbstractCursor {
                 break;
             case SORT_ORDER_LAST_MODIFIED:
             case SORT_ORDER_SIZE:
+            case SORT_ORDER_PLAYED:
                 mValueString = null;
                 mValueLong = new long[count];
                 break;
@@ -83,6 +94,9 @@ public class SortingCursorWrapper extends AbstractCursor {
                 case SORT_ORDER_SIZE:
                     mValueLong[i] = getCursorLong(cursor, Document.COLUMN_SIZE);
                     break;
+                case SORT_ORDER_PLAYED:
+                    mValueLong[i] = playedRank(history, cursor);
+                    break;
             }
         }
 
@@ -95,8 +109,22 @@ public class SortingCursorWrapper extends AbstractCursor {
                 break;
             case SORT_ORDER_LAST_MODIFIED:
             case SORT_ORDER_SIZE:
+            case SORT_ORDER_PLAYED:
                 binarySort(mPosition, mValueLong);
                 break;
+        }
+    }
+
+    /** In progress first, then not played, then played; the long sort puts the highest first */
+    private static long playedRank(WatchHistory history, Cursor cursor) {
+        final String id = history == null ? null : getCursorString(cursor, Document.COLUMN_DOCUMENT_ID);
+        switch (id == null ? WatchHistory.NONE : history.getState(id)) {
+            case WatchHistory.VIEWING:
+                return 2;
+            case WatchHistory.VIEWED:
+                return 0;
+            default:
+                return 1;
         }
     }
 

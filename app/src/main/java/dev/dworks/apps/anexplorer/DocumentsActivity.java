@@ -1059,6 +1059,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             params.putString("type", "size");
             AnalyticsManager.logEvent("sort_size", params);
             return true;
+        } else if (id == R.id.menu_sort_played) {
+            setUserSortOrder(State.SORT_ORDER_PLAYED);
+            Bundle params = new Bundle();
+            params.putString("type", "played");
+            AnalyticsManager.logEvent("sort_played", params);
+            return true;
         } else if (id == R.id.menu_grid) {
             setUserMode(State.MODE_GRID);
             Bundle params = new Bundle();
@@ -1157,6 +1163,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final Menu menu = new PopupMenu(this, anchor).getMenu();
         getMenuInflater().inflate(R.menu.sort, menu);
         menu.findItem(R.id.menu_sort_size).setVisible(mState.showSize);
+        final RootInfo root = getCurrentRoot();
+        menu.findItem(R.id.menu_sort_played).setVisible(root != null && root.isVideos());
         final int checked;
         switch (mState.derivedSortOrder) {
             case State.SORT_ORDER_LAST_MODIFIED:
@@ -1164,6 +1172,9 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 break;
             case State.SORT_ORDER_SIZE:
                 checked = R.id.menu_sort_size;
+                break;
+            case State.SORT_ORDER_PLAYED:
+                checked = R.id.menu_sort_played;
                 break;
             default:
                 checked = R.id.menu_sort_name;
