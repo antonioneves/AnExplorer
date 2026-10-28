@@ -46,6 +46,7 @@ public final class OfficeHtml {
             + ".slide{position:relative;overflow:hidden;margin:0 auto 24px;background:#fff}"
             + ".slide p{line-height:1.2}.slide .t{box-sizing:border-box;width:100%;height:100%;display:flex;"
             + "flex-direction:column}.slide img{max-width:none}"
+            + ".slide .o{position:absolute;box-sizing:border-box}.slide td{padding:0}.slide td p{margin:0}"
             + ".notes{box-sizing:border-box;margin:-12px auto 28px;padding:14px 22px;background:#424242;"
             + "color:#eee;border-radius:0 0 6px 6px;font-size:20px}.notes p{margin:0 0 .4em;line-height:1.3}"
             + ".sh{display:inline-block;vertical-align:top;overflow:hidden}span.p{display:block;margin:0 0 .3em;"
@@ -60,7 +61,7 @@ public final class OfficeHtml {
 
     /** @return whether the file is one of the binary Office formats this page shows */
     public static boolean supports(String ext) {
-        return "|doc|xls|xlsx|xlsm|xltx|xlsb|ppt|pps|".contains("|" + ext + "|");
+        return "|doc|xls|xlsx|xlsm|xltx|xlsb|ppt|pps|pptx|pptm|ppsx|potx|".contains("|" + ext + "|");
     }
 
     /** @return the whole HTML page; throws if the file is encrypted or unreadable */
@@ -82,6 +83,12 @@ public final class OfficeHtml {
                 break;
             case "xlsb":
                 sheets(out, BinaryOffice.xlsb(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
+                break;
+            case "pptx":
+            case "pptm":
+            case "ppsx":
+            case "potx":
+                out.append(PptxSlides.html(OoxmlPackage.read(in)));
                 break;
             default: {
                 final byte[] file = PreviewFormatter.readAll(in, MAX_BYTES);
