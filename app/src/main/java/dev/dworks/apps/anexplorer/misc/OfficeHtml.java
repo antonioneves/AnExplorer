@@ -125,6 +125,43 @@ public final class OfficeHtml {
         return out.toString();
     }
 
+    /** @return how many slides a page made by {@link #page} holds, or 0 if it is not a slide deck */
+    public static int slideCount(String page) {
+        int count = 0;
+        for (int at = page.indexOf("<div class=slide id=s"); at >= 0; at = page.indexOf("<div class=slide id=s", at + 1)) {
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * @return the slide deck page showing only slide number {@code index} (from 1) and its notes, scaled to
+     * fit a screen of the given size in CSS pixels
+     */
+    public static String showSlide(String page, int index, double screenW, double screenH) {
+        final int deck = page.indexOf("<div id=deck");
+        if (deck < 0) {
+            return page;
+        }
+        double zoom = 0;
+        final int slide = page.indexOf("<div class=slide id=s" + index + " style=\"width:");
+        if (slide >= 0) {
+            try {
+                final int w0 = page.indexOf("width:", slide) + 6, w1 = page.indexOf("px", w0);
+                final int h0 = page.indexOf("height:", w1) + 7, h1 = page.indexOf("px", h0);
+                zoom = Math.min(screenW / Double.parseDouble(page.substring(w0, w1)),
+                        screenH / Double.parseDouble(page.substring(h0, h1))) * 0.97;
+            } catch (RuntimeException e) {
+                zoom = 0;
+            }
+        }
+        return page.substring(0, deck) + "<style>.slide,.notes{display:none}#s" + index + ",#s" + index
+                + "+.notes{display:block}"
+                + (zoom > 0 ? "#deck{zoom:" + zoom + "!important;padding:0!important}body{margin:0;display:flex;"
+                + "align-items:center;justify-content:center;min-height:100vh}.slide{margin:0 auto!important}" : "")
+                + "</style>" + page.substring(deck);
+    }
+
     private static String esc(String text) {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>");
     }

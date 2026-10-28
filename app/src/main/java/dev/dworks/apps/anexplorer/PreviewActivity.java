@@ -67,6 +67,9 @@ public class PreviewActivity extends Activity {
 
     private FrameLayout mRoot;
     private ZoomImageView mImage;
+    private WebView mWeb;
+    private String mSlideshow;
+    private int mSlides, mSlide;
     private ScrollView mScroll;
     private PdfRenderer mPdf;
     private File mPdfFile;
@@ -335,6 +338,13 @@ public class PreviewActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(false);
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setBuiltInZoomControls(false);
+        mSlides = "text/html".equals(mimeType) ? OfficeHtml.slideCount(content) : 0;
+        if (mSlides > 0) {
+            mSlideshow = content;
+            mSlide = 1;
+            mWeb = web;
+            content = slideHtml();
+        }
         web.loadDataWithBaseURL(null, content, mimeType, "UTF-8", null);
         mRoot.addView(web, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -385,6 +395,43 @@ public class PreviewActivity extends Activity {
                 Log.w("PreviewActivity", "Page failed", e);
             }
         }, "preview-page").start();
+    }
+
+    private String slideHtml() {
+        final android.util.DisplayMetrics m = getResources().getDisplayMetrics();
+        return OfficeHtml.showSlide(mSlideshow, mSlide, m.widthPixels / m.density, m.heightPixels / m.density);
+    }
+
+    /** Shows another slide of a presentation: the remote's left and right keys turn the pages */
+    private void turnSlide(int step) {
+        final int next = Math.max(1, Math.min(mSlides, mSlide + step));
+        if (next != mSlide) {
+            mSlide = next;
+            mWeb.loadDataWithBaseURL(null, slideHtml(), "text/html", "UTF-8", null);
+        }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (mSlides > 0 && mWeb != null && event.getAction() == KeyEvent.ACTION_DOWN) {
+            switch (event.getKeyCode()) {
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                case KeyEvent.KEYCODE_ENTER:
+                case KeyEvent.KEYCODE_PAGE_DOWN:
+                case KeyEvent.KEYCODE_MEDIA_NEXT:
+                    turnSlide(1);
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                case KeyEvent.KEYCODE_PAGE_UP:
+                case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                    turnSlide(-1);
+                    return true;
+                default:
+                    break;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override

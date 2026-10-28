@@ -105,7 +105,7 @@ final class PptxSlides {
             if (++count > MAX_SLIDES) {
                 break;
             }
-            out.append("<div class=slide style=\"width:").append(fmt(width)).append("px;height:")
+            out.append("<div class=slide id=s").append(count).append(" style=\"width:").append(fmt(width)).append("px;height:")
                     .append(fmt(height)).append("px;");
             try {
                 slide(slide, out);
