@@ -35,6 +35,8 @@
     <string name="videos_other">Videos</string>
     <string name="videos_season">Season %d</string>
     <string name="videos_episode">Episode %d</string>
+    <string name="videos_viewed">Viewed</string>
+    <string name="videos_viewing">Viewing</string>
     <string name="root_internal_storage">Internal Storage</string>
     <string name="root_external_storage">External Storage</string>
     <string name="root_phone_storage">System</string>

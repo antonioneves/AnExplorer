@@ -2121,6 +2121,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             // Nova always wins over the preview for formats it plays
             if (isPlayable(doc.mimeType, doc.displayName)) {
                 view.setClass(this, PlayerActivity.class);
+                view.putExtra(PlayerActivity.EXTRA_WATCH_KEY, doc.documentId);
             } else if (PreviewActivity.supports(doc.mimeType, doc.displayName)) {
                 view.setClass(this, PreviewActivity.class);
                 view.putExtra(PreviewActivity.EXTRA_NAME, doc.displayName);

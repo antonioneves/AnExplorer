@@ -614,6 +614,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public void onResume() {
 		super.onResume();
 		updateDisplayState();
+		if (mShowAdapter != null) {
+			// Back from the player, where the viewed and viewing marks may have changed
+			mShowAdapter.notifyDataSetChanged();
+		}
 		if (!mUninstallQueue.isEmpty()) {
 			uninstallNext();
 		} else if (mReloadAppsOnResume) {

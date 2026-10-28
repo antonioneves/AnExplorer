@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import androidx.recyclerview.widget.RecyclerView;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.EpisodeName;
+import dev.dworks.apps.anexplorer.misc.WatchHistory;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -58,6 +59,7 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final Context mContext;
     private final IconHelper mIconHelper;
     private final SharedPreferences mPreferences;
+    private final WatchHistory mHistory;
     private final Handler mMain = new Handler(Looper.getMainLooper());
     private final OnEpisodeClickListener mListener;
     private final List<Season> mSeasons = new ArrayList<>();
@@ -71,6 +73,7 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         mIconHelper = iconHelper;
         mListener = listener;
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        mHistory = new WatchHistory(context);
         setHasStableIds(true);
         for (DocumentInfo doc : seasons) {
             final Season season = new Season(doc);
@@ -277,6 +280,7 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             private final ImageView iconThumb;
             private final View iconMimeBackground;
             private final TextView title;
+            private final ImageView watchBadge;
             private DocumentInfo episode;
 
             EpisodeViewHolder(View v) {
@@ -292,6 +296,18 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     title.setPadding(title.getPaddingLeft(), title.getPaddingBottom(),
                             title.getPaddingRight(), title.getPaddingTop());
                 }
+                // Bottom corner, opposite the label on top
+                watchBadge = new ImageView(v.getContext());
+                final int size = v.getResources().getDimensionPixelSize(R.dimen.episode_badge_size);
+                final int margin = size / 4;
+                final FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(size, size,
+                        Gravity.BOTTOM | Gravity.END);
+                badgeParams.setMargins(margin, margin, margin, margin);
+                watchBadge.setLayoutParams(badgeParams);
+                watchBadge.setBackgroundResource(R.drawable.watch_badge_scrim);
+                watchBadge.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
+                watchBadge.setVisibility(View.GONE);
+                ((FrameLayout) iconThumb.getParent()).addView(watchBadge);
                 v.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -304,6 +320,14 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             void bind(DocumentInfo episode) {
                 this.episode = episode;
+                final int state = mHistory.getState(episode.documentId);
+                watchBadge.setVisibility(state == WatchHistory.NONE ? View.GONE : View.VISIBLE);
+                if (state != WatchHistory.NONE) {
+                    final boolean viewed = state == WatchHistory.VIEWED;
+                    watchBadge.setImageResource(viewed ? R.drawable.ic_watch_viewed : R.drawable.ic_watch_viewing);
+                    watchBadge.setContentDescription(watchBadge.getContext().getString(
+                            viewed ? R.string.videos_viewed : R.string.videos_viewing));
+                }
                 if (title != null) {
                     // The season header already says which show and season, so the card is just the number
                     final EpisodeName parsed = EpisodeName.parse(episode.displayName);

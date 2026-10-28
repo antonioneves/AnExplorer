@@ -18,6 +18,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
+import dev.dworks.apps.anexplorer.misc.WatchHistory;
+
 /**
  * Plays video and audio inside the app so it doesn't depend on another player being installed.
  * The ffmpeg renderers are preferred so formats the platform codecs lack still play.
@@ -25,11 +27,17 @@ import androidx.media3.ui.PlayerView;
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerActivity extends Activity {
 
+    /** Document id of the video, so the episode cards can show how far it got */
+    public static final String EXTRA_WATCH_KEY = "watch_key";
+
     private static final int CONTROLS_TIMEOUT_MS = 4000;
 
     private PlayerView mPlayerView;
     private ExoPlayer mPlayer;
     private boolean mScrubbing;
+    private boolean mEnded;
+    private String mWatchKey;
+    private WatchHistory mHistory;
     private final Runnable mHideControls = this::fadeOutControls;
 
     @Override
@@ -84,12 +92,22 @@ public class PlayerActivity extends Activity {
             @Override
             public void onPlaybackStateChanged(int state) {
                 if (state == Player.STATE_ENDED) {
+                    mEnded = true;
+                    if (mWatchKey != null) {
+                        mHistory.markViewed(mWatchKey);
+                    }
                     finish();
                 }
             }
         });
         mPlayerView.setPlayer(mPlayer);
         mPlayer.setMediaItem(MediaItem.fromUri(uri));
+        mEnded = false;
+        mHistory = new WatchHistory(this);
+        mWatchKey = getIntent().getStringExtra(EXTRA_WATCH_KEY);
+        if (mWatchKey != null && mHistory.getPosition(mWatchKey) > 0) {
+            mPlayer.seekTo(mHistory.getPosition(mWatchKey));
+        }
         mPlayer.prepare();
         mPlayer.play();
         mPlayerView.requestFocus();
@@ -130,6 +148,15 @@ public class PlayerActivity extends Activity {
             mPlayerView.hideController();
             controls.setAlpha(1f);
         });
+    }
+
+    /** Saved here, not in onStop, because the list behind resumes before the player stops and must see it */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mPlayer != null && mWatchKey != null && !mEnded) {
+            mHistory.savePosition(mWatchKey, mPlayer.getCurrentPosition(), mPlayer.getDuration());
+        }
     }
 
     @Override
