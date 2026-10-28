@@ -61,7 +61,7 @@ public final class OfficeHtml {
 
     /** @return whether the file is one of the binary Office formats this page shows */
     public static boolean supports(String ext) {
-        return "|doc|xls|xlsx|xlsm|xltx|xlsb|ppt|pps|pptx|pptm|ppsx|potx|".contains("|" + ext + "|");
+        return "|doc|xls|xlsx|xlsm|xltx|xlsb|ppt|pps|pptx|pptm|ppsx|potx|docx|docm|dotx|".contains("|" + ext + "|");
     }
 
     /** @return the whole HTML page; throws if the file is encrypted or unreadable */
@@ -73,6 +73,21 @@ public final class OfficeHtml {
                 out.append("<div id=page>").append(WordReader.html(PreviewFormatter.readAll(in, MAX_BYTES)))
                         .append("</div>");
                 break;
+            case "docx":
+            case "docm":
+            case "dotx": {
+                final byte[] file = PreviewFormatter.readAll(in, MAX_BYTES);
+                String drawn;
+                try {
+                    drawn = DocxPage.html(OoxmlPackage.read(new java.io.ByteArrayInputStream(file)));
+                } catch (RuntimeException | StackOverflowError e) {
+                    // An odd document the reader can't follow: show its text instead
+                    drawn = "<div style=\"white-space:pre-wrap\">" + OoxmlPackage.esc(PreviewFormatter.document("docx",
+                            new java.io.ByteArrayInputStream(file)).toString()) + "</div>";
+                }
+                out.append("<div id=page>").append(drawn).append("</div>");
+                break;
+            }
             case "xls":
                 sheets(out, BinaryOffice.xls(PreviewFormatter.readAll(in, MAX_BYTES), MAX_ROWS, MAX_COLUMNS));
                 break;
