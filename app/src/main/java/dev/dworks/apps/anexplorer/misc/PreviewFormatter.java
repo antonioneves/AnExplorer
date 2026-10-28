@@ -50,6 +50,7 @@ public final class PreviewFormatter {
     public static final int HIGHLIGHT_MAX = 400_000;
 
     private static final int MAX_ENTRY_BYTES = 16 * 1024 * 1024;
+    private static final int MAX_BINARY_BYTES = 32 * 1024 * 1024;
     private static final int MAX_ROWS = 2000;
     private static final int MAX_COLUMNS = 50;
     private static final int MAX_CELL_WIDTH = 28;
@@ -438,9 +439,10 @@ public final class PreviewFormatter {
 
     // ---- documents ----
 
-    /** Formats that are a zip of XML parts or RTF; legacy binary .doc/.xls/.ppt aren't read */
+    /** Formats that are a zip of XML parts, RTF, or the binary Office files that {@link BinaryOffice} reads */
     public static boolean isDocument(String ext) {
-        return "|docx|odt|rtf|xlsx|xlsm|xltx|ods|pptx|pptm|ppsx|odp|epub|".contains("|" + ext + "|");
+        return "|docx|odt|rtf|doc|xlsx|xlsm|xltx|ods|xls|xlsb|pptx|pptm|ppsx|odp|ppt|pps|epub|"
+                .contains("|" + ext + "|");
     }
 
     /** @return the readable text of the document, or throws if it is encrypted or not readable */
@@ -449,6 +451,15 @@ public final class PreviewFormatter {
             switch (ext) {
                 case "rtf":
                     return rtf(decodeLatin(readAll(in, MAX_ENTRY_BYTES)));
+                case "doc":
+                    return BinaryOffice.doc(readAll(in, MAX_BINARY_BYTES));
+                case "xls":
+                    return sheets(BinaryOffice.xls(readAll(in, MAX_BINARY_BYTES), MAX_ROWS, MAX_COLUMNS));
+                case "xlsb":
+                    return sheets(BinaryOffice.xlsb(zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
+                case "ppt":
+                case "pps":
+                    return slides(BinaryOffice.ppt(readAll(in, MAX_BINARY_BYTES)));
                 case "docx":
                     return docx(zip(in, "word/document.xml").get("word/document.xml"));
                 case "odt":
@@ -496,7 +507,7 @@ public final class PreviewFormatter {
                 final String name = entry.getName();
                 final boolean wanted = name.startsWith(prefix) || name.startsWith("META-INF/")
                         || prefix.isEmpty() || name.equals("word/document.xml");
-                if (!entry.isDirectory() && wanted && (name.endsWith(".xml") || name.endsWith(".rels")
+                if (!entry.isDirectory() && wanted && (name.endsWith(".xml") || name.endsWith(".rels") || name.endsWith(".bin")
                         || name.endsWith(".opf") || name.endsWith(".ncx") || name.endsWith("html"))) {
                     entries.put(name, readAll(zip, MAX_ENTRY_BYTES));
                 }
@@ -787,11 +798,42 @@ public final class PreviewFormatter {
             if (xml == null) {
                 continue;
             }
+            appendSheet(out, sheet[0], sheetRows(xml, shared));
+        }
+        return out;
+    }
+
+    private static CharSequence sheets(List<BinaryOffice.Sheet> sheets) {
+        final SpannableStringBuilder out = new SpannableStringBuilder();
+        for (BinaryOffice.Sheet sheet : sheets) {
+            appendSheet(out, sheet.name, sheet.rows);
+        }
+        return out;
+    }
+
+    private static void appendSheet(SpannableStringBuilder out, String name, List<List<String>> rows) {
+        final int start = out.length();
+        out.append(name).append('\n');
+        out.setSpan(new StyleSpan(Typeface.BOLD), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        out.setSpan(new RelativeSizeSpan(1.2f), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        out.append(layout(rows)).append('\n');
+    }
+
+    private static CharSequence slides(List<List<String>> slides) throws IOException {
+        if (slides.isEmpty()) {
+            throw new IOException("No slides");
+        }
+        final SpannableStringBuilder out = new SpannableStringBuilder();
+        int index = 0;
+        for (List<String> slide : slides) {
             final int start = out.length();
-            out.append(sheet[0]).append('\n');
+            out.append("Slide ").append(String.valueOf(++index)).append('\n');
             out.setSpan(new StyleSpan(Typeface.BOLD), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            out.setSpan(new RelativeSizeSpan(1.2f), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            out.append(layout(sheetRows(xml, shared))).append('\n');
+            out.setSpan(new RelativeSizeSpan(1.3f), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            for (String text : slide) {
+                out.append(text).append('\n');
+            }
+            out.append('\n');
         }
         return out;
     }

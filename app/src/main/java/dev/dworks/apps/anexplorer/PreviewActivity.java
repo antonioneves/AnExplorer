@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.misc.PreviewFormatter;
+import dev.dworks.apps.anexplorer.misc.TiffDecoder;
 import dev.dworks.apps.anexplorer.ui.ZoomImageView;
 
 /**
@@ -50,8 +51,10 @@ public class PreviewActivity extends Activity {
     private static final int KIND_SVG = 3;
     private static final int KIND_TEXT = 4;
     private static final int KIND_DOCUMENT = 5;
+    private static final int KIND_TIFF = 6;
 
     private static final int MAX_TEXT_BYTES = 2 * 1024 * 1024;
+    private static final int MAX_TIFF_BYTES = 48 * 1024 * 1024;
     private static final int MAX_IMAGE_SIDE = 2560;
     private static final String IMAGE_EXTENSIONS = "|png|jpg|jpeg|gif|webp|bmp|avif|heic|heif|";
     private static final String PLAIN_EXTENSIONS = "|txt|text|log|";
@@ -87,7 +90,10 @@ public class PreviewActivity extends Activity {
         if ("svg".equals(ext) || "image/svg+xml".equals(mimeType)) {
             return KIND_SVG;
         }
-        if (mimeType != null && mimeType.startsWith("image/") && !mimeType.contains("tiff")
+        if ("tif".equals(ext) || "tiff".equals(ext) || mimeType != null && mimeType.contains("tiff")) {
+            return KIND_TIFF;
+        }
+        if (mimeType != null && mimeType.startsWith("image/")
                 || IMAGE_EXTENSIONS.contains("|" + ext + "|")) {
             return KIND_IMAGE;
         }
@@ -150,6 +156,11 @@ public class PreviewActivity extends Activity {
             switch (mKind) {
                 case KIND_IMAGE: {
                     final Bitmap bitmap = decodeImage(uri);
+                    runOnUiThread(() -> showImage(loading, bitmap, false));
+                    break;
+                }
+                case KIND_TIFF: {
+                    final Bitmap bitmap = TiffDecoder.decode(readBytes(uri, MAX_TIFF_BYTES), MAX_IMAGE_SIDE);
                     runOnUiThread(() -> showImage(loading, bitmap, false));
                     break;
                 }
