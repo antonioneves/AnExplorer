@@ -167,6 +167,7 @@
 
         <activity
             android:name=".PlayerActivity"
+            android:enableOnBackInvokedCallback="false"
             android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
             android:exported="true">

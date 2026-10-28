@@ -29,6 +29,7 @@ public class PlayerActivity extends Activity {
 
     private PlayerView mPlayerView;
     private ExoPlayer mPlayer;
+    private boolean mScrubbing;
     private final Runnable mHideControls = this::fadeOutControls;
 
     @Override
@@ -51,10 +52,11 @@ public class PlayerActivity extends Activity {
                         fadeInControls();
                     }
                 });
-        // A focusable time bar swallows LEFT/RIGHT, so focus could never reach the buttons after it
+        // Only the time bar circle shows focus; it takes focus but only scrubs after OK, otherwise it swallows LEFT/RIGHT
         final View timeBar = mPlayerView.findViewById(androidx.media3.ui.R.id.exo_progress);
         if (timeBar != null) {
-            timeBar.setFocusable(false);
+            timeBar.setFocusable(true);
+            timeBar.setOnFocusChangeListener((v, hasFocus) -> setScrubbing(false));
         }
         setContentView(mPlayerView);
     }
@@ -91,6 +93,14 @@ public class PlayerActivity extends Activity {
         mPlayer.prepare();
         mPlayer.play();
         mPlayerView.requestFocus();
+    }
+
+    private void setScrubbing(boolean scrubbing) {
+        mScrubbing = scrubbing;
+        final View timeBar = mPlayerView.findViewById(androidx.media3.ui.R.id.exo_progress);
+        if (timeBar != null) {
+            timeBar.setActivated(scrubbing);
+        }
     }
 
     /** Only the controls fade, never the video behind them */
@@ -138,6 +148,34 @@ public class PlayerActivity extends Activity {
         // Any D-pad key brings the controls up before PlayerView handles it
         if (mPlayerView.isControllerFullyVisible()) {
             fadeInControls();
+        }
+        final View focus = getCurrentFocus();
+        if (focus != null && focus.getId() == androidx.media3.ui.R.id.exo_progress
+                && mPlayerView.isControllerFullyVisible()) {
+            final int key = event.getKeyCode();
+            final boolean select = key == KeyEvent.KEYCODE_DPAD_CENTER || key == KeyEvent.KEYCODE_ENTER;
+            if (select) {
+                if (event.getAction() == KeyEvent.ACTION_UP) {
+                    setScrubbing(!mScrubbing);
+                }
+                return true;
+            }
+            if (mScrubbing && key == KeyEvent.KEYCODE_BACK) {
+                if (event.getAction() == KeyEvent.ACTION_UP) {
+                    setScrubbing(false);
+                }
+                return true;
+            }
+            if (!mScrubbing && (key == KeyEvent.KEYCODE_DPAD_LEFT || key == KeyEvent.KEYCODE_DPAD_RIGHT)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                    final View next = focus.focusSearch(key == KeyEvent.KEYCODE_DPAD_LEFT
+                            ? View.FOCUS_LEFT : View.FOCUS_RIGHT);
+                    if (next != null) {
+                        next.requestFocus();
+                    }
+                }
+                return true;
+            }
         }
         return mPlayerView.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
     }
