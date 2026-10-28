@@ -120,7 +120,32 @@ final class PptxSlides {
             }
             out.append("<span class=n>").append(count).append(" / ").append(slides.size()).append("</span></div>");
         }
-        return out.append("</div>").toString();
+        out.append("</div>");
+        return (avenir ? avenirFace() : "") + out;
+    }
+
+    private boolean avenir;
+
+    /** Avenir is a cloud font that isn't on Android: Nunito Sans, which is shaped alike, stands in for it */
+    private String usesAvenir() {
+        avenir = true;
+        return "'" + AVENIR + "',";
+    }
+
+    private static final String AVENIR = "Avenir Stand-in";
+
+    /** @return the style that defines the stand-in font from the copy bundled with the app, or "" if missing */
+    private static String avenirFace() {
+        try (java.io.InputStream in = PptxSlides.class.getResourceAsStream("/fonts/nunito-sans.woff2")) {
+            if (in == null) {
+                return "";
+            }
+            return "<style>@font-face{font-family:'" + AVENIR + "';font-weight:300 900;src:url(data:font/woff2;base64,"
+                    + android.util.Base64.encodeToString(PreviewFormatter.readAll(in, 256 * 1024),
+                    android.util.Base64.NO_WRAP) + ") format('woff2')}</style>";
+        } catch (java.io.IOException e) {
+            return "";
+        }
     }
 
     /**
@@ -1797,6 +1822,7 @@ final class PptxSlides {
         final String face = theme.font(attr(latin, "typeface"));
         if (face != null) {
             css.append("font-family:'").append(face.replace("'", "")).append("',")
+                    .append(face.toLowerCase(Locale.ROOT).contains("avenir") ? usesAvenir() : "")
                     .append(face.matches("(?i).*(times|georgia|cambria|garamond|serif|palatino|book).*") && !face.toLowerCase(Locale.ROOT).contains("sans")
                             ? "serif" : "sans-serif").append(';');
         }
