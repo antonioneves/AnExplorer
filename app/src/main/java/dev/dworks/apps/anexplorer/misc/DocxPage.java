@@ -63,7 +63,15 @@ final class DocxPage {
         final Element sect = lastSection(body);
         final StringBuilder out = new StringBuilder(pageStyle(sect));
         reference(sect, "w:headerReference", "hd", out);
-        blocks(body, out);
+        final long cols = num(child(sect, "w:cols"), "w:num", 1);
+        if (cols > 1 && cols <= 6) {
+            final double gap = num(child(sect, "w:cols"), "w:space", 720) / 15;
+            out.append("<div style=\"column-count:").append(cols).append(";column-gap:").append(fmt(gap)).append("px\">");
+            blocks(body, out);
+            out.append("</div>");
+        } else {
+            blocks(body, out);
+        }
         for (int i = 0; i < footnotes.size(); i++) {
             if (i == 0) {
                 out.append("<div class=fn>");
@@ -735,6 +743,15 @@ final class DocxPage {
                     break;
                 }
                 case "w:ins":
+                    out.append("<ins style=\"color:#1a7f37;text-decoration:underline\">");
+                    inline(e, base, out);
+                    out.append("</ins>");
+                    break;
+                case "w:del":
+                    out.append("<del style=\"color:#c0392b\">");
+                    inline(e, base, out);
+                    out.append("</del>");
+                    break;
                 case "w:smartTag":
                 case "w:fldSimple":
                 case "w:customXml":
@@ -774,6 +791,7 @@ final class DocxPage {
         for (Element e : children(r, null)) {
             switch (e.getNodeName()) {
                 case "w:t":
+                case "w:delText":
                     out.append(esc(OoxmlPackage.text(e)));
                     break;
                 case "w:tab":

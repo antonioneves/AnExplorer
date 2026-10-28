@@ -527,12 +527,9 @@ final class PptxSlides {
             switch (prst) {
                 case "rect":
                 case "flowChartProcess":
-                case "snip1Rect":
-                case "snip2SameRect":
                 case "round1Rect":
                 case "round2SameRect":
                 case "wedgeRectCallout":
-                case "frame":
                     break;
                 case "roundRect":
                 case "wedgeRoundRectCallout":
@@ -552,6 +549,9 @@ final class PptxSlides {
                     break;
                 default:
                     polygon = preset(prst, geom, box);
+                    if (polygon == null) {
+                        shapePath = presetPath(prst, geom, box);
+                    }
                     break;
             }
         }
@@ -736,8 +736,83 @@ final class PptxSlides {
                 final double x = w - ss * adjust(geom, "adj", 50000) / 100000;
                 return new double[][]{{0, 0}, {x, 0}, {w, h / 2}, {x, h}, {0, h}};
             }
+            case "upDownArrow": {
+                final double x1 = w * (1 - adjust(geom, "adj1", 50000) / 100000) / 2;
+                final double y = ss * adjust(geom, "adj2", 50000) / 100000;
+                return new double[][]{{w / 2, 0}, {w, y}, {w - x1, y}, {w - x1, h - y}, {w, h - y}, {w / 2, h},
+                        {0, h - y}, {x1, h - y}, {x1, y}, {0, y}};
+            }
+            case "snip1Rect": {
+                final double x = ss * adjust(geom, "adj", 16667) / 100000;
+                return new double[][]{{0, 0}, {w - x, 0}, {w, x}, {w, h}, {0, h}};
+            }
+            case "snip2SameRect": {
+                final double x = ss * adjust(geom, "adj1", 16667) / 100000;
+                return new double[][]{{x, 0}, {w - x, 0}, {w, x}, {w, h}, {0, h}, {0, x}};
+            }
+            case "snip2DiagRect": {
+                final double x = ss * adjust(geom, "adj1", 0) / 100000, y = ss * adjust(geom, "adj2", 16667) / 100000;
+                return new double[][]{{x, 0}, {w - y, 0}, {w, y}, {w, h - x}, {w - x, h}, {y, h}, {0, h - y}, {0, x}};
+            }
+            case "snipRoundRect": {
+                final double x = ss * adjust(geom, "adj2", 16667) / 100000;
+                return new double[][]{{0, 0}, {w - x, 0}, {w, x}, {w, h}, {0, h}};
+            }
+            case "frame": {
+                final double t = ss * adjust(geom, "adj1", 12500) / 100000;
+                return new double[][]{{0, 0}, {w, 0}, {w, h}, {0, h}, {0, 0}, {t, t}, {t, h - t}, {w - t, h - t},
+                        {w - t, t}, {t, t}};
+            }
+            case "mathMinus": {
+                final double y = h * (1 - adjust(geom, "adj1", 23520) / 50000 * 0.5) / 2;
+                return new double[][]{{0, y}, {w, y}, {w, h - y}, {0, h - y}};
+            }
+            case "mathMultiply":
+            case "mathDivide":
+            case "mathEqual":
+            case "mathNotEqual":
+                return null;
+            case "flowChartPreparation":
+                return new double[][]{{w * 0.2, 0}, {w * 0.8, 0}, {w, h / 2}, {w * 0.8, h}, {w * 0.2, h}, {0, h / 2}};
+            case "flowChartMerge":
+                return new double[][]{{0, 0}, {w, 0}, {w / 2, h}};
+            case "flowChartManualInput":
+                return new double[][]{{0, h * 0.2}, {w, 0}, {w, h}, {0, h}};
+            case "flowChartManualOperation":
+                return new double[][]{{0, 0}, {w, 0}, {w * 0.8, h}, {w * 0.2, h}};
+            case "flowChartOffpageConnector":
+                return new double[][]{{0, 0}, {w, 0}, {w, h * 0.8}, {w / 2, h}, {0, h * 0.8}};
+            case "flowChartCollate":
+                return new double[][]{{0, 0}, {w, 0}, {w / 2, h / 2}, {w, h}, {0, h}, {w / 2, h / 2}};
+            case "flowChartSort":
+                return new double[][]{{w / 2, 0}, {w, h / 2}, {w / 2, h}, {0, h / 2}};
+            case "lightningBolt":
+                return new double[][]{{w * 0.38, 0}, {w * 0.62, h * 0.33}, {w * 0.5, h * 0.36}, {w, h * 0.7},
+                        {w * 0.62, h * 0.66}, {w * 0.7, h}, {w * 0.2, h * 0.58}, {w * 0.38, h * 0.55}, {w * 0.1, h * 0.28},
+                        {w * 0.3, h * 0.3}};
+            case "bentArrow":
+            case "uturnArrow":
+            case "curvedRightArrow":
+                return null;
+            case "rightArrowCallout": {
+                final double x = ss * adjust(geom, "adj3", 25000) / 100000;
+                final double body = w * adjust(geom, "adj4", 64977) / 100000;
+                final double y1 = h * (1 - adjust(geom, "adj1", 25000) / 100000 * 2 > 0
+                        ? adjust(geom, "adj1", 25000) / 100000 : 0.25);
+                return new double[][]{{0, 0}, {body, 0}, {body, h / 2 - y1 * h / 2}, {w - x, h / 2 - y1 * h / 2},
+                        {w - x, h * 0.25 - y1 * 0}, {w, h / 2}, {w - x, h * 0.75}, {w - x, h / 2 + y1 * h / 2},
+                        {body, h / 2 + y1 * h / 2}, {body, h}, {0, h}};
+            }
             case "star4":
                 return star(4, 0.4, w, h);
+            case "star16":
+                return star(16, 0.88, w, h);
+            case "star24":
+                return star(24, 0.9, w, h);
+            case "star32":
+                return star(32, 0.93, w, h);
+            case "star7":
+                return star(7, 0.51, w, h);
             case "star5":
                 return star(5, 0.382, w, h);
             case "star6":
@@ -751,6 +826,59 @@ final class PptxSlides {
             default:
                 return null;
         }
+    }
+
+    /** Curved presets as an SVG path in pixels of the box; null if unknown */
+    private static String presetPath(String name, Element geom, Box b) {
+        final double w = b.w, h = b.h;
+        switch (name) {
+            case "donut": {
+                final double t = Math.min(w, h) * adjust(geom, "adj", 25000) / 100000;
+                return ring(w, h, 0, 0, w, h, true) + ring(w, h, t, t, w - t, h - t, false);
+            }
+            case "heart":
+                return "M" + fmt(w / 2) + ' ' + fmt(h * 0.3) + "C" + fmt(w * 0.5) + ' ' + fmt(h * 0.1) + ' ' + fmt(w * 0.35) + " 0 "
+                        + fmt(w * 0.25) + " 0C" + fmt(w * 0.1) + " 0 0 " + fmt(h * 0.12) + " 0 " + fmt(h * 0.3) + "C0 "
+                        + fmt(h * 0.6) + ' ' + fmt(w * 0.4) + ' ' + fmt(h * 0.8) + ' ' + fmt(w / 2) + ' ' + fmt(h)
+                        + "C" + fmt(w * 0.6) + ' ' + fmt(h * 0.8) + ' ' + fmt(w) + ' ' + fmt(h * 0.6) + ' ' + fmt(w) + ' '
+                        + fmt(h * 0.3) + "C" + fmt(w) + ' ' + fmt(h * 0.12) + ' ' + fmt(w * 0.9) + " 0 " + fmt(w * 0.75)
+                        + " 0C" + fmt(w * 0.65) + " 0 " + fmt(w * 0.5) + ' ' + fmt(h * 0.1) + ' ' + fmt(w / 2) + ' '
+                        + fmt(h * 0.3) + "Z";
+            case "moon": {
+                final double x = w * adjust(geom, "adj", 50000) / 100000;
+                return "M" + fmt(w) + " 0A" + fmt(w) + ' ' + fmt(h / 2) + " 0 0 0 " + fmt(w) + ' ' + fmt(h) + "A"
+                        + fmt(Math.max(w - x, 1)) + ' ' + fmt(h / 2) + " 0 0 1 " + fmt(w) + " 0Z";
+            }
+            case "cloud":
+                return "M" + fmt(w * 0.2) + ' ' + fmt(h * 0.85) + "A" + fmt(w * 0.17) + ' ' + fmt(h * 0.25) + " 0 0 1 "
+                        + fmt(w * 0.15) + ' ' + fmt(h * 0.45) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.25) + " 0 0 1 "
+                        + fmt(w * 0.4) + ' ' + fmt(h * 0.2) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.2) + " 0 0 1 "
+                        + fmt(w * 0.75) + ' ' + fmt(h * 0.2) + "A" + fmt(w * 0.2) + ' ' + fmt(h * 0.28) + " 0 0 1 "
+                        + fmt(w * 0.88) + ' ' + fmt(h * 0.6) + "A" + fmt(w * 0.15) + ' ' + fmt(h * 0.25) + " 0 0 1 "
+                        + fmt(w * 0.75) + ' ' + fmt(h * 0.85) + "Z";
+            case "sun": {
+                final double[][] pts = star(8, 0.55, w, h);
+                final StringBuilder d = new StringBuilder();
+                for (int i = 0; i < pts.length; i++) {
+                    d.append(i == 0 ? 'M' : 'L').append(fmt(pts[i][0])).append(' ').append(fmt(pts[i][1]));
+                }
+                return d.append('Z').toString();
+            }
+            case "chord":
+            case "pie":
+            case "blockArc":
+            case "arc":
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    private static String ring(double w, double h, double x0, double y0, double x1, double y1, boolean clockwise) {
+        final double rx = (x1 - x0) / 2, ry = (y1 - y0) / 2, cy = (y0 + y1) / 2;
+        final String sweep = clockwise ? "1" : "0";
+        return "M" + fmt(x0) + ' ' + fmt(cy) + "A" + fmt(rx) + ' ' + fmt(ry) + " 0 1 " + sweep + ' ' + fmt(x1) + ' ' + fmt(cy)
+                + "A" + fmt(rx) + ' ' + fmt(ry) + " 0 1 " + sweep + ' ' + fmt(x0) + ' ' + fmt(cy) + "Z";
     }
 
     private static double[][] star(int points, double inner, double w, double h) {
