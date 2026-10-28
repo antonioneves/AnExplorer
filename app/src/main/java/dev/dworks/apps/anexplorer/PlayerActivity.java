@@ -25,8 +25,11 @@ import androidx.media3.ui.PlayerView;
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerActivity extends Activity {
 
+    private static final int CONTROLS_TIMEOUT_MS = 4000;
+
     private PlayerView mPlayerView;
     private ExoPlayer mPlayer;
+    private final Runnable mHideControls = this::fadeOutControls;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +38,19 @@ public class PlayerActivity extends Activity {
 
         mPlayerView = new PlayerView(this);
         mPlayerView.setFocusable(true);
-        mPlayerView.setControllerShowTimeoutMs(4000);
+        // The stock slide-down stutters on TVs, so the controls fade in and out instead
+        mPlayerView.setControllerAnimationEnabled(false);
+        mPlayerView.setControllerShowTimeoutMs(0);
+        mPlayerView.setControllerVisibilityListener(
+                (PlayerView.ControllerVisibilityListener) visibility -> {
+                    if (visibility == View.VISIBLE) {
+                        final View controls = controls();
+                        if (controls != null) {
+                            controls.setAlpha(0f);
+                        }
+                        fadeInControls();
+                    }
+                });
         // A focusable time bar swallows LEFT/RIGHT, so focus could never reach the buttons after it
         final View timeBar = mPlayerView.findViewById(androidx.media3.ui.R.id.exo_progress);
         if (timeBar != null) {
@@ -78,9 +93,39 @@ public class PlayerActivity extends Activity {
         mPlayerView.requestFocus();
     }
 
+    /** Only the controls fade, never the video behind them */
+    private View controls() {
+        return mPlayerView.findViewById(androidx.media3.ui.R.id.exo_controller);
+    }
+
+    private void fadeInControls() {
+        final View controls = controls();
+        mPlayerView.removeCallbacks(mHideControls);
+        if (controls != null) {
+            controls.animate().cancel();
+            if (controls.getAlpha() < 1f) {
+                controls.animate().alpha(1f).setDuration(200).withEndAction(null);
+            }
+        }
+        mPlayerView.postDelayed(mHideControls, CONTROLS_TIMEOUT_MS);
+    }
+
+    private void fadeOutControls() {
+        final View controls = controls();
+        if (controls == null) {
+            mPlayerView.hideController();
+            return;
+        }
+        controls.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+            mPlayerView.hideController();
+            controls.setAlpha(1f);
+        });
+    }
+
     @Override
     protected void onStop() {
         super.onStop();
+        mPlayerView.removeCallbacks(mHideControls);
         if (mPlayer != null) {
             mPlayerView.setPlayer(null);
             mPlayer.release();
@@ -91,6 +136,9 @@ public class PlayerActivity extends Activity {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         // Any D-pad key brings the controls up before PlayerView handles it
+        if (mPlayerView.isControllerFullyVisible()) {
+            fadeInControls();
+        }
         return mPlayerView.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
     }
 }
