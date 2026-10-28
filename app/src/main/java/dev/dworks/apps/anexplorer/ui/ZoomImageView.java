@@ -15,6 +15,10 @@ import android.view.View;
 public class ZoomImageView extends View {
 
     private static final float[] ZOOM_STEPS = {1f, 2f, 4f};
+    /** The desk colour around a page, the same grey the Word previews use */
+    private static final int DESK = 0xFF303030;
+    private static final float PAGE_MARGIN_X = 0.12f;
+    private static final float PAGE_MARGIN_Y = 0.04f;
 
     private final Matrix mMatrix = new Matrix();
     private final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
@@ -33,7 +37,7 @@ public class ZoomImageView extends View {
         super(context, attrs);
     }
 
-    /** @param fitWidth true for pages that should fill the width and scroll down, false to fit whole */
+    /** @param fitWidth true for pages, which sit on a grey desk with margins and scroll down, false to fit whole */
     public void setBitmap(Bitmap bitmap, boolean fitWidth, boolean startAtBottom) {
         mBitmap = bitmap;
         mFitWidth = fitWidth;
@@ -46,9 +50,17 @@ public class ZoomImageView extends View {
         if (mBitmap == null || getWidth() == 0) {
             return 1f;
         }
-        final float w = (float) getWidth() / mBitmap.getWidth();
+        final float w = (float) (getWidth() - 2 * insetX()) / mBitmap.getWidth();
         final float h = (float) getHeight() / mBitmap.getHeight();
         return mFitWidth ? w : Math.min(w, h);
+    }
+
+    private float insetX() {
+        return mFitWidth ? getWidth() * PAGE_MARGIN_X : 0;
+    }
+
+    private float insetY() {
+        return mFitWidth ? getHeight() * PAGE_MARGIN_Y : 0;
     }
 
     private void resetPosition(boolean startAtBottom) {
@@ -58,8 +70,8 @@ public class ZoomImageView extends View {
         mScale = baseScale() * ZOOM_STEPS[mZoomStep];
         mTx = (getWidth() - mBitmap.getWidth() * mScale) / 2f;
         mTy = (getHeight() - mBitmap.getHeight() * mScale) / 2f;
-        if (mBitmap.getHeight() * mScale > getHeight()) {
-            mTy = startAtBottom ? getHeight() - mBitmap.getHeight() * mScale : 0;
+        if (mBitmap.getHeight() * mScale + 2 * insetY() > getHeight()) {
+            mTy = startAtBottom ? getHeight() - mBitmap.getHeight() * mScale - insetY() : insetY();
         }
         clamp();
     }
@@ -67,8 +79,12 @@ public class ZoomImageView extends View {
     private void clamp() {
         final float w = mBitmap.getWidth() * mScale;
         final float h = mBitmap.getHeight() * mScale;
-        mTx = w <= getWidth() ? (getWidth() - w) / 2f : Math.max(getWidth() - w, Math.min(0, mTx));
-        mTy = h <= getHeight() ? (getHeight() - h) / 2f : Math.max(getHeight() - h, Math.min(0, mTy));
+        final float ix = insetX();
+        final float iy = insetY();
+        mTx = w + 2 * ix <= getWidth() ? (getWidth() - w) / 2f
+                : Math.max(getWidth() - w - ix, Math.min(ix, mTx));
+        mTy = h + 2 * iy <= getHeight() ? (getHeight() - h) / 2f
+                : Math.max(getHeight() - h - iy, Math.min(iy, mTy));
     }
 
     /** Steps through fit, 2x and 4x, keeping the middle of the screen where it was */
@@ -114,6 +130,9 @@ public class ZoomImageView extends View {
     protected void onDraw(Canvas canvas) {
         if (mBitmap == null) {
             return;
+        }
+        if (mFitWidth) {
+            canvas.drawColor(DESK);
         }
         mMatrix.setScale(mScale, mScale);
         mMatrix.postTranslate(mTx, mTy);
