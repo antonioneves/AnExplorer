@@ -790,6 +790,24 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					public void onEpisodeClick(DocumentInfo episode) {
 						((BaseActivity) getActivity()).onDocumentPicked(episode);
 					}
+
+					@Override
+					public void onEpisodeLongClick(final DocumentInfo episode, View view) {
+						final PopupMenu popup = new PopupMenu(getActivity(), view);
+						popup.getMenuInflater().inflate(R.menu.popup_directory, popup.getMenu());
+						final Menu menu = popup.getMenu();
+						for (int i = 0; i < menu.size(); i++) {
+							menu.getItem(i).setVisible(false);
+						}
+						menu.findItem(R.id.menu_show_in_folder).setVisible(true);
+						SideMenuPopup.show(view, menu, new SideMenuPopup.OnMenuItemClickListener() {
+							@Override
+							public boolean onMenuItemClick(MenuItem item) {
+								((BaseActivity) getActivity()).showInFolder(episode.path);
+								return true;
+							}
+						});
+					}
 				});
 		list.setType(RecyclerViewPlus.TYPE_LIST);
 		list.setAdapter(mShowAdapter);
@@ -1488,6 +1506,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return MimePredicate.mimeMatches(state.acceptMimes, docMimeType);
 	}
 
+	private boolean inMoviesOrShows() {
+		return null != root && root.isVideos() && null != this.doc
+				&& (MediaDocumentsProvider.TYPE_VIDEOS_ROOT.equals(this.doc.documentId)
+				|| MediaDocumentsProvider.TYPE_VIDEOS_MOVIES.equals(this.doc.documentId)
+				|| MediaDocumentsProvider.TYPE_VIDEOS_SHOWS.equals(this.doc.documentId));
+	}
+
 	private void showPopupMenu(View view, final int position) {
 		PopupMenu popup = new PopupMenu(getActivity(), view);
 
@@ -1546,6 +1571,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			copy.setVisible(manageMode && (doc.isCopySupported() || copiesAcross()));
 			cut.setVisible(manageMode && (doc.isMoveSupported()
 					|| (copiesAcross() && doc.isDeleteSupported())));
+			popup.getMenu().findItem(R.id.menu_show_in_folder).setVisible(manageMode && inMoviesOrShows() && !TextUtils.isEmpty(doc.path));
 		}
 
 		if (null != root && root.isApp()) {
@@ -1684,6 +1710,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return true;
 		} else if (id == R.id.menu_info) {
 			infoDocument(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_show_in_folder) {
+			((BaseActivity) getActivity()).showInFolder(docs.get(0).path);
 			return true;
 		} else if (id == R.id.menu_rename) {
 			renameDocument(docs.get(0));

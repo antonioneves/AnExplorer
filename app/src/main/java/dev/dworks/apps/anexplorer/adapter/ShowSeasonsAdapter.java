@@ -38,6 +38,8 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
     public interface OnEpisodeClickListener {
         void onEpisodeClick(DocumentInfo episode);
+
+        void onEpisodeLongClick(DocumentInfo episode, View view);
     }
 
     private static final int TYPE_HEADER = 0;
@@ -314,6 +316,16 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                         if (episode != null) {
                             mListener.onEpisodeClick(episode);
                         }
+                    }
+                });
+                v.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View view) {
+                        if (episode == null) {
+                            return false;
+                        }
+                        mListener.onEpisodeLongClick(episode, view);
+                        return true;
                     }
                 });
             }

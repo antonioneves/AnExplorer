@@ -80,6 +80,7 @@ public abstract class BaseActivity extends ActionBarActivity {
     public abstract DocumentInfo getCurrentDirectory();
     public abstract void setPending(boolean pending);
     public abstract void onStackPicked(DocumentStack stack);
+    public abstract void showInFolder(String path);
     public abstract void onPickRequested(DocumentInfo pickTarget);
     public abstract void onAppPicked(ResolveInfo info);
     public abstract void onRootPicked(RootInfo root, boolean closeDrawer);

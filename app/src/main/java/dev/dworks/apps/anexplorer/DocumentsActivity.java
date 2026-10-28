@@ -1871,6 +1871,70 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         dumpStack();
     }
 
+    /**
+     * Opens the folder that holds the file at {@code path}, for rows in virtual lists such as
+     * Movies whose real location is only known by its path.
+     */
+    @Override
+    public void showInFolder(final String path) {
+        if (TextUtils.isEmpty(path)) {
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final DocumentStack stack = buildFolderStack(path);
+                if (stack == null) {
+                    return;
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing()) {
+                            onStackPicked(stack);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private DocumentStack buildFolderStack(String path) {
+        RootInfo best = null;
+        for (RootInfo candidate : mRoots.getRootsBlocking()) {
+            if (!ExternalStorageProvider.AUTHORITY.equals(candidate.authority)
+                    || TextUtils.isEmpty(candidate.path)) {
+                continue;
+            }
+            final String base = candidate.path.endsWith("/") ? candidate.path : candidate.path + "/";
+            if (path.startsWith(base) && (best == null || candidate.path.length() > best.path.length())) {
+                best = candidate;
+            }
+        }
+        if (best == null) {
+            return null;
+        }
+        final String base = best.path.endsWith("/") ? best.path : best.path + "/";
+        final String[] parts = path.substring(base.length()).split("/");
+        final DocumentStack stack = new DocumentStack();
+        stack.root = best;
+        try {
+            stack.push(DocumentInfo.fromUri(getContentResolver(),
+                    DocumentsContract.buildDocumentUri(best.authority, best.documentId)));
+            String relative = "";
+            // The last part is the file itself, so the stack ends at its folder
+            for (int i = 0; i < parts.length - 1; i++) {
+                relative = relative.isEmpty() ? parts[i] : relative + "/" + parts[i];
+                stack.push(DocumentInfo.fromUri(getContentResolver(), DocumentsContract.buildDocumentUri(
+                        best.authority, best.rootId + ":" + relative)));
+            }
+        } catch (FileNotFoundException e) {
+            Log.w(TAG, "Failed to open folder: " + e);
+            return null;
+        }
+        return stack;
+    }
+
     public void onStackPicked(DocumentStack stack) {
         try {
             // Update the restored stack to ensure we have freshest data
