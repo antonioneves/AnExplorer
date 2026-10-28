@@ -367,7 +367,17 @@ final class OoxmlTheme {
             return "background:radial-gradient(circle at 50% 50%," + stops + ");";
         }
         final Element lin = child(f, "a:lin");
-        final double deg = lin == null ? 0 : num(lin, "ang", 0) / 60000.0;
+        double deg = lin == null ? 0 : num(lin, "ang", 0) / 60000.0;
+        // A shape flipped with its gradient (rotWithShape) mirrors the direction too
+        final Element xfrm = f.getParentNode() instanceof Element ? child((Element) f.getParentNode(), "a:xfrm") : null;
+        if (xfrm != null && OoxmlPackage.flag(f, "rotWithShape", false)) {
+            if (OoxmlPackage.flag(xfrm, "flipH", false)) {
+                deg = 180 - deg;
+            }
+            if (OoxmlPackage.flag(xfrm, "flipV", false)) {
+                deg = -deg;
+            }
+        }
         return "background:linear-gradient(" + OoxmlPackage.fmt(deg + 90) + "deg," + stops + ");";
     }
 }

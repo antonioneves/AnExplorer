@@ -1112,7 +1112,14 @@ final class PptxSlides {
     // ---- pictures ----
 
     private void picture(Element pic, String part, Ctx ctx, Tx tx, StringBuilder out) {
-        final Box box = box(path(pic, "p:spPr", "a:xfrm"), tx);
+        // A picture in a placeholder takes its place and shape from the layout and master
+        final Element ph = path(pic, "p:nvPicPr", "p:nvPr", "p:ph");
+        final Element layoutSp = ph == null || ctx.layout == null || part.equals(ctx.layoutPart) ? null
+                : match(ctx.layout, ph, false);
+        final Element masterSp = ph == null || ctx.master == null || part.equals(ctx.masterPart) ? null
+                : match(ctx.master, layoutSp != null ? path(layoutSp, "p:nvSpPr", "p:nvPr", "p:ph") : ph, true);
+        final Element[] sps = {pic, layoutSp, masterSp};
+        final Box box = box(firstWith(sps, "a:xfrm"), tx);
         final Element blipFill = child(pic, "p:blipFill");
         final String uri = pkg.picture(pkg.target(part, attr(child(blipFill, "a:blip"), "r:embed")));
         if (box == null || uri == null) {
@@ -1123,12 +1130,13 @@ final class PptxSlides {
         final double r = num(src, "r", 0) / 100000.0, b = num(src, "b", 0) / 100000.0;
         final double kw = 1 - l - r, kh = 1 - t - b;
         final StringBuilder css = new StringBuilder(place(box)).append("overflow:hidden;");
-        final String prst = attr(path(pic, "p:spPr", "a:prstGeom"), "prst");
+        final Element geom = firstWith(sps, "a:prstGeom");
+        final String prst = attr(geom, "prst");
         if ("ellipse".equals(prst)) {
             css.append("border-radius:50%;");
         } else if ("roundRect".equals(prst)) {
             css.append("border-radius:").append(fmt(Math.min(box.w, box.h)
-                    * adjust(path(pic, "p:spPr", "a:prstGeom"), "adj", 16667) / 100000)).append("px;");
+                    * adjust(geom, "adj", 16667) / 100000)).append("px;");
         }
         final Line line = line(new Element[]{pic}, null, ctx.theme);
         if (visible(line)) {
