@@ -56,8 +56,8 @@
                     style="@style/PopupTheme"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
-                    android:layout_marginLeft="4dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginLeft="6dp"
+                    android:layout_marginStart="6dp"
                     android:overlapAnchor="false" />
 
             <!-- Apps and APK files, shown in the toolbar only in APKs -->
