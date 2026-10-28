@@ -2,8 +2,6 @@ package dev.dworks.apps.anexplorer.misc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.MathContext;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,10 +20,18 @@ public final class BinaryOffice {
     private static final Charset UTF16 = Charset.forName("UTF-16LE");
     private static final int MAX_FILE_BYTES = 64 * 1024 * 1024;
 
-    /** One worksheet: its name and the rows that have cells */
+    /** One worksheet: its name and the rows that have cells, with the look of each cell */
     public static final class Sheet {
         public final String name;
         public final List<List<String>> rows = new ArrayList<>();
+        /** The 1-based sheet row number of each entry in {@link #rows}, since empty rows are left out */
+        public final List<Integer> rowNumbers = new ArrayList<>();
+        /** The CSS of each cell, in the same shape as {@link #rows}; empty for a plain cell */
+        public final List<List<String>> styles = new ArrayList<>();
+        /** Column widths in pixels, by 0-based column */
+        public final Map<Integer, Integer> columnWidths = new TreeMap<>();
+        /** Merged ranges as first row, last row, first column, last column (0-based) */
+        public final List<int[]> merges = new ArrayList<>();
 
         Sheet(String name) {
             this.name = name;
@@ -247,6 +253,107 @@ public final class BinaryOffice {
         return out.toString().replaceAll("\n{3,}", "\n\n").trim();
     }
 
+    // ---- cell looks shared by the Excel formats ----
+
+    private static final class Cell {
+        final String text;
+        final boolean numeric;
+        final int xf;
+
+        Cell(String text, boolean numeric, int xf) {
+            this.text = text;
+            this.numeric = numeric;
+            this.xf = xf;
+        }
+    }
+
+    private static final class Font {
+        boolean bold, italic, strike, underline;
+        float size = 10;
+        String color;
+    }
+
+    /** What a cell format record says: its CSS, whether it aligns itself, and its number format */
+    private static final class Xf {
+        String css = "";
+        boolean aligned;
+        int format;
+    }
+
+    /** The fonts, number formats and cell formats a workbook defines, and how its dates count */
+    private static final class Workbook {
+        final List<Font> fonts = new ArrayList<>();
+        final Map<Integer, String> formats = new java.util.HashMap<>();
+        final List<Xf> xfs = new ArrayList<>();
+        String[] palette;
+        boolean date1904;
+
+        /** @return the number as text under the cell's number format */
+        String number(int xf, double value) {
+            final String code = xf >= 0 && xf < xfs.size() ? code(xfs.get(xf).format) : null;
+            return SheetFormat.format(value, code, date1904);
+        }
+
+        String code(int id) {
+            final String custom = formats.get(id);
+            return custom != null ? custom : SheetFormat.builtIn(id);
+        }
+
+        String css(int xf, boolean numeric) {
+            if (xf < 0 || xf >= xfs.size()) {
+                return numeric ? "text-align:right;" : "";
+            }
+            final Xf x = xfs.get(xf);
+            return numeric && !x.aligned ? x.css + "text-align:right;" : x.css;
+        }
+
+        /** Builds the CSS of a cell format from the pieces its record points at */
+        Xf make(int font, int format, int align, boolean wrap, int[] borders, String fill) {
+            final Xf x = new Xf();
+            x.format = format;
+            final StringBuilder css = new StringBuilder();
+            final Font f = font >= 0 && font < fonts.size() ? fonts.get(font) : null;
+            final Font base = fonts.isEmpty() ? null : fonts.get(0);
+            if (f != null) {
+                if (f.bold) {
+                    css.append("font-weight:bold;");
+                }
+                if (f.italic) {
+                    css.append("font-style:italic;");
+                }
+                if (f.underline || f.strike) {
+                    css.append("text-decoration:").append(f.underline ? "underline " : "")
+                            .append(f.strike ? "line-through" : "").append(';');
+                }
+                if (base != null && Math.abs(f.size - base.size) > 0.1f) {
+                    css.append("font-size:").append(f.size).append("pt;");
+                }
+                if (f.color != null) {
+                    css.append("color:").append(f.color).append(';');
+                }
+            }
+            if (fill != null) {
+                css.append("background:").append(fill).append(';');
+            }
+            if (align >= 1 && align <= 3) {
+                css.append("text-align:").append(align == 1 ? "left" : align == 2 ? "center" : "right").append(';');
+                x.aligned = true;
+            }
+            if (wrap) {
+                css.append("white-space:pre-wrap;");
+            }
+            final String[] sides = {"left", "right", "top", "bottom"};
+            for (int i = 0; i < 4; i++) {
+                if (borders[i] > 0) {
+                    css.append("border-").append(sides[i]).append(':').append(borders[i] >= 5 ? 3 : borders[i] == 2 ? 2 : 1)
+                            .append("px solid #333;");
+                }
+            }
+            x.css = css.toString();
+            return x;
+        }
+    }
+
     // ---- Excel 97-2003 ----
 
     /** @return the worksheets of a BIFF8 workbook */
@@ -265,6 +372,7 @@ public final class BinaryOffice {
         final List<String> shared = new ArrayList<>();
         final List<String> names = new ArrayList<>();
         final List<Integer> offsets = new ArrayList<>();
+        final Workbook wb = new Workbook();
         for (int pos = 0; pos + 4 <= book.length; ) {
             final int type = u16(book, pos);
             final int length = u16(book, pos + 2);
@@ -287,6 +395,24 @@ public final class BinaryOffice {
                     names.add(new String(book, data + 8, size, wide ? UTF16 : ANSI));
                     offsets.add(u32(book, data));
                 }
+            } else if (type == 0x0031 && length >= 14) {
+                xlsFont(wb, book, data, length);
+            } else if (type == 0x041E && length >= 5) {
+                final int chars = u16(book, data + 2);
+                final boolean wide = (book[data + 4] & 1) != 0;
+                final int size = Math.min(chars * (wide ? 2 : 1), Math.max(0, length - 5));
+                wb.formats.put(u16(book, data), new String(book, data + 5, size, wide ? UTF16 : ANSI));
+            } else if (type == 0x00E0 && length >= 20) {
+                xlsXf(wb, book, data);
+            } else if (type == 0x0092 && length >= 2) {
+                final int count = Math.min(u16(book, data), (length - 2) / 4);
+                wb.palette = new String[count];
+                for (int i = 0; i < count; i++) {
+                    wb.palette[i] = String.format("#%02x%02x%02x", book[data + 2 + i * 4] & 0xFF,
+                            book[data + 3 + i * 4] & 0xFF, book[data + 4 + i * 4] & 0xFF);
+                }
+            } else if (type == 0x0022 && length >= 2) {
+                wb.date1904 = u16(book, data) != 0;
             } else if (type == 0x000A) {
                 break;
             }
@@ -294,12 +420,40 @@ public final class BinaryOffice {
         }
         final List<Sheet> sheets = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
-            sheets.add(xlsSheet(book, names.get(i), offsets.get(i), shared, maxRows, maxColumns));
+            sheets.add(xlsSheet(book, names.get(i), offsets.get(i), shared, wb, maxRows, maxColumns));
         }
         if (sheets.isEmpty()) {
             throw new IOException("No sheets");
         }
         return sheets;
+    }
+
+    private static void xlsFont(Workbook wb, byte[] book, int d, int length) {
+        final Font font = new Font();
+        font.size = u16(book, d) / 20f;
+        final int flags = u16(book, d + 2);
+        font.italic = (flags & 2) != 0;
+        font.strike = (flags & 8) != 0;
+        font.bold = u16(book, d + 6) >= 700;
+        font.underline = (book[d + 10] & 0xFF) != 0;
+        final int color = u16(book, d + 4);
+        font.color = color == 0x7FFF || color == 64 ? null : SheetFormat.color(color, wb.palette);
+        wb.fonts.add(font);
+        if (wb.fonts.size() == 4) {
+            // BIFF numbers fonts from 0 to 3 and then from 5: index 4 is never used
+            wb.fonts.add(new Font());
+        }
+    }
+
+    private static void xlsXf(Workbook wb, byte[] book, int d) {
+        final int align = book[d + 6] & 7;
+        final boolean wrap = (book[d + 6] & 8) != 0;
+        final int lines = u16(book, d + 10);
+        final int[] borders = {lines & 0xF, lines >> 4 & 0xF, lines >> 8 & 0xF, lines >> 12 & 0xF};
+        final int pattern = u32(book, d + 14) >>> 26;
+        final int colors = u16(book, d + 18);
+        final String fill = pattern == 1 ? SheetFormat.color(colors & 0x7F, wb.palette) : null;
+        wb.xfs.add(wb.make(u16(book, d), u16(book, d + 2), align, wrap, borders, fill));
     }
 
     /** The record data of a string table, which a CONTINUE record can cut in the middle of a string */
@@ -398,10 +552,11 @@ public final class BinaryOffice {
         }
     }
 
-    private static Sheet xlsSheet(byte[] book, String name, int start, List<String> shared, int maxRows,
+    private static Sheet xlsSheet(byte[] book, String name, int start, List<String> shared, Workbook wb, int maxRows,
                                   int maxColumns) {
         final Sheet sheet = new Sheet(name);
-        final TreeMap<Integer, TreeMap<Integer, String>> cells = new TreeMap<>();
+        final TreeMap<Integer, TreeMap<Integer, Cell>> cells = new TreeMap<>();
+        int formulaXf = -1;
         int depth = 0;
         int formulaRow = -1;
         int formulaColumn = -1;
@@ -421,76 +576,109 @@ public final class BinaryOffice {
                 }
             } else if (type == 0x00FD && length >= 10) {
                 final int at = u32(book, d + 6);
-                put(cells, u16(book, d), u16(book, d + 2), at >= 0 && at < shared.size() ? shared.get(at) : "");
+                put(cells, u16(book, d), u16(book, d + 2), at >= 0 && at < shared.size() ? shared.get(at) : "",
+                        false, u16(book, d + 4));
             } else if (type == 0x0204 && length >= 9) {
                 final int chars = u16(book, d + 6);
                 final boolean wide = (book[d + 8] & 1) != 0;
                 final int size = Math.min(chars * (wide ? 2 : 1), Math.max(0, length - 9));
-                put(cells, u16(book, d), u16(book, d + 2), new String(book, d + 9, size, wide ? UTF16 : ANSI));
+                put(cells, u16(book, d), u16(book, d + 2), new String(book, d + 9, size, wide ? UTF16 : ANSI),
+                        false, u16(book, d + 4));
             } else if (type == 0x0203 && length >= 14) {
-                put(cells, u16(book, d), u16(book, d + 2), number(Double.longBitsToDouble(i64(book, d + 6))));
+                final int xf = u16(book, d + 4);
+                put(cells, u16(book, d), u16(book, d + 2),
+                        wb.number(xf, Double.longBitsToDouble(i64(book, d + 6))), true, xf);
             } else if (type == 0x027E && length >= 10) {
-                put(cells, u16(book, d), u16(book, d + 2), number(rk(u32(book, d + 6))));
+                final int xf = u16(book, d + 4);
+                put(cells, u16(book, d), u16(book, d + 2), wb.number(xf, rk(u32(book, d + 6))), true, xf);
             } else if (type == 0x00BD && length >= 6) {
                 final int row = u16(book, d);
                 final int first = u16(book, d + 2);
                 for (int i = 0; i < (length - 6) / 6; i++) {
-                    put(cells, row, first + i, number(rk(u32(book, d + 4 + i * 6 + 2))));
+                    final int xf = u16(book, d + 4 + i * 6);
+                    put(cells, row, first + i, wb.number(xf, rk(u32(book, d + 4 + i * 6 + 2))), true, xf);
+                }
+            } else if (type == 0x0201 && length >= 6) {
+                put(cells, u16(book, d), u16(book, d + 2), "", false, u16(book, d + 4));
+            } else if (type == 0x00BE && length >= 6) {
+                final int row = u16(book, d);
+                final int first = u16(book, d + 2);
+                for (int i = 0; i < (length - 6) / 2; i++) {
+                    put(cells, row, first + i, "", false, u16(book, d + 4 + i * 2));
                 }
             } else if (type == 0x0205 && length >= 8) {
                 put(cells, u16(book, d), u16(book, d + 2),
-                        book[d + 7] != 0 ? "#ERR" : book[d + 6] != 0 ? "TRUE" : "FALSE");
+                        book[d + 7] != 0 ? "#ERR" : book[d + 6] != 0 ? "TRUE" : "FALSE", false, u16(book, d + 4));
             } else if (type == 0x0006 && length >= 14) {
                 formulaRow = u16(book, d);
                 formulaColumn = u16(book, d + 2);
+                formulaXf = u16(book, d + 4);
                 if (u16(book, d + 12) == 0xFFFF) {
                     final int kind = book[d + 6];
                     if (kind == 1) {
-                        put(cells, formulaRow, formulaColumn, book[d + 8] != 0 ? "TRUE" : "FALSE");
+                        put(cells, formulaRow, formulaColumn, book[d + 8] != 0 ? "TRUE" : "FALSE", false, formulaXf);
                     } else if (kind == 2) {
-                        put(cells, formulaRow, formulaColumn, "#ERR");
+                        put(cells, formulaRow, formulaColumn, "#ERR", false, formulaXf);
                     }
                 } else {
-                    put(cells, formulaRow, formulaColumn, number(Double.longBitsToDouble(i64(book, d + 6))));
+                    put(cells, formulaRow, formulaColumn,
+                            wb.number(formulaXf, Double.longBitsToDouble(i64(book, d + 6))), true, formulaXf);
                 }
             } else if (type == 0x0207 && length >= 3 && formulaRow >= 0) {
                 final int chars = u16(book, d);
                 final boolean wide = (book[d + 2] & 1) != 0;
                 final int size = Math.min(chars * (wide ? 2 : 1), Math.max(0, length - 3));
-                put(cells, formulaRow, formulaColumn, new String(book, d + 3, size, wide ? UTF16 : ANSI));
+                put(cells, formulaRow, formulaColumn, new String(book, d + 3, size, wide ? UTF16 : ANSI), false,
+                        formulaXf);
+            } else if (type == 0x007D && length >= 12) {
+                final int width = Math.round(u16(book, d + 4) / 256f * 7 + 5);
+                for (int c = u16(book, d); c <= Math.min(u16(book, d + 2), 255) && c < 256; c++) {
+                    sheet.columnWidths.put(c, width);
+                }
+            } else if (type == 0x00E5 && length >= 2) {
+                for (int i = 0; i < Math.min(u16(book, d), (length - 2) / 8); i++) {
+                    final int at = d + 2 + i * 8;
+                    sheet.merges.add(new int[]{u16(book, at), u16(book, at + 2), u16(book, at + 4), u16(book, at + 6)});
+                }
             }
         }
-        rows(cells, sheet, maxRows, maxColumns);
+        rows(cells, sheet, wb, maxRows, maxColumns);
         return sheet;
     }
 
-    private static void put(TreeMap<Integer, TreeMap<Integer, String>> cells, int row, int column, String text) {
-        TreeMap<Integer, String> line = cells.get(row);
+    private static void put(TreeMap<Integer, TreeMap<Integer, Cell>> cells, int row, int column, String text,
+                             boolean numeric, int xf) {
+        TreeMap<Integer, Cell> line = cells.get(row);
         if (line == null) {
             line = new TreeMap<>();
             cells.put(row, line);
         }
-        line.put(column, text);
+        line.put(column, new Cell(text, numeric, xf));
     }
 
     /** Fills the gaps between cells with empty strings so the columns line up */
-    private static void rows(TreeMap<Integer, TreeMap<Integer, String>> cells, Sheet sheet, int maxRows,
+    private static void rows(TreeMap<Integer, TreeMap<Integer, Cell>> cells, Sheet sheet, Workbook wb, int maxRows,
                              int maxColumns) {
-        for (TreeMap<Integer, String> line : cells.values()) {
+        for (Map.Entry<Integer, TreeMap<Integer, Cell>> line : cells.entrySet()) {
             if (sheet.rows.size() >= maxRows) {
                 break;
             }
             final List<String> row = new ArrayList<>();
-            for (Map.Entry<Integer, String> cell : line.entrySet()) {
+            final List<String> styles = new ArrayList<>();
+            for (Map.Entry<Integer, Cell> cell : line.getValue().entrySet()) {
                 if (cell.getKey() >= maxColumns) {
                     break;
                 }
                 while (row.size() < cell.getKey()) {
                     row.add("");
+                    styles.add("");
                 }
-                row.add(cell.getValue());
+                row.add(cell.getValue().text);
+                styles.add(wb.css(cell.getValue().xf, cell.getValue().numeric));
             }
             sheet.rows.add(row);
+            sheet.styles.add(styles);
+            sheet.rowNumbers.add(line.getKey() + 1);
         }
     }
 
@@ -498,16 +686,6 @@ public final class BinaryOffice {
         final double number = (value & 2) != 0 ? value >> 2
                 : Double.longBitsToDouble((value & 0xFFFFFFFCL) << 32);
         return (value & 1) != 0 ? number / 100 : number;
-    }
-
-    private static String number(double value) {
-        if (Double.isNaN(value) || Double.isInfinite(value)) {
-            return "#NUM";
-        }
-        if (value == Math.rint(value) && Math.abs(value) < 1e15) {
-            return Long.toString((long) value);
-        }
-        return new BigDecimal(value).round(new MathContext(12)).stripTrailingZeros().toPlainString();
     }
 
     // ---- Excel binary workbook (.xlsb) ----
@@ -527,8 +705,16 @@ public final class BinaryOffice {
                 }
             }
         }
+        final Workbook wb = new Workbook();
+        final byte[] styles = parts.get("xl/styles.bin");
+        if (styles != null) {
+            xlsbStyles(wb, styles);
+        }
         final List<Sheet> sheets = new ArrayList<>();
         for (Record r = new Record(workbook); r.next(); ) {
+            if (r.id == 0x99 && r.length >= 4) {
+                wb.date1904 = (u32(workbook, r.data) & 1) != 0;
+            }
             if (r.id != 0x9C || r.length < 12) {
                 continue;
             }
@@ -541,7 +727,7 @@ public final class BinaryOffice {
             final String name = wide(workbook, nameAt);
             final byte[] sheet = parts.get(sheetPath(parts, rel));
             if (sheet != null) {
-                sheets.add(xlsbSheet(sheet, name, shared, maxRows, maxColumns));
+                sheets.add(xlsbSheet(sheet, name, shared, wb, maxRows, maxColumns));
             }
         }
         if (sheets.isEmpty()) {
@@ -589,20 +775,100 @@ public final class BinaryOffice {
         return new String(b, at + 4, chars * 2, UTF16);
     }
 
-    private static Sheet xlsbSheet(byte[] bytes, String name, List<String> shared, int maxRows, int maxColumns) {
+    /** A BIFF12 colour: an RGB value or a palette index; theme colours are not resolved */
+    private static String xlsbColor(byte[] b, int at) {
+        final int type = (b[at] & 0xFF) >> 1;
+        if (type == 1) {
+            return String.format("#%02x%02x%02x", b[at + 4] & 0xFF, b[at + 5] & 0xFF, b[at + 6] & 0xFF);
+        }
+        return type == 2 ? SheetFormat.color(b[at + 1] & 0xFF, null) : null;
+    }
+
+    /** Reads the number formats, fonts, fills, borders and cell formats of xl/styles.bin */
+    private static void xlsbStyles(Workbook wb, byte[] b) {
+        final List<String> fills = new ArrayList<>();
+        final List<int[]> borders = new ArrayList<>();
+        boolean cellXfs = false;
+        for (Record r = new Record(b); r.next(); ) {
+            final int d = r.data;
+            switch (r.id) {
+                case 0x2C:
+                    if (r.length >= 6) {
+                        wb.formats.put(u16(b, d), wide(b, d + 2));
+                    }
+                    break;
+                case 0x2B:
+                    if (r.length >= 20) {
+                        final Font font = new Font();
+                        font.size = u16(b, d) / 20f;
+                        font.italic = (u16(b, d + 2) & 2) != 0;
+                        font.strike = (u16(b, d + 2) & 8) != 0;
+                        font.bold = u16(b, d + 4) >= 700;
+                        font.underline = (b[d + 8] & 0xFF) != 0;
+                        font.color = xlsbColor(b, d + 12);
+                        wb.fonts.add(font);
+                    }
+                    break;
+                case 0x2D:
+                    fills.add(r.length >= 12 && u32(b, d) == 1 ? xlsbColor(b, d + 4) : null);
+                    break;
+                case 0x2E:
+                    if (r.length >= 43) {
+                        // top, bottom, left, right
+                        borders.add(new int[]{u16(b, d + 29), u16(b, d + 39), u16(b, d + 9), u16(b, d + 19)});
+                    } else {
+                        borders.add(new int[4]);
+                    }
+                    break;
+                case 0x272:
+                    cellXfs = false;
+                    break;
+                case 0x269:
+                    cellXfs = true;
+                    break;
+                case 0x2F:
+                    if (cellXfs && r.length >= 14) {
+                        final int fill = u16(b, d + 6);
+                        final int border = u16(b, d + 8);
+                        final int[] edge = border < borders.size() ? borders.get(border) : new int[4];
+                        wb.xfs.add(wb.make(u16(b, d + 4), u16(b, d + 2), u16(b, d + 12) & 7,
+                                (u16(b, d + 12) & 0x40) != 0, edge, fill < fills.size() ? fills.get(fill) : null));
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private static Sheet xlsbSheet(byte[] bytes, String name, List<String> shared, Workbook wb, int maxRows,
+                                   int maxColumns) {
         final Sheet sheet = new Sheet(name);
-        final TreeMap<Integer, TreeMap<Integer, String>> cells = new TreeMap<>();
+        final TreeMap<Integer, TreeMap<Integer, Cell>> cells = new TreeMap<>();
         int row = 0;
         for (Record r = new Record(bytes); r.next(); ) {
             final int d = r.data;
             if (r.id == 0x00 && r.length >= 4) {
                 row = u32(bytes, d);
+            } else if (r.id == 0x3C && r.length >= 16) {
+                final int width = Math.round(u32(bytes, d + 8) / 256f * 7 + 5);
+                for (int c = u32(bytes, d); c <= Math.min(u32(bytes, d + 4), 255) && c >= 0; c++) {
+                    sheet.columnWidths.put(c, width);
+                }
+            } else if (r.id == 0xB0 && r.length >= 16) {
+                sheet.merges.add(new int[]{u32(bytes, d), u32(bytes, d + 4), u32(bytes, d + 8), u32(bytes, d + 12)});
             } else if (r.length >= 8 && r.id >= 0x01 && r.id <= 0x0B) {
                 final int column = u32(bytes, d);
+                final int xf = u32(bytes, d + 4) & 0xFFFFFF;
                 String text = null;
+                boolean numeric = false;
                 switch (r.id) {
+                    case 0x01:
+                        text = "";
+                        break;
                     case 0x02:
-                        text = r.length >= 12 ? number(rk(u32(bytes, d + 8))) : null;
+                        numeric = r.length >= 12;
+                        text = numeric ? wb.number(xf, rk(u32(bytes, d + 8))) : null;
                         break;
                     case 0x03:
                     case 0x0B:
@@ -614,7 +880,8 @@ public final class BinaryOffice {
                         break;
                     case 0x05:
                     case 0x09:
-                        text = r.length >= 16 ? number(Double.longBitsToDouble(i64(bytes, d + 8))) : null;
+                        numeric = r.length >= 16;
+                        text = numeric ? wb.number(xf, Double.longBitsToDouble(i64(bytes, d + 8))) : null;
                         break;
                     case 0x06:
                     case 0x08:
@@ -629,11 +896,11 @@ public final class BinaryOffice {
                         break;
                 }
                 if (text != null && column >= 0) {
-                    put(cells, row, column, text);
+                    put(cells, row, column, text, numeric, xf);
                 }
             }
         }
-        rows(cells, sheet, maxRows, maxColumns);
+        rows(cells, sheet, wb, maxRows, maxColumns);
         return sheet;
     }
 

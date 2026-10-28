@@ -2,8 +2,11 @@ package dev.dworks.apps.anexplorer.misc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Shows the binary Office files (.doc, .xls, .xlsb, .ppt, .pps) as a styled HTML page for a
@@ -14,7 +17,6 @@ public final class OfficeHtml {
     private static final int MAX_BYTES = 32 * 1024 * 1024;
     private static final int MAX_ROWS = 2000;
     private static final int MAX_COLUMNS = 50;
-    private static final Pattern NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?([eE][-+]?\\d+)?");
 
     private static final String STYLE = "<style>"
             + "body{margin:0;background:#303030;font-family:sans-serif;color:#202020}"
@@ -33,8 +35,7 @@ public final class OfficeHtml {
             + "table.g td,table.g th{border:1px solid #c8c8c8;padding:3px 10px;white-space:pre}"
             + "table.g th{background:#e6e6e6;color:#555;font-weight:normal;font-size:13px}"
             + "table.g th.r{text-align:center}"
-            + "table.g td.n{text-align:right}"
-            + "table.g tr:nth-child(even) td{background:#f6f8fb}"
+            + "table.g td{background:#fff}"
             + ".card{box-sizing:border-box;width:640px;min-height:360px;margin:0 auto 24px;"
             + "padding:28px 40px;background:#fff;border-radius:6px;position:relative}"
             + ".card h1{margin:0 0 .6em;font-size:34px;color:#1f3864}"
@@ -92,21 +93,66 @@ public final class OfficeHtml {
             for (List<String> row : sheet.rows) {
                 columns = Math.max(columns, row.size());
             }
-            out.append("<h2 class=s>").append(esc(sheet.name)).append("</h2><table class=g><tr><th>");
+            // A merged range shows at its first cell and covers the others
+            final Map<Long, int[]> spans = new HashMap<>();
+            final Set<Long> covered = new HashSet<>();
+            for (int[] m : sheet.merges) {
+                int rows = 0;
+                for (int number : sheet.rowNumbers) {
+                    if (number - 1 >= m[0] && number - 1 <= m[1]) {
+                        rows++;
+                    }
+                }
+                spans.put(key(m[0] + 1, m[2]), new int[]{Math.max(1, rows), m[3] - m[2] + 1});
+                for (int r = m[0]; r <= m[1]; r++) {
+                    for (int c = m[2]; c <= m[3]; c++) {
+                        if (r != m[0] || c != m[2]) {
+                            covered.add(key(r + 1, c));
+                        }
+                    }
+                }
+            }
+            out.append("<h2 class=s>").append(esc(sheet.name)).append("</h2><table class=g><colgroup><col class=h>");
+            for (int c = 0; c < columns; c++) {
+                final Integer width = sheet.columnWidths.get(c);
+                out.append(width == null ? "<col>" : "<col style=\"min-width:" + width + "px\">");
+            }
+            out.append("</colgroup><tr><th>");
             for (int c = 0; c < columns; c++) {
                 out.append("<th class=r>").append(column(c));
             }
-            int number = 0;
-            for (List<String> row : sheet.rows) {
-                out.append("<tr><th>").append(++number);
+            for (int r = 0; r < sheet.rows.size(); r++) {
+                final List<String> row = sheet.rows.get(r);
+                final List<String> styles = sheet.styles.get(r);
+                final int number = sheet.rowNumbers.get(r);
+                out.append("<tr><th>").append(number);
                 for (int c = 0; c < columns; c++) {
+                    if (covered.contains(key(number, c))) {
+                        continue;
+                    }
                     final String value = c < row.size() ? row.get(c) : "";
-                    out.append(NUMBER.matcher(value).matches() ? "<td class=n>" : "<td>").append(esc(value));
+                    final String style = c < styles.size() ? styles.get(c) : "";
+                    final int[] span = spans.get(key(number, c));
+                    out.append("<td");
+                    if (span != null && span[0] > 1) {
+                        out.append(" rowspan=").append(span[0]);
+                    }
+                    if (span != null && span[1] > 1) {
+                        out.append(" colspan=").append(span[1]);
+                    }
+                    if (!style.isEmpty()) {
+                        out.append(" style=\"").append(style).append('"');
+                    }
+                    out.append('>').append(esc(value));
                 }
             }
             out.append("</table>");
         }
         out.append("</div>");
+    }
+
+    private static long key(int row, int column) {
+        return (long) row << 32 | column;
     }
 
     private static void slides(StringBuilder out, List<List<String>> slides) throws IOException {
