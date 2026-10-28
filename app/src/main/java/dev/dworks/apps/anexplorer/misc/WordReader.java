@@ -18,8 +18,9 @@ import java.util.regex.Pattern;
  * Reads a Word 97-2003 (.doc) file as HTML with its formatting: bold, italic, underline, colours,
  * sizes, fonts, alignment, headings, lists, tables with merged and shaded cells, inline pictures
  * and links. A Java port of the binary reader in Paperwren's doc.ts (MIT, Copyright (c) 2026
- * Paperwren contributors), which follows [MS-DOC]. Page geometry, headers, footnotes, drawn
- * shapes and EMF/WMF pictures are not read: the text flows instead of being paginated.
+ * Paperwren contributors), which follows [MS-DOC]. Floating pictures are shown inline at their
+ * anchor. Page geometry, headers, footnotes, drawn shapes and EMF/WMF pictures are not read: the
+ * text flows instead of being paginated.
  */
 public final class WordReader {
 
@@ -126,6 +127,7 @@ public final class WordReader {
         String text;
         Run run;
         String href;
+        /** A floating picture anchored here, as an img tag; the span has no text then */
         String image;
     }
 
@@ -608,6 +610,67 @@ public final class WordReader {
         return null;
     }
 
+    /**
+     * Floating pictures: an anchor character (0x08) at a character position names a shape, and the
+     * shape names a picture in the drawing's picture store.
+     *
+     * @return the img tag of each picture by the character position of its anchor
+     */
+    private static Map<Integer, String> floatingPictures(byte[] word, byte[] table, int[] spaPair, int[] dggPair) {
+        final Map<Integer, String> out = new HashMap<>();
+        final int fcSpa = spaPair[0], lcbSpa = spaPair[1], fcDgg = dggPair[0], lcbDgg = dggPair[1];
+        try {
+            if (lcbSpa < 34 || lcbDgg <= 16 || fcSpa < 0 || fcDgg < 0 || (long) fcDgg + lcbDgg > table.length
+                    || (long) fcSpa + lcbSpa > table.length) {
+                return out;
+            }
+            final int dggEnd = fcDgg + lcbDgg;
+            final List<int[]> store = Escher.blipStore(table, fcDgg, dggEnd);
+            // Drawings follow the first container, each after a one-byte tag
+            final Map<Integer, Integer> shapes = new HashMap<>();
+            int pos = fcDgg;
+            while (pos + 8 <= dggEnd) {
+                final List<Escher.Rec> first = Escher.children(table, pos, dggEnd);
+                if (first.isEmpty()) {
+                    break;
+                }
+                final Escher.Rec rec = first.get(0);
+                final List<Escher.Rec> containers = new ArrayList<>();
+                Escher.descendants(table, rec.body, rec.end, Escher.SP_CONTAINER, containers, 0);
+                for (Escher.Rec container : containers) {
+                    final List<Escher.Rec> parts = Escher.children(table, container.body, container.end);
+                    final Escher.Rec head = Escher.find(parts, Escher.SP);
+                    final Escher.Rec opt = Escher.find(parts, Escher.OPT);
+                    if (head != null && opt != null) {
+                        final Map<Integer, Integer> props = new HashMap<>();
+                        Escher.readProps(table, opt, props);
+                        final Integer pib = props.get(0x0104);
+                        if (pib != null && pib != 0) {
+                            shapes.put(u32(table, head.body), pib);
+                        }
+                    }
+                }
+                pos = rec.end + 1;
+            }
+            final int count = (lcbSpa - 4) / 30;
+            for (int i = 0; i < count; i++) {
+                final int spa = fcSpa + (count + 1) * 4 + i * 26;
+                final Integer pib = shapes.get(u32(table, spa));
+                final String uri = pib == null ? null : Escher.storedImage(store, pib, table, word);
+                if (uri != null) {
+                    // Twips to CSS px
+                    final int width = (u32(table, spa + 12) - u32(table, spa + 4)) / 15;
+                    final int height = (u32(table, spa + 16) - u32(table, spa + 8)) / 15;
+                    out.put(u32(table, fcSpa + i * 4), "<img src=\"" + uri + "\""
+                            + (width > 0 && height > 0 ? " width=" + width + " height=" + height : "") + ">");
+                }
+            }
+        } catch (RuntimeException e) {
+            // Floating pictures are optional; the text still shows
+        }
+        return out;
+    }
+
     // ---- document ----
 
     private static List<Piece> readPieces(byte[] word, byte[] table, int fcClx, int lcbClx) throws IOException {
@@ -769,6 +832,7 @@ public final class WordReader {
         final List<Field> fields = new ArrayList<>();
         final List<Span> spans = new ArrayList<>();
         final Map<Integer, String> pictures = new HashMap<>();
+        final Map<Integer, String> floating = floatingPictures(word, table, pairs[40], pairs[50]);
 
         for (Piece piece : pieces) {
             if (piece.cpStart >= mainEnd) {
@@ -809,6 +873,15 @@ public final class WordReader {
                         emit(buffer, fields, spans, run);
                         flushSpans(at, spans, runs, papRuns, resolver, word, table, styles, fonts, data, pictures);
                         endParagraph(at, code, runs, paragraphs, papRuns, resolver, word);
+                    } else if (code == 0x08) {
+                        emit(buffer, fields, spans, run);
+                        final String image = floating.get(piece.cpStart + i);
+                        if (image != null) {
+                            final Span span = new Span();
+                            span.text = "";
+                            span.image = image;
+                            spans.add(span);
+                        }
                     } else if (code == 0x0B) {
                         buffer.append('\n');
                     } else if (code == 0x1E) {
@@ -890,6 +963,10 @@ public final class WordReader {
         final Run para = runAt(papRuns, markFc);
         final Chp style = (Chp) resolver.resolve(para != null ? para.istd : 0, 0)[0];
         for (Span span : spans) {
+            if (span.image != null) {
+                runs.append(span.image);
+                continue;
+            }
             final Chp chp = style.copy();
             if (span.run != null && span.run.to > span.run.from) {
                 final List<Sprm> list = sprms(word, span.run.from, span.run.to);

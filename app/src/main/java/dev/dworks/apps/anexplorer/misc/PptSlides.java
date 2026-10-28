@@ -2,8 +2,23 @@ package dev.dworks.apps.anexplorer.misc;
 
 import static dev.dworks.apps.anexplorer.misc.BinaryOffice.u16;
 import static dev.dworks.apps.anexplorer.misc.BinaryOffice.u32;
+import static dev.dworks.apps.anexplorer.misc.Escher.CHILD_ANCHOR;
+import static dev.dworks.apps.anexplorer.misc.Escher.CLIENT_ANCHOR;
+import static dev.dworks.apps.anexplorer.misc.Escher.CLIENT_DATA;
+import static dev.dworks.apps.anexplorer.misc.Escher.CLIENT_TEXTBOX;
+import static dev.dworks.apps.anexplorer.misc.Escher.DG;
+import static dev.dworks.apps.anexplorer.misc.Escher.OPT;
+import static dev.dworks.apps.anexplorer.misc.Escher.SP;
+import static dev.dworks.apps.anexplorer.misc.Escher.SPGR;
+import static dev.dworks.apps.anexplorer.misc.Escher.SPGR_CONTAINER;
+import static dev.dworks.apps.anexplorer.misc.Escher.SP_CONTAINER;
+import static dev.dworks.apps.anexplorer.misc.Escher.TERTIARY_OPT;
+import static dev.dworks.apps.anexplorer.misc.Escher.children;
+import static dev.dworks.apps.anexplorer.misc.Escher.descendants;
+import static dev.dworks.apps.anexplorer.misc.Escher.find;
+import static dev.dworks.apps.anexplorer.misc.Escher.readProps;
 
-import android.util.Base64;
+import dev.dworks.apps.anexplorer.misc.Escher.Rec;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -53,36 +68,9 @@ final class PptSlides {
     private static final int USER_EDIT = 0x0FF5;
     private static final int PERSIST_DIRECTORY = 0x1772;
 
-    // OfficeArt ("Escher") record types
-    private static final int BSTORE = 0xF001;
-    private static final int DG = 0xF002;
-    private static final int SPGR_CONTAINER = 0xF003;
-    private static final int SP_CONTAINER = 0xF004;
-    private static final int BSE = 0xF007;
-    private static final int SPGR = 0xF009;
-    private static final int SP = 0xF00A;
-    private static final int OPT = 0xF00B;
-    private static final int CLIENT_TEXTBOX = 0xF00D;
-    private static final int CHILD_ANCHOR = 0xF00F;
-    private static final int CLIENT_ANCHOR = 0xF010;
-    private static final int CLIENT_DATA = 0xF011;
-    private static final int TERTIARY_OPT = 0xF122;
-
     private static final String[] ALIGN = {"left", "center", "right", "justify"};
     private static final String[] DEFAULT_SCHEME = {"#ffffff", "#000000", "#808080", "#000000",
             "#bbe0e3", "#333399", "#009999", "#99cc00"};
-
-    private static final class Rec {
-        final int ver, inst, type, body, end;
-
-        Rec(int ver, int inst, int type, int body, int end) {
-            this.ver = ver;
-            this.inst = inst;
-            this.type = type;
-            this.body = body;
-            this.end = end;
-        }
-    }
 
     /** Paragraph properties; {@link #UNSET} means the record does not say */
     private static final class PF {
@@ -201,7 +189,7 @@ final class PptSlides {
             } else if (rec.type == ENVIRONMENT) {
                 readEnvironment(rec);
             } else if (rec.type == DRAWING_GROUP) {
-                readBlipStore(rec);
+                store.addAll(Escher.blipStore(doc, rec.body, rec.end));
             } else if (rec.type == SLIDE_LIST && rec.inst < 3) {
                 readSlideList(rec, lists.get(rec.inst));
             }
@@ -319,44 +307,6 @@ final class PptSlides {
 
     // ---- records ----
 
-    private static List<Rec> children(byte[] b, int start, int end) {
-        final List<Rec> out = new ArrayList<>();
-        int pos = start;
-        while (pos + 8 <= end) {
-            final int head = u16(b, pos);
-            final long length = u32(b, pos + 4) & 0xFFFFFFFFL;
-            final int body = pos + 8;
-            if (body + length > end) {
-                break;
-            }
-            out.add(new Rec(head & 0xF, head >> 4, u16(b, pos + 2), body, (int) (body + length)));
-            pos = (int) (body + length);
-        }
-        return out;
-    }
-
-    private static void descendants(byte[] b, int start, int end, int type, List<Rec> out, int depth) {
-        if (depth > 24) {
-            return;
-        }
-        for (Rec rec : children(b, start, end)) {
-            if (rec.type == type) {
-                out.add(rec);
-            } else if (rec.ver == 0xF) {
-                descendants(b, rec.body, rec.end, type, out, depth + 1);
-            }
-        }
-    }
-
-    private static Rec find(List<Rec> recs, int type) {
-        for (Rec rec : recs) {
-            if (rec.type == type) {
-                return rec;
-            }
-        }
-        return null;
-    }
-
     private static Rec last(List<Rec> recs, int type) {
         Rec found = null;
         for (Rec rec : recs) {
@@ -386,71 +336,12 @@ final class PptSlides {
         }
     }
 
-    /** The picture store: one [offset, size, embedded body, embedded end] entry per image, in blip-index order */
-    private void readBlipStore(Rec group) {
-        final List<Rec> stores = new ArrayList<>();
-        descendants(doc, group.body, group.end, BSTORE, stores, 0);
-        if (stores.isEmpty()) {
-            return;
-        }
-        for (Rec rec : children(doc, stores.get(0).body, stores.get(0).end)) {
-            if (rec.type != BSE) {
-                // Some writers put the picture directly in the store
-                store.add(new int[]{-1, rec.end - rec.body, rec.body, rec.end});
-                continue;
-            }
-            final int nameLength = doc[rec.body + 33] & 0xFF;
-            final List<Rec> inner = children(doc, rec.body + 36 + nameLength, rec.end);
-            store.add(new int[]{u32(doc, rec.body + 28), u32(doc, rec.body + 20),
-                    inner.isEmpty() ? -1 : inner.get(0).body, inner.isEmpty() ? -1 : inner.get(0).end});
-        }
-    }
-
     /** @return the picture with that 1-based store index as a data URI, or null if it cannot be shown */
     private String picture(int index) {
-        if (pictureCache.containsKey(index)) {
-            return pictureCache.get(index);
+        if (!pictureCache.containsKey(index)) {
+            pictureCache.put(index, Escher.storedImage(store, index, doc, pictures));
         }
-        String uri = null;
-        if (index >= 1 && index <= store.size()) {
-            final int[] entry = store.get(index - 1);
-            if (entry[2] >= 0) {
-                uri = blip(doc, entry[2], entry[3]);
-            } else if (pictures != null && entry[0] >= 0 && entry[0] + 8L <= pictures.length) {
-                final long length = u32(pictures, entry[0] + 4) & 0xFFFFFFFFL;
-                final int body = entry[0] + 8;
-                uri = blip(pictures, body, (int) Math.min(pictures.length, body + length));
-            }
-        }
-        pictureCache.put(index, uri);
-        return uri;
-    }
-
-    /** The image inside a BLIP record body, found by its signature after the UIDs */
-    private static String blip(byte[] b, int body, int end) {
-        for (int i = body + 16; i < Math.min(end, body + 60); i++) {
-            final String type = sniff(b, i, end);
-            if (type != null) {
-                return "data:" + type + ";base64," + Base64.encodeToString(b, i, end - i, Base64.NO_WRAP);
-            }
-        }
-        return null;
-    }
-
-    private static String sniff(byte[] b, int i, int end) {
-        if (i + 4 > end) {
-            return null;
-        }
-        if ((b[i] & 0xFF) == 0x89 && b[i + 1] == 'P' && b[i + 2] == 'N' && b[i + 3] == 'G') {
-            return "image/png";
-        }
-        if ((b[i] & 0xFF) == 0xFF && (b[i + 1] & 0xFF) == 0xD8 && (b[i + 2] & 0xFF) == 0xFF) {
-            return "image/jpeg";
-        }
-        if (b[i] == 'G' && b[i + 1] == 'I' && b[i + 2] == 'F' && b[i + 3] == '8') {
-            return "image/gif";
-        }
-        return null;
+        return pictureCache.get(index);
     }
 
     private void readSlideList(Rec list, List<Entry> entries) {
@@ -973,7 +864,7 @@ final class PptSlides {
         final Map<Integer, Integer> props = new HashMap<>();
         for (Rec part : children(doc, shape.body, shape.end)) {
             if (part.type == OPT) {
-                readProps(part, props);
+                readProps(doc, part, props);
             }
         }
         final int type = props.containsKey(0x0180) ? props.get(0x0180) : 0;
@@ -987,20 +878,6 @@ final class PptSlides {
         final Integer color = props.get(0x0181);
         final String css = color == null ? null : artColor(color, scheme);
         return css != null ? css : scheme[0];
-    }
-
-    /** A shape's property table (OfficeArtFOPT); complex properties are skipped */
-    private void readProps(Rec rec, Map<Integer, Integer> into) {
-        for (int i = 0; i < rec.inst; i++) {
-            final int at = rec.body + i * 6;
-            if (at + 6 > rec.end) {
-                break;
-            }
-            final int head = u16(doc, at);
-            if ((head & 0x8000) == 0) {
-                into.put(head & 0x3FFF, u32(doc, at + 2));
-            }
-        }
     }
 
     private double[] anchor(List<Rec> parts) {
@@ -1076,7 +953,7 @@ final class PptSlides {
         final Map<Integer, Integer> props = new HashMap<>();
         for (Rec part : parts) {
             if (part.type == OPT || part.type == TERTIARY_OPT) {
-                readProps(part, props);
+                readProps(doc, part, props);
             }
         }
         final Rec clientData = find(parts, CLIENT_DATA);
