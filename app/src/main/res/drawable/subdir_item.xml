@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A row in the folder path dropdown: a rounded accent fill on focus -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_selected="true">
+        <inset android:insetLeft="8dp" android:insetRight="8dp">
+            <shape android:shape="rectangle">
+                <solid android:color="@color/accentColor" />
+                <corners android:radius="12dp" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_pressed="true">
+        <inset android:insetLeft="8dp" android:insetRight="8dp">
+            <shape android:shape="rectangle">
+                <solid android:color="@color/accentColor" />
+                <corners android:radius="12dp" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

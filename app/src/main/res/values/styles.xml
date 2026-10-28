@@ -44,6 +44,8 @@
 
     <style name="PopupTheme" parent="@android:style/Widget.Holo.Spinner">
         <item name="android:background">@drawable/abc_spinner_mtrl_am_alpha</item>
+        <item name="android:popupBackground">@drawable/subdir_popup_background</item>
+        <item name="android:dropDownSelector">@android:color/transparent</item>
     </style>
 
     <style name="Custom.Widget.ActionBar" parent="Widget.Material3.ActionBar.Solid">
