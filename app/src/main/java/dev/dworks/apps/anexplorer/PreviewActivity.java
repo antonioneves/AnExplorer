@@ -425,7 +425,7 @@ public class PreviewActivity extends Activity {
             step = OfficeHtml.slideSteps(mSlideshow, slide);
         }
         if (slide != mSlide || step != mStep) {
-            mPlay = direction > 0 && slide == mSlide;
+            mPlay = direction > 0;
             mSlide = slide;
             mStep = step;
             mWeb.loadDataWithBaseURL(null, slideHtml(), "text/html", "UTF-8", null);

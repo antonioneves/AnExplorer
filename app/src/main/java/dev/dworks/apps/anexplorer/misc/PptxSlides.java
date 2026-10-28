@@ -110,7 +110,7 @@ final class PptxSlides {
                 break;
             }
             animations(slide);
-            out.append("<div class=slide id=s").append(count).append(" data-steps=").append(clicks)
+            out.append("<div class=slide id=s").append(count).append(" data-steps=").append(clicks).append(transition(slide))
                     .append(" style=\"width:").append(fmt(width)).append("px;height:")
                     .append(fmt(height)).append("px;");
             try {
@@ -121,6 +121,43 @@ final class PptxSlides {
             out.append("<span class=n>").append(count).append(" / ").append(slides.size()).append("</span></div>");
         }
         return out.append("</div>").toString();
+    }
+
+    /** @return the slide's entry transition as a class for the slideshow, such as " data-tr=push2", or nothing */
+    private String transition(String part) {
+        final Element root = pkg.xml(part);
+        final org.w3c.dom.NodeList found = root == null ? null : root.getElementsByTagName("p:transition");
+        if (found == null || found.getLength() == 0) {
+            return "";
+        }
+        final Element tr = (Element) found.item(0);
+        String kind = "fade", dir = "";
+        for (Element e : children(tr, null)) {
+            final String name = e.getNodeName();
+            if (name.equals("mc:AlternateContent") || name.equals("p:sndAc")) {
+                continue;
+            }
+            kind = name.substring(name.indexOf(':') + 1);
+            dir = attr(e, "dir") == null ? "" : attr(e, "dir");
+            break;
+        }
+        if (kind.equals("cut")) {
+            return "";
+        }
+        // Direction is where the new slide travels: it enters from the opposite edge
+        final String from = dir.equals("l") ? "2" : dir.equals("r") ? "8" : dir.equals("u") ? "4" : dir.equals("d") ? "1" : "2";
+        switch (kind) {
+            case "push":
+            case "cover":
+            case "pull":
+                return " data-tr=push" + from;
+            case "wipe":
+                return " data-tr=wipe" + from;
+            case "zoom":
+                return " data-tr=zoom";
+            default:
+                return " data-tr=fade";
+        }
     }
 
     /**

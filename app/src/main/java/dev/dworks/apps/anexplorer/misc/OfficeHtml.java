@@ -187,11 +187,42 @@ public final class OfficeHtml {
         }
         if (play && step > 0) {
             clicks.append(effects(step));
+        } else if (play && slide >= 0) {
+            clicks.append(transition(page, slide, index));
         }
         return page.substring(0, deck) + "<style>" + clicks + ".slide{display:none}#s" + index + "{display:block}"
                 + (zoom > 0 ? "#deck{zoom:" + zoom + "!important;padding:0!important}body{margin:0;display:flex;"
                 + "align-items:center;justify-content:center;min-height:100vh}.slide{margin:0 auto!important}" : "")
                 + "</style>" + page.substring(deck);
+    }
+
+    /** CSS that plays the slide's own entry transition, as marked on the slide by its data-tr attribute */
+    private static String transition(String page, int slide, int index) {
+        final int end = page.indexOf('>', slide);
+        final int mark = page.indexOf("data-tr=", slide);
+        if (mark < 0 || mark > end) {
+            return "";
+        }
+        int to = mark + 8;
+        while (to < end && page.charAt(to) != ' ' && page.charAt(to) != '>') {
+            to++;
+        }
+        final String kind = page.substring(mark + 8, to);
+        final String s = "#s" + index + "{animation:";
+        final String from = kind.length() > 4 ? kind.substring(kind.length() - 1) : "";
+        if (kind.startsWith("push")) {
+            return "@keyframes tp{from{transform:" + (from.equals("1") || from.equals("4")
+                    ? "translateY(" + (from.equals("1") ? "-" : "") + "100vh)" : "translateX("
+                    + (from.equals("8") ? "-" : "") + "100vw)") + "}}" + s + "tp .5s both}";
+        }
+        if (kind.startsWith("wipe")) {
+            return "@keyframes tw{from{clip-path:inset(" + (from.equals("1") ? "0 0 100% 0" : from.equals("4")
+                    ? "100% 0 0 0" : from.equals("8") ? "0 100% 0 0" : "0 0 0 100%") + ")}}" + s + "tw .5s both}";
+        }
+        if (kind.equals("zoom")) {
+            return "@keyframes tz{from{opacity:0;transform:scale(.3)}}" + s + "tz .5s both}";
+        }
+        return "@keyframes tf{from{opacity:0}}" + s + "tf .5s both}";
     }
 
     /** CSS that plays the entrance and exit effects of one click; presets without a look of their own fade */
