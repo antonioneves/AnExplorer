@@ -24,6 +24,13 @@
         android:visible="false" />
 
     <item
+        android:id="@+id/menu_show_in_folder"
+        android:icon="@drawable/ic_menu_show_in_folder"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_show_in_folder" />
+
+    <item
         android:id="@+id/menu_restore"
         android:icon="@drawable/ic_menu_restore"
         support:showAsAction="always"
@@ -103,13 +110,6 @@
         android:icon="@drawable/ic_menu_info"
         support:showAsAction="always"
         android:title="@string/menu_info" />
-    <item
-        android:id="@+id/menu_show_in_folder"
-        android:icon="@drawable/ic_menu_show_in_folder"
-        android:visible="false"
-        support:showAsAction="always"
-        android:title="@string/menu_show_in_folder" />
-
     <item
         android:id="@+id/menu_save_apk"
         android:icon="@drawable/ic_menu_save"
