@@ -488,7 +488,7 @@ public final class PreviewFormatter {
         return new String(bytes, Charset.forName("ISO-8859-1"));
     }
 
-    private static byte[] readAll(InputStream in, int limit) throws IOException {
+    static byte[] readAll(InputStream in, int limit) throws IOException {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         final byte[] buffer = new byte[16 * 1024];
         int read;
@@ -499,7 +499,7 @@ public final class PreviewFormatter {
     }
 
     /** Reads the zip entries whose names start with the prefix; a zip can only be walked in order */
-    private static Map<String, byte[]> zip(InputStream in, String prefix) throws IOException {
+    static Map<String, byte[]> zip(InputStream in, String prefix) throws IOException {
         final Map<String, byte[]> entries = new HashMap<>();
         try (ZipInputStream zip = new ZipInputStream(in)) {
             ZipEntry entry;

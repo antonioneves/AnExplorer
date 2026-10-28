@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
 
+import dev.dworks.apps.anexplorer.misc.OfficeHtml;
 import dev.dworks.apps.anexplorer.misc.PreviewFormatter;
 import dev.dworks.apps.anexplorer.misc.TiffDecoder;
 import dev.dworks.apps.anexplorer.ui.ZoomImageView;
@@ -52,6 +53,7 @@ public class PreviewActivity extends Activity {
     private static final int KIND_TEXT = 4;
     private static final int KIND_DOCUMENT = 5;
     private static final int KIND_TIFF = 6;
+    private static final int KIND_OFFICE = 7;
 
     private static final int MAX_TEXT_BYTES = 2 * 1024 * 1024;
     private static final int MAX_TIFF_BYTES = 48 * 1024 * 1024;
@@ -96,6 +98,9 @@ public class PreviewActivity extends Activity {
         if (mimeType != null && mimeType.startsWith("image/")
                 || IMAGE_EXTENSIONS.contains("|" + ext + "|")) {
             return KIND_IMAGE;
+        }
+        if (OfficeHtml.supports(ext)) {
+            return KIND_OFFICE;
         }
         if (PreviewFormatter.isDocument(ext)) {
             return KIND_DOCUMENT;
@@ -173,7 +178,15 @@ public class PreviewActivity extends Activity {
                 }
                 case KIND_SVG: {
                     final String svg = new String(readBytes(uri, MAX_TEXT_BYTES), "UTF-8");
-                    runOnUiThread(() -> showSvg(loading, svg));
+                    runOnUiThread(() -> showWeb(loading, svg, "image/svg+xml"));
+                    break;
+                }
+                case KIND_OFFICE: {
+                    final String page;
+                    try (InputStream in = getContentResolver().openInputStream(uri)) {
+                        page = OfficeHtml.page(extensionOf(mName), in);
+                    }
+                    runOnUiThread(() -> showWeb(loading, page, "text/html"));
                     break;
                 }
                 case KIND_DOCUMENT: {
@@ -305,7 +318,7 @@ public class PreviewActivity extends Activity {
                 Toast.LENGTH_SHORT).show();
     }
 
-    private void showSvg(TextView loading, String svg) {
+    private void showWeb(TextView loading, String content, String mimeType) {
         if (mDestroyed) {
             return;
         }
@@ -322,7 +335,7 @@ public class PreviewActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(false);
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setBuiltInZoomControls(false);
-        web.loadDataWithBaseURL(null, svg, "image/svg+xml", "UTF-8", null);
+        web.loadDataWithBaseURL(null, content, mimeType, "UTF-8", null);
         mRoot.addView(web, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         web.requestFocus();

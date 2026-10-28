@@ -38,7 +38,7 @@ public final class BinaryOffice {
     // ---- OLE2 container ----
 
     /** A compound file: the named streams that sit in it */
-    private static final class Ole2 {
+    static final class Ole2 {
         private final byte[] data;
         private final int sectorSize;
         private final int miniCutoff;
@@ -742,11 +742,11 @@ public final class BinaryOffice {
 
     // ---- little-endian reads ----
 
-    private static int u16(byte[] b, int at) {
+    static int u16(byte[] b, int at) {
         return at < 0 || at + 2 > b.length ? 0 : (b[at] & 0xFF) | (b[at + 1] & 0xFF) << 8;
     }
 
-    private static int u32(byte[] b, int at) {
+    static int u32(byte[] b, int at) {
         return at < 0 || at + 4 > b.length ? 0 : u16(b, at) | u16(b, at + 2) << 16;
     }
 
