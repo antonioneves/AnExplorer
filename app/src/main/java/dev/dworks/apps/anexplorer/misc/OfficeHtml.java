@@ -159,6 +159,11 @@ public final class OfficeHtml {
      * fit a screen of the given size in CSS pixels, with the shapes as they are after {@code step} clicks
      */
     public static String showSlide(String page, int index, int step, double screenW, double screenH) {
+        return showSlide(page, index, step, screenW, screenH, false);
+    }
+
+    /** As above; {@code play} also plays the effects of the click just made, as the slideshow does going forward */
+    public static String showSlide(String page, int index, int step, double screenW, double screenH, boolean play) {
         final int deck = page.indexOf("<div id=deck");
         if (deck < 0) {
             return page;
@@ -180,10 +185,32 @@ public final class OfficeHtml {
             // Shapes that enter on a later click, and shapes that already left, are hidden
             clicks.append(n > step ? ".k" : ".x").append(n).append("{visibility:hidden}");
         }
+        if (play && step > 0) {
+            clicks.append(effects(step));
+        }
         return page.substring(0, deck) + "<style>" + clicks + ".slide{display:none}#s" + index + "{display:block}"
                 + (zoom > 0 ? "#deck{zoom:" + zoom + "!important;padding:0!important}body{margin:0;display:flex;"
                 + "align-items:center;justify-content:center;min-height:100vh}.slide{margin:0 auto!important}" : "")
                 + "</style>" + page.substring(deck);
+    }
+
+    /** CSS that plays the entrance and exit effects of one click; presets without a look of their own fade */
+    private static String effects(int step) {
+        final String k = ".k" + step, d = "{animation:";
+        return "@keyframes fd{from{opacity:0}}@keyframes fo{to{opacity:0;visibility:hidden}}"
+                + "@keyframes zi{from{opacity:0;transform:scale(.1)}}"
+                + "@keyframes f1{from{transform:translateY(-1500px)}}@keyframes f2{from{transform:translateX(1500px)}}"
+                + "@keyframes f4{from{transform:translateY(1500px)}}@keyframes f8{from{transform:translateX(-1500px)}}"
+                + "@keyframes w1{from{clip-path:inset(0 0 100% 0)}}@keyframes w2{from{clip-path:inset(0 0 0 100%)}}"
+                + "@keyframes w4{from{clip-path:inset(100% 0 0 0)}}@keyframes w8{from{clip-path:inset(0 100% 0 0)}}"
+                + k + d + "fd .6s both}"
+                + k + ".a53_0" + d + "zi .6s both}" + k + ".a53_16" + d + "zi .6s both}"
+                + k + ".a2_1" + d + "f1 .6s both}" + k + ".a2_2" + d + "f2 .6s both}"
+                + k + ".a2_4" + d + "f4 .6s both}" + k + ".a2_8" + d + "f8 .6s both}"
+                + k + ".a22_1" + d + "w1 .6s both}" + k + ".a22_2" + d + "w2 .6s both}"
+                + k + ".a22_4" + d + "w4 .6s both}" + k + ".a22_8" + d + "w8 .6s both}"
+                + k + ".a1_0" + d + "none}"
+                + ".x" + step + "{visibility:visible!important;animation:fo .6s forwards}";
     }
 
     private static String esc(String text) {

@@ -70,6 +70,8 @@ public class PreviewActivity extends Activity {
     private WebView mWeb;
     private String mSlideshow;
     private int mSlides, mSlide, mStep;
+    /** Whether the page being shown plays the effects of the click just made */
+    private boolean mPlay;
     private ScrollView mScroll;
     private PdfRenderer mPdf;
     private File mPdfFile;
@@ -399,7 +401,8 @@ public class PreviewActivity extends Activity {
 
     private String slideHtml() {
         final android.util.DisplayMetrics m = getResources().getDisplayMetrics();
-        return OfficeHtml.showSlide(mSlideshow, mSlide, mStep, m.widthPixels / m.density, m.heightPixels / m.density);
+        return OfficeHtml.showSlide(mSlideshow, mSlide, mStep, m.widthPixels / m.density, m.heightPixels / m.density,
+                mPlay);
     }
 
     /**
@@ -422,6 +425,7 @@ public class PreviewActivity extends Activity {
             step = OfficeHtml.slideSteps(mSlideshow, slide);
         }
         if (slide != mSlide || step != mStep) {
+            mPlay = direction > 0 && slide == mSlide;
             mSlide = slide;
             mStep = step;
             mWeb.loadDataWithBaseURL(null, slideHtml(), "text/html", "UTF-8", null);

@@ -151,13 +151,16 @@ final class PptxSlides {
                     if (!"entr".equals(kind) && !"exit".equals(kind)) {
                         continue;
                     }
+                    // The effect's kind and direction, as a class: a10_0 fades, a2_4 flies in from the bottom
+                    final String effect = "entr".equals(kind) ? " a" + attr((Element) effects.item(j), "presetID") + "_"
+                            + attr((Element) effects.item(j), "presetSubtype") : "";
                     final NodeList targets = ((Element) effects.item(j)).getElementsByTagName("p:spTgt");
                     for (int k = 0; k < targets.getLength(); k++) {
                         final String id = attr((Element) targets.item(k), "spid");
                         final String mark = ("entr".equals(kind) ? "k" : "x") + clicks;
                         final String had = animated.get(id);
                         if (id != null && clicks > 0 && (had == null || !had.contains(mark.substring(0, 1)))) {
-                            animated.put(id, had == null ? mark : had + " " + mark);
+                            animated.put(id, had == null ? mark + effect : had + " " + mark + effect);
                         }
                     }
                 }
