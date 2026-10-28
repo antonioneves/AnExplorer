@@ -18,9 +18,10 @@ import java.util.regex.Pattern;
  * Reads a Word 97-2003 (.doc) file as HTML with its formatting: bold, italic, underline, colours,
  * sizes, fonts, alignment, headings, lists, tables with merged and shaded cells, inline pictures
  * and links. A Java port of the binary reader in Paperwren's doc.ts (MIT, Copyright (c) 2026
- * Paperwren contributors), which follows [MS-DOC]. Floating pictures are shown inline at their
- * anchor. Page geometry, headers, footnotes, drawn shapes and EMF/WMF pictures are not read: the
- * text flows instead of being paginated.
+ * Paperwren contributors), which follows [MS-DOC]. Headers, footers, footnotes, endnotes, text boxes
+ * and drawn shapes are read here without a reference (the same spec). Floating shapes are shown
+ * inline at their anchor, and the first section's header and footer frame the text. Page geometry
+ * is not read: the text flows instead of being paginated.
  */
 public final class WordReader {
 
@@ -127,7 +128,7 @@ public final class WordReader {
         String text;
         Run run;
         String href;
-        /** A floating picture anchored here, as an img tag; the span has no text then */
+        /** Markup placed here as it is (a floating shape or a note mark); the span has no text then */
         String image;
     }
 
@@ -587,7 +588,7 @@ public final class WordReader {
 
     // ---- pictures ----
 
-    /** The first PNG or JPEG inside a PICF's shape data, as a data URI, or null */
+    /** The first picture inside a PICF's shape data (PNG, JPEG or a drawn metafile), as a data URI, or null */
     private static String readPicture(byte[] data, int offset) {
         if (offset < 0 || offset + 0x44 > data.length) {
             return null;
@@ -607,27 +608,48 @@ public final class WordReader {
                         + Base64.encodeToString(data, i, end - i, Base64.NO_WRAP);
             }
         }
-        return null;
+        return Escher.firstImage(data, offset + header, end);
     }
 
-    /**
-     * Floating pictures: an anchor character (0x08) at a character position names a shape, and the
-     * shape names a picture in the drawing's picture store.
-     *
-     * @return the img tag of each picture by the character position of its anchor
-     */
-    private static Map<Integer, String> floatingPictures(byte[] word, byte[] table, int[] spaPair, int[] dggPair) {
-        final Map<Integer, String> out = new HashMap<>();
-        final int fcSpa = spaPair[0], lcbSpa = spaPair[1], fcDgg = dggPair[0], lcbDgg = dggPair[1];
+    // ---- drawn shapes ----
+
+    /** One shape of the drawing layer: pictures, text boxes, lines, basic shapes and groups of them */
+    private static final class Shape {
+        int id, inst, flags;
+        final Map<Integer, Integer> props = new HashMap<>();
+        /** Where a group's child sits, in the group's own coordinates */
+        int[] anchor;
+        /** A group's coordinate box: left, top, right, bottom */
+        int[] box;
+        final List<Shape> children = new ArrayList<>();
+    }
+
+    /** What every story (body, header, footnote, text box) is read with */
+    private static final class Ctx {
+        byte[] word, table, data;
+        List<Piece> pieces;
+        List<Run> chpRuns, papRuns;
+        List<Style> styles;
+        List<String> fonts;
+        Map<Integer, int[]> lists;
+        StyleResolver resolver;
+        final Map<Integer, String> pictures = new HashMap<>();
+        final Map<Integer, Shape> shapes = new HashMap<>();
+        List<int[]> store = new ArrayList<>();
+        /** Text box story ranges by shape id: [first cp, end cp] */
+        final Map<Integer, int[]> textBoxes = new HashMap<>();
+    }
+
+    private static void readShapes(Ctx c, int[] dggPair) {
+        final byte[] table = c.table;
+        final int fcDgg = dggPair[0], lcbDgg = dggPair[1];
         try {
-            if (lcbSpa < 34 || lcbDgg <= 16 || fcSpa < 0 || fcDgg < 0 || (long) fcDgg + lcbDgg > table.length
-                    || (long) fcSpa + lcbSpa > table.length) {
-                return out;
+            if (lcbDgg <= 16 || fcDgg < 0 || (long) fcDgg + lcbDgg > table.length) {
+                return;
             }
             final int dggEnd = fcDgg + lcbDgg;
-            final List<int[]> store = Escher.blipStore(table, fcDgg, dggEnd);
-            // Drawings follow the first container, each after a one-byte tag
-            final Map<Integer, Integer> shapes = new HashMap<>();
+            c.store = Escher.blipStore(table, fcDgg, dggEnd);
+            // Each drawing follows the one before it, after a one-byte tag
             int pos = fcDgg;
             while (pos + 8 <= dggEnd) {
                 final List<Escher.Rec> first = Escher.children(table, pos, dggEnd);
@@ -635,40 +657,218 @@ public final class WordReader {
                     break;
                 }
                 final Escher.Rec rec = first.get(0);
-                final List<Escher.Rec> containers = new ArrayList<>();
-                Escher.descendants(table, rec.body, rec.end, Escher.SP_CONTAINER, containers, 0);
-                for (Escher.Rec container : containers) {
-                    final List<Escher.Rec> parts = Escher.children(table, container.body, container.end);
-                    final Escher.Rec head = Escher.find(parts, Escher.SP);
-                    final Escher.Rec opt = Escher.find(parts, Escher.OPT);
-                    if (head != null && opt != null) {
-                        final Map<Integer, Integer> props = new HashMap<>();
-                        Escher.readProps(table, opt, props);
-                        final Integer pib = props.get(0x0104);
-                        if (pib != null && pib != 0) {
-                            shapes.put(u32(table, head.body), pib);
-                        }
-                    }
-                }
+                walk(c, rec, null, 0);
                 pos = rec.end + 1;
+            }
+        } catch (RuntimeException e) {
+            // Drawn shapes are optional; the text still shows
+        }
+    }
+
+    private static void walk(Ctx c, Escher.Rec container, Shape parent, int depth) {
+        if (depth > 12) {
+            return;
+        }
+        Shape inside = parent;
+        boolean groupHead = container.type == Escher.SPGR_CONTAINER;
+        for (Escher.Rec rec : Escher.children(c.table, container.body, container.end)) {
+            if (rec.type == Escher.SPGR_CONTAINER) {
+                walk(c, rec, inside, depth + 1);
+            } else if (rec.type == Escher.SP_CONTAINER) {
+                final Shape shape = readShape(c, rec, inside);
+                if (groupHead) {
+                    inside = shape;
+                    groupHead = false;
+                }
+            }
+        }
+    }
+
+    private static Shape readShape(Ctx c, Escher.Rec rec, Shape parent) {
+        final List<Escher.Rec> parts = Escher.children(c.table, rec.body, rec.end);
+        final Escher.Rec sp = Escher.find(parts, Escher.SP);
+        final Shape shape = new Shape();
+        if (sp != null) {
+            shape.id = u32(c.table, sp.body);
+            shape.flags = u32(c.table, sp.body + 4);
+            shape.inst = sp.inst;
+        }
+        for (Escher.Rec part : parts) {
+            if (part.type == Escher.OPT || part.type == Escher.TERTIARY_OPT) {
+                Escher.readProps(c.table, part, shape.props);
+            } else if (part.type == Escher.CHILD_ANCHOR && part.end - part.body >= 16) {
+                shape.anchor = new int[]{u32(c.table, part.body), u32(c.table, part.body + 4),
+                        u32(c.table, part.body + 8), u32(c.table, part.body + 12)};
+            } else if (part.type == Escher.SPGR && part.end - part.body >= 16) {
+                shape.box = new int[]{u32(c.table, part.body), u32(c.table, part.body + 4),
+                        u32(c.table, part.body + 8), u32(c.table, part.body + 12)};
+            }
+        }
+        c.shapes.put(shape.id, shape);
+        if (parent != null) {
+            parent.children.add(shape);
+        }
+        return shape;
+    }
+
+    /** A drawing colour: a literal RGB, or the fallback for scheme and system colours */
+    private static String artColor(Integer value, String fallback) {
+        if (value == null || value >>> 24 != 0) {
+            return fallback;
+        }
+        return String.format(java.util.Locale.ROOT, "#%02x%02x%02x", value & 0xFF, value >> 8 & 0xFF, value >> 16 & 0xFF);
+    }
+
+    private static String px(double value) {
+        return String.format(java.util.Locale.ROOT, "%.1f", value);
+    }
+
+    /**
+     * One shape as an inline box. A shape inside a group takes its place as percentages of the group;
+     * a shape in the text is an inline box of its own size. Text boxes hold the paragraphs of their
+     * story, with the blocks turned into spans so they stay valid inside a paragraph.
+     */
+    private static String draw(Ctx c, Shape s, String place, double w, double h, int depth) {
+        if (depth > 6) {
+            return "";
+        }
+        final Map<Integer, Integer> props = s.props;
+        final StringBuilder transform = new StringBuilder();
+        final Integer rotation = props.get(0x0004);
+        if (rotation != null && rotation != 0) {
+            transform.append("rotate(").append(px(rotation / 65536.0)).append("deg) ");
+        }
+        if ((s.flags & 0x40) != 0) {
+            transform.append("scaleX(-1) ");
+        }
+        if ((s.flags & 0x80) != 0) {
+            transform.append("scaleY(-1)");
+        }
+        final String turn = transform.length() > 0 ? ";transform:" + transform.toString().trim() : "";
+
+        final Integer pib = props.get(0x0104);
+        if (pib != null && pib != 0) {
+            final String uri = Escher.storedImage(c.store, pib, c.table, c.word);
+            return uri == null ? "" : "<span class=sh style=\"" + place + turn + "\"><img src=\"" + uri
+                    + "\" style=\"width:100%;height:100%\"></span>";
+        }
+        if (!s.children.isEmpty() && s.box != null) {
+            final double gw = Math.max(1, s.box[2] - s.box[0]), gh = Math.max(1, s.box[3] - s.box[1]);
+            final StringBuilder inner = new StringBuilder();
+            for (Shape child : s.children) {
+                if (child.anchor == null) {
+                    continue;
+                }
+                final double cw = (child.anchor[2] - child.anchor[0]) / gw, ch = (child.anchor[3] - child.anchor[1]) / gh;
+                inner.append(draw(c, child, "position:absolute;left:" + px((child.anchor[0] - s.box[0]) / gw * 100)
+                        + "%;top:" + px((child.anchor[1] - s.box[1]) / gh * 100) + "%;width:" + px(cw * 100)
+                        + "%;height:" + px(ch * 100) + "%", cw * w, ch * h, depth + 1));
+            }
+            return "<span class=sh style=\"" + place + ";position:relative" + turn + "\">" + inner + "</span>";
+        }
+        final int geom = s.inst;
+        final Integer lineBools = props.get(0x01FF);
+        final boolean lined = lineBools != null && (lineBools & 0x80000) != 0 ? (lineBools & 0x8) != 0 : true;
+        final String stroke = lined ? artColor(props.get(0x01C0), "#000000") : null;
+        final Integer lineWidth = props.get(0x01CB);
+        final double strokePx = Math.max(0.75, (lineWidth == null ? 9525 : lineWidth) / 9525.0);
+        final Integer dash = props.get(0x01CE);
+        if (geom == 20 || geom == 32 || geom == 33 || geom == 34 || geom == 35) {
+            return stroke == null ? "" : "<svg style=\"" + place + ";overflow:visible" + turn
+                    + "\" viewBox=\"0 0 1 1\" preserveAspectRatio=\"none\"><line x1=0 y1=0 x2=1 y2=1 stroke=\""
+                    + stroke + "\" stroke-width=\"" + px(strokePx) + "\" vector-effect=\"non-scaling-stroke\""
+                    + (dash != null && dash != 0 ? " stroke-dasharray=\"6 4\"" : "") + "/></svg>";
+        }
+
+        // Text box content
+        String content = "";
+        final int[] range = c.textBoxes.get(s.id);
+        if (range != null) {
+            final List<Para> paragraphs = story(c, range[0], range[1], null, 0, null);
+            content = blocks(paragraphs, c.styles, c.lists).replaceAll("<(?:p|h[1-6])\\b", "<span class=p")
+                    .replaceAll("</(?:p|h[1-6])>", "</span>");
+        }
+        final Integer fillBools = props.get(0x01BF);
+        final boolean filled = fillBools != null && (fillBools & 0x100000) != 0 ? (fillBools & 0x10) != 0 : true;
+        final String fore = artColor(props.get(0x0181), "#ffffff");
+        final String fill = !filled ? null
+                : orGradient(props, fore, artColor(props.get(0x0182), "#ffffff"));
+        if (fill == null && stroke == null && content.isEmpty()) {
+            return "";
+        }
+        final StringBuilder css = new StringBuilder(place).append(";box-sizing:border-box");
+        if (fill != null) {
+            css.append(";background:").append(fill);
+        }
+        if (stroke != null) {
+            css.append(";border:").append(px(strokePx)).append("px ").append(dash != null && dash != 0 ? "dashed " : "solid ")
+                    .append(stroke);
+        }
+        if (!content.isEmpty()) {
+            final Integer l = props.get(0x0081), t = props.get(0x0082), r = props.get(0x0083), b = props.get(0x0084);
+            css.append(";padding:").append(px((t == null ? 45720 : t) / 9525.0)).append("px ")
+                    .append(px((r == null ? 91440 : r) / 9525.0)).append("px ")
+                    .append(px((b == null ? 45720 : b) / 9525.0)).append("px ")
+                    .append(px((l == null ? 91440 : l) / 9525.0)).append("px;overflow:hidden");
+        }
+        css.append(Escher.geometry(geom, Math.min(w, h))).append(turn);
+        return "<span class=sh style=\"" + css + "\">" + content + "</span>";
+    }
+
+    private static String orGradient(Map<Integer, Integer> props, String fore, String back) {
+        final String gradient = Escher.gradient(props, fore, back);
+        return gradient != null ? gradient : fore;
+    }
+
+    /**
+     * Shapes that float in the text: an anchor character (0x08) at a character position names a
+     * shape. They are drawn inline at their anchor, at their own size.
+     *
+     * @return the markup of each shape by the character position of its anchor
+     */
+    private static Map<Integer, String> anchors(Ctx c, int[] spaPair) {
+        final Map<Integer, String> out = new HashMap<>();
+        final int fcSpa = spaPair[0], lcbSpa = spaPair[1];
+        try {
+            if (lcbSpa < 34 || fcSpa < 0 || (long) fcSpa + lcbSpa > c.table.length) {
+                return out;
             }
             final int count = (lcbSpa - 4) / 30;
             for (int i = 0; i < count; i++) {
                 final int spa = fcSpa + (count + 1) * 4 + i * 26;
-                final Integer pib = shapes.get(u32(table, spa));
-                final String uri = pib == null ? null : Escher.storedImage(store, pib, table, word);
-                if (uri != null) {
-                    // Twips to CSS px
-                    final int width = (u32(table, spa + 12) - u32(table, spa + 4)) / 15;
-                    final int height = (u32(table, spa + 16) - u32(table, spa + 8)) / 15;
-                    out.put(u32(table, fcSpa + i * 4), "<img src=\"" + uri + "\""
-                            + (width > 0 && height > 0 ? " width=" + width + " height=" + height : "") + ">");
+                final Shape shape = c.shapes.get(u32(c.table, spa));
+                if (shape == null) {
+                    continue;
+                }
+                // Twips to CSS px
+                final double width = (u32(c.table, spa + 12) - u32(c.table, spa + 4)) / 15.0;
+                final double height = (u32(c.table, spa + 16) - u32(c.table, spa + 8)) / 15.0;
+                if (width <= 0 || height <= 0) {
+                    continue;
+                }
+                final String html = draw(c, shape, "display:inline-block;vertical-align:top;max-width:100%;width:"
+                        + px(width) + "px;height:" + px(height) + "px", width, height, 0);
+                if (!html.isEmpty()) {
+                    out.put(u32(c.table, fcSpa + i * 4), html);
                 }
             }
         } catch (RuntimeException e) {
-            // Floating pictures are optional; the text still shows
+            // Drawn shapes are optional; the text still shows
         }
         return out;
+    }
+
+    /** The story ranges of the text boxes: each shape id names the characters of its text */
+    private static void readTextBoxes(Ctx c, int[] pair, int start) {
+        final int fc = pair[0], lcb = pair[1];
+        if (lcb < 30 || fc < 0 || (long) fc + lcb > c.table.length) {
+            return;
+        }
+        final int count = (lcb - 4) / 26;
+        for (int i = 0; i < count; i++) {
+            final int lid = u32(c.table, fc + (count + 1) * 4 + i * 22 + 14);
+            c.textBoxes.put(lid, new int[]{start + u32(c.table, fc + i * 4), start + u32(c.table, fc + (i + 1) * 4)});
+        }
     }
 
     // ---- document ----
@@ -822,35 +1022,169 @@ public final class WordReader {
         final List<Style> styles = readStyles(table, pairs[1][0], pairs[1][1]);
         final List<String> fonts = readFonts(table, pairs[15][0], pairs[15][1]);
         final Map<Integer, int[]> lists = readLists(table, pairs[73][0], pairs[73][1], pairs[74][0], pairs[74][1]);
-        final int mainEnd = u32(word, 0x4C);
+        final int[] ccp = new int[8];
+        for (int i = 0; i < ccp.length; i++) {
+            ccp[i] = Math.max(0, u32(word, 0x4C + i * 4));
+        }
+        final int headerStart = ccp[0] + ccp[1];
+        final int noteStart = headerStart + ccp[2] + ccp[3] + ccp[4];
+        final int textBoxStart = noteStart + ccp[5];
+        final int headerBoxStart = textBoxStart + ccp[6];
 
         final Map<Integer, Object[]> styleCache = new HashMap<>();
-        final StyleResolver resolver = new StyleResolver(styles, table, styleCache);
+        final Ctx c = new Ctx();
+        c.word = word;
+        c.table = table;
+        c.data = data;
+        c.pieces = pieces;
+        c.chpRuns = chpRuns;
+        c.papRuns = papRuns;
+        c.styles = styles;
+        c.fonts = fonts;
+        c.lists = lists;
+        c.resolver = new StyleResolver(styles, table, styleCache);
+        readShapes(c, pairs[50]);
+        readTextBoxes(c, pairs[56], textBoxStart);
+        readTextBoxes(c, pairs[58], headerBoxStart);
+        final Map<Integer, String> bodyShapes = anchors(c, pairs[40]);
+        final Map<Integer, String> headerShapes = anchors(c, pairs[41]);
 
+        final Map<Integer, String> marks = new HashMap<>();
+        final List<String> footnotes = readNotes(c, pairs[2], pairs[3], ccp[0], false, marks);
+        final List<String> endnotes = readNotes(c, pairs[46], pairs[47], noteStart, true, marks);
+
+        final StringBuilder out = new StringBuilder();
+        final String[] band = headerAndFooter(c, pairs[11], headerStart, headerShapes);
+        if (band[0] != null) {
+            out.append("<div class=hd>").append(band[0]).append("</div>");
+        }
+        out.append(blocks(story(c, 0, ccp[0], bodyShapes, 0, marks), styles, lists));
+        appendNotes(out, footnotes);
+        appendNotes(out, endnotes);
+        if (band[1] != null) {
+            out.append("<div class=ft>").append(band[1]).append("</div>");
+        }
+        return out.toString();
+    }
+
+    private static void appendNotes(StringBuilder out, List<String> notes) {
+        if (!notes.isEmpty()) {
+            out.append("<div class=fn>");
+            for (String note : notes) {
+                out.append(note);
+            }
+            out.append("</div>");
+        }
+    }
+
+    /**
+     * Footnotes or endnotes: a reference mark in the body text for each, and the text of each note
+     * numbered to match.
+     *
+     * @param marks gets the superscript number of each reference by its character position
+     * @return the HTML of each note, in order
+     */
+    private static List<String> readNotes(Ctx c, int[] refPair, int[] textPair, int textStart, boolean roman,
+                                          Map<Integer, String> marks) {
+        final List<String> out = new ArrayList<>();
+        try {
+            final int refs = (refPair[1] - 4) / 6;
+            if (refs <= 0 || refPair[0] < 0 || (long) refPair[0] + refPair[1] > c.table.length
+                    || textPair[0] < 0 || textPair[1] < (refs + 2) * 4 || (long) textPair[0] + textPair[1] > c.table.length) {
+                return out;
+            }
+            for (int i = 0; i < refs; i++) {
+                final String label = roman ? roman(i + 1).toLowerCase(java.util.Locale.ROOT) : String.valueOf(i + 1);
+                marks.put(u32(c.table, refPair[0] + i * 4), "<sup>" + label + "</sup>");
+                final int from = textStart + u32(c.table, textPair[0] + i * 4);
+                final int to = textStart + u32(c.table, textPair[0] + (i + 1) * 4);
+                final String html = blocks(story(c, from, to, null, 0, null), c.styles, c.lists);
+                if (!html.isEmpty()) {
+                    out.add(html.replaceFirst("^(<[^>]+>)", "$1<sup>" + label + "</sup> "));
+                }
+            }
+        } catch (RuntimeException e) {
+            // Notes are optional; the text still shows
+        }
+        return out;
+    }
+
+    /**
+     * The running header and footer of the first section. The header and footer stories follow the
+     * footnote text; each section has six of them (even, odd and first-page, header then footer).
+     *
+     * @return [header HTML or null, footer HTML or null]
+     */
+    private static String[] headerAndFooter(Ctx c, int[] pair, int start, Map<Integer, String> shapes) {
+        final String[] out = new String[2];
+        try {
+            final int count = pair[1] / 4;
+            if (count < 14 || pair[0] < 0 || (long) pair[0] + pair[1] > c.table.length) {
+                return out;
+            }
+            // Stories 0-5 are the footnote separators; the first section's follow
+            final int[][] choice = {{7, 10, 6}, {9, 11, 8}};
+            for (int kind = 0; kind < 2; kind++) {
+                for (int index : choice[kind]) {
+                    final int from = start + u32(c.table, pair[0] + index * 4);
+                    final int to = start + u32(c.table, pair[0] + (index + 1) * 4);
+                    if (to - from < 2) {
+                        continue;
+                    }
+                    final List<Para> paragraphs = story(c, from, to, shapes, start, null);
+                    boolean text = false;
+                    for (Para para : paragraphs) {
+                        text |= !para.empty;
+                    }
+                    if (text) {
+                        out[kind] = blocks(paragraphs, c.styles, c.lists);
+                        break;
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            // Headers are optional; the text still shows
+        }
+        return out;
+    }
+
+    /**
+     * Reads the characters [from, to) as paragraphs.
+     *
+     * @param anchors the shapes floating in this story, by character position minus {@code anchorBase}, or null
+     * @param marks   footnote and endnote reference marks by character position, or null
+     */
+    private static List<Para> story(Ctx c, int from, int to, Map<Integer, String> anchors, int anchorBase,
+                                    Map<Integer, String> marks) {
+        final byte[] word = c.word;
         final List<Para> paragraphs = new ArrayList<>();
         final StringBuilder runs = new StringBuilder();
         final List<Field> fields = new ArrayList<>();
         final List<Span> spans = new ArrayList<>();
-        final Map<Integer, String> pictures = new HashMap<>();
-        final Map<Integer, String> floating = floatingPictures(word, table, pairs[40], pairs[50]);
-
-        for (Piece piece : pieces) {
-            if (piece.cpStart >= mainEnd) {
+        int lastFc = -1;
+        for (Piece piece : c.pieces) {
+            if (piece.cpStart + piece.chars <= from) {
+                continue;
+            }
+            if (piece.cpStart >= to) {
                 break;
             }
-            final int chars = Math.min(piece.chars, mainEnd - piece.cpStart);
+            final int chars = Math.min(piece.chars, to - piece.cpStart);
             final int step = piece.wide ? 2 : 1;
-            final String text = new String(word, piece.fc, chars * step, piece.wide ? UTF16 : ANSI);
-            int i = 0;
+            final int skip = Math.max(0, from - piece.cpStart);
+            final String text = new String(word, piece.fc + skip * step, (chars - skip) * step,
+                    piece.wide ? UTF16 : ANSI);
+            int i = skip;
             while (i < chars) {
                 final int fc = piece.fc + i * step;
-                final Run run = runAt(chpRuns, fc);
+                final Run run = runAt(c.chpRuns, fc);
                 final int stop = run != null ? Math.min(chars, i + (run.end - fc + step - 1) / step) : i + 1;
                 final StringBuilder buffer = new StringBuilder();
                 final int limit = Math.min(chars, Math.max(stop, i + 1));
                 for (; i < limit; i++) {
-                    final char code = text.charAt(i);
+                    final char code = text.charAt(i - skip);
                     final int at = piece.fc + i * step;
+                    lastFc = at;
                     final Field top = fields.isEmpty() ? null : fields.get(fields.size() - 1);
                     if (code == 0x13) {
                         emit(buffer, fields, spans, run);
@@ -871,15 +1205,17 @@ public final class WordReader {
                         top.instruction.append(code);
                     } else if (code == 0x0D || code == 0x07 || code == 0x0C) {
                         emit(buffer, fields, spans, run);
-                        flushSpans(at, spans, runs, papRuns, resolver, word, table, styles, fonts, data, pictures);
-                        endParagraph(at, code, runs, paragraphs, papRuns, resolver, word);
-                    } else if (code == 0x08) {
+                        flushSpans(at, spans, runs, c);
+                        endParagraph(at, code, runs, paragraphs, c.papRuns, c.resolver, word);
+                    } else if (code == 0x08 || code == 0x02) {
                         emit(buffer, fields, spans, run);
-                        final String image = floating.get(piece.cpStart + i);
-                        if (image != null) {
+                        final Map<Integer, String> source = code == 0x08 ? anchors : marks;
+                        final String html = source == null ? null
+                                : source.get(piece.cpStart + i - (code == 0x08 ? anchorBase : 0));
+                        if (html != null) {
                             final Span span = new Span();
                             span.text = "";
-                            span.image = image;
+                            span.image = html;
                             spans.add(span);
                         }
                     } else if (code == 0x0B) {
@@ -896,12 +1232,10 @@ public final class WordReader {
             }
         }
         if (!spans.isEmpty() || runs.length() > 0) {
-            final Piece last = pieces.isEmpty() ? null : pieces.get(pieces.size() - 1);
-            final int at = last == null ? 0 : last.fc + (last.chars - 1) * (last.wide ? 2 : 1);
-            flushSpans(at, spans, runs, papRuns, resolver, word, table, styles, fonts, data, pictures);
-            endParagraph(at, 0x0D, runs, paragraphs, papRuns, resolver, word);
+            flushSpans(lastFc, spans, runs, c);
+            endParagraph(lastFc, 0x0D, runs, paragraphs, c.papRuns, c.resolver, word);
         }
-        return blocks(paragraphs, styles, lists);
+        return paragraphs;
     }
 
     private static void emit(StringBuilder buffer, List<Field> fields, List<Span> spans, Run run) {
@@ -957,9 +1291,13 @@ public final class WordReader {
         }
     }
 
-    private static void flushSpans(int markFc, List<Span> spans, StringBuilder runs, List<Run> papRuns,
-                                   StyleResolver resolver, byte[] word, byte[] table, List<Style> styles,
-                                   List<String> fonts, byte[] data, Map<Integer, String> pictures) {
+    private static void flushSpans(int markFc, List<Span> spans, StringBuilder runs, Ctx c) {
+        final List<Run> papRuns = c.papRuns;
+        final StyleResolver resolver = c.resolver;
+        final byte[] word = c.word, table = c.table, data = c.data;
+        final List<Style> styles = c.styles;
+        final List<String> fonts = c.fonts;
+        final Map<Integer, String> pictures = c.pictures;
         final Run para = runAt(papRuns, markFc);
         final Chp style = (Chp) resolver.resolve(para != null ? para.istd : 0, 0)[0];
         for (Span span : spans) {

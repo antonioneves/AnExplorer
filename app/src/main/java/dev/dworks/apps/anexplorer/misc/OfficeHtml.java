@@ -46,6 +46,13 @@ public final class OfficeHtml {
             + ".slide{position:relative;overflow:hidden;margin:0 auto 24px;background:#fff}"
             + ".slide p{line-height:1.2}.slide .t{box-sizing:border-box;width:100%;height:100%;display:flex;"
             + "flex-direction:column}.slide img{max-width:none}"
+            + ".notes{box-sizing:border-box;margin:-12px auto 28px;padding:14px 22px;background:#424242;"
+            + "color:#eee;border-radius:0 0 6px 6px;font-size:20px}.notes p{margin:0 0 .4em;line-height:1.3}"
+            + ".sh{display:inline-block;vertical-align:top;overflow:hidden}span.p{display:block;margin:0 0 .3em;"
+            + "line-height:1.3}"
+            + ".hd{border-bottom:1px dashed #bbb;margin-bottom:1.2em;color:#555}"
+            + ".ft{border-top:1px dashed #bbb;margin-top:1.5em;color:#555}"
+            + ".fn{margin-top:2em;border-top:1px solid #999;padding-top:.6em;font-size:.85em}"
             + "</style>";
 
     private OfficeHtml() {

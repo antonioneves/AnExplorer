@@ -30,6 +30,8 @@ final class Escher {
     static final int CLIENT_ANCHOR = 0xF010;
     static final int CLIENT_DATA = 0xF011;
     static final int TERTIARY_OPT = 0xF122;
+    static final int BLIP_EMF = 0xF01A;
+    static final int BLIP_WMF = 0xF01B;
 
     private Escher() {
     }
@@ -147,12 +149,122 @@ final class Escher {
         return null;
     }
 
-    /** The image inside a BLIP record body, found by its signature after the UIDs */
+    /** CSS for a two-colour gradient fill (the shaded fill types), or null if the fill is not one */
+    static String gradient(Map<Integer, Integer> props, String fore, String back) {
+        final Integer type = props.get(0x0180);
+        if (type == null || type < 4 || type > 7) {
+            return null;
+        }
+        if (type == 5 || type == 6) {
+            return "radial-gradient(" + fore + "," + back + ")";
+        }
+        final Integer angle = props.get(0x018B);
+        // OfficeArt measures clockwise from the left-to-right direction, CSS from the top
+        return "linear-gradient(" + (90 + (angle == null ? 0 : angle / 65536.0)) + "deg," + fore + "," + back + ")";
+    }
+
+    /** CSS (with a leading semicolon) that cuts a box to the preset geometry of that shape type, or "" */
+    static String geometry(int type, double minSide) {
+        switch (type) {
+            case 3:
+                return ";border-radius:50%";
+            case 2:
+                return ";border-radius:" + String.format(java.util.Locale.ROOT, "%.2f", minSide * 0.1667) + "px";
+            case 4:
+                return ";clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)";
+            case 5:
+                return ";clip-path:polygon(50% 0,100% 100%,0 100%)";
+            case 6:
+                return ";clip-path:polygon(0 0,100% 100%,0 100%)";
+            case 13:
+                return ";clip-path:polygon(0 25%,60% 25%,60% 0,100% 50%,60% 100%,60% 75%,0 75%)";
+            case 15:
+                return ";clip-path:polygon(0 0,75% 0,100% 50%,75% 100%,0 100%)";
+            case 55:
+                return ";clip-path:polygon(0 0,75% 0,100% 50%,75% 100%,0 100%,25% 50%)";
+            default:
+                return "";
+        }
+    }
+
+    /** The image inside a BLIP record body: a bitmap found by its signature, or a drawn metafile */
     private static String blip(byte[] b, int body, int end) {
+        final int type = body >= 8 ? u16(b, body - 6) : 0;
+        if (type == BLIP_EMF || type == BLIP_WMF) {
+            return metafile(b, body, end, (u16(b, body - 8) >> 4) == (type == BLIP_EMF ? 0x3D5 : 0x217));
+        }
         for (int i = body + 16; i < Math.min(end, body + 60); i++) {
-            final String type = sniff(b, i, end);
-            if (type != null) {
-                return "data:" + type + ";base64," + Base64.encodeToString(b, i, end - i, Base64.NO_WRAP);
+            final String mime = sniff(b, i, end);
+            if (mime != null) {
+                return "data:" + mime + ";base64," + Base64.encodeToString(b, i, end - i, Base64.NO_WRAP);
+            }
+        }
+        return null;
+    }
+
+    /** An EMF or WMF BLIP: one or two UIDs, a 34-byte header, then the picture, usually deflated */
+    private static String metafile(byte[] b, int body, int end, boolean twoUids) {
+        final int head = body + (twoUids ? 32 : 16);
+        if (head + 34 > end) {
+            return null;
+        }
+        final int size = u32(b, head), packed = u32(b, head + 28), compression = b[head + 32] & 0xFF;
+        final int data = head + 34;
+        byte[] picture;
+        if (compression == 0) {
+            if (size <= 0 || size > 32 * 1024 * 1024) {
+                return null;
+            }
+            final java.util.zip.Inflater inflater = new java.util.zip.Inflater();
+            try {
+                inflater.setInput(b, data, Math.min(packed > 0 ? packed : end - data, end - data));
+                picture = new byte[size];
+                int got = 0;
+                while (got < size && !inflater.finished()) {
+                    final int n = inflater.inflate(picture, got, size - got);
+                    if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
+                        break;
+                    }
+                    got += n;
+                }
+                if (got < size) {
+                    picture = java.util.Arrays.copyOf(picture, got);
+                }
+            } catch (java.util.zip.DataFormatException e) {
+                return null;
+            } finally {
+                inflater.end();
+            }
+        } else {
+            picture = java.util.Arrays.copyOfRange(b, data, end);
+        }
+        return Metafile.toSvg(picture);
+    }
+
+    /**
+     * The first picture under [start, end) in a run of records, as a data URI, or null. Used where
+     * a picture is stored beside its shape instead of in the picture store.
+     */
+    static String firstImage(byte[] b, int start, int end) {
+        return firstImage(b, start, end, 0);
+    }
+
+    private static String firstImage(byte[] b, int start, int end, int depth) {
+        if (depth > 6) {
+            return null;
+        }
+        for (Rec rec : children(b, start, end)) {
+            String found = null;
+            if (rec.type >= 0xF018 && rec.type <= 0xF117 && rec.ver != 0xF) {
+                found = blip(b, rec.body, rec.end);
+            } else if (rec.type == BSE) {
+                final int nameLength = rec.body + 33 < rec.end ? b[rec.body + 33] & 0xFF : 0;
+                found = firstImage(b, rec.body + 36 + nameLength, rec.end, depth + 1);
+            } else if (rec.ver == 0xF) {
+                found = firstImage(b, rec.body, rec.end, depth + 1);
+            }
+            if (found != null) {
+                return found;
             }
         }
         return null;
