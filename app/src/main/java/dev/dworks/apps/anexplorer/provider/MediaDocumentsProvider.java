@@ -607,11 +607,53 @@ public class MediaDocumentsProvider extends StorageProvider {
             } else if (TYPE_AUDIO.equals(ident.type)) {
                 final long id = getAlbumForAudioCleared(ident.id);
                 return openOrCreateAudioThumbnailCleared(id, signal);
+            } else if (TYPE_VIDEOS_SHOW.equals(ident.type) || TYPE_VIDEOS_SEASON.equals(ident.type)) {
+                return openShowPosterCleared(ident);
             } else {
                 throw new UnsupportedOperationException("Unsupported document " + docId);
             }
         } finally {
             Binder.restoreCallingIdentity(token);
+        }
+    }
+
+    /** The poster of a show is the same for every episode, so the first recognised one stands in for the folder */
+    private AssetFileDescriptor openShowPosterCleared(Ident ident) throws FileNotFoundException {
+        final boolean season = TYPE_VIDEOS_SEASON.equals(ident.type);
+        final long showId = season ? ident.id / 1000 : ident.id;
+        final ContentResolver resolver = getContext().getContentResolver();
+        Cursor cursor = null;
+        String fileName = null;
+        try {
+            cursor = resolver.query(Video.Media.EXTERNAL_CONTENT_URI,
+                    VideoQuery.PROJECTION, null, null, VideoColumns.DISPLAY_NAME);
+            while (cursor != null && cursor.moveToNext()) {
+                final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                final EpisodeName episode = EpisodeName.parse(name);
+                if (episode != null && episode.showId() == showId
+                        && (!season || episode.season == (int) (ident.id % 1000))
+                        && TmdbPosters.status(getContext(), name) == TmdbPosters.RECOGNIZED) {
+                    fileName = name;
+                    break;
+                }
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        final android.graphics.Bitmap poster = fileName == null ? null : TmdbPosters.load(getContext(), fileName);
+        if (poster == null) {
+            throw new FileNotFoundException("No poster for show " + showId);
+        }
+        try {
+            final java.io.File file = java.io.File.createTempFile("poster", ".png", getContext().getCacheDir());
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+                poster.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            }
+            final ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+            file.delete();
+            return new AssetFileDescriptor(pfd, 0, AssetFileDescriptor.UNKNOWN_LENGTH);
+        } catch (java.io.IOException e) {
+            throw new FileNotFoundException(e.getMessage());
         }
     }
 
@@ -862,7 +904,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SEASON, showId * 1000 + season));
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.videos_season, season));
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
-        row.add(Document.COLUMN_FLAGS, 0);
+        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL);
     }
 
     /**
@@ -895,7 +937,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SHOW, episode.showId()));
         row.add(Document.COLUMN_DISPLAY_NAME, episode.show);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
-        row.add(Document.COLUMN_FLAGS, 0);
+        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL);
     }
 
     private interface ArtistQuery {
