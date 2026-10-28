@@ -3,6 +3,7 @@ package dev.dworks.apps.anexplorer.ui;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.util.AttributeSet;
@@ -22,6 +23,7 @@ public class ZoomImageView extends View {
 
     private final Matrix mMatrix = new Matrix();
     private final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final Paint mShadow = new Paint();
     private Bitmap mBitmap;
     private boolean mFitWidth;
     private int mZoomStep;
@@ -136,6 +138,23 @@ public class ZoomImageView extends View {
         }
         mMatrix.setScale(mScale, mScale);
         mMatrix.postTranslate(mTx, mTy);
+        if (mFitWidth) {
+            drawShadow(canvas);
+        }
         canvas.drawBitmap(mBitmap, mMatrix, mPaint);
+    }
+
+    /** Soft shadow under the sheet, built from stacked translucent rectangles since blur needs a software layer */
+    private void drawShadow(Canvas canvas) {
+        final float left = mTx;
+        final float top = mTy;
+        final float right = mTx + mBitmap.getWidth() * mScale;
+        final float bottom = mTy + mBitmap.getHeight() * mScale;
+        final float step = getResources().getDisplayMetrics().density * 1.5f;
+        final float drop = step * 2;
+        for (int i = 6; i >= 1; i--) {
+            mShadow.setColor(Color.argb(22, 0, 0, 0));
+            canvas.drawRect(left - i * step, top - i * step + drop, right + i * step, bottom + i * step + drop, mShadow);
+        }
     }
 }
