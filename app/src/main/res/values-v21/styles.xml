@@ -4,5 +4,7 @@
     <style name="ListProgress" parent="@android:style/Widget.Material.ProgressBar"/>
 
     <style name="PopupTheme" parent="@style/Widget.AppCompat.Spinner.DropDown.ActionBar">
+        <item name="android:background">@drawable/stack_spinner_background</item>
+        <item name="android:paddingEnd">40dp</item>
     </style>
 </resources>

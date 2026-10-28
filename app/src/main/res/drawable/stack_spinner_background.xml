@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The folder path dropdown button: the app's collapse arrow, with a focus ring around it like the tabs -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <layer-list>
+            <item
+                android:width="36dp"
+                android:height="36dp"
+                android:gravity="end|center_vertical">
+                <shape android:shape="rectangle">
+                    <corners android:radius="18dp" />
+                    <solid android:color="@color/item_root_pressed" />
+                    <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+                </shape>
+            </item>
+            <item
+                android:width="24dp"
+                android:height="24dp"
+                android:right="6dp"
+                android:gravity="end|center_vertical"
+                android:drawable="@drawable/expander_open" />
+        </layer-list>
+    </item>
+
+    <item>
+        <layer-list>
+            <item
+                android:width="24dp"
+                android:height="24dp"
+                android:right="6dp"
+                android:gravity="end|center_vertical"
+                android:drawable="@drawable/expander_open" />
+        </layer-list>
+    </item>
+</selector>
