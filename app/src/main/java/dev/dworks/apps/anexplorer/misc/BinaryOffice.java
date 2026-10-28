@@ -286,9 +286,12 @@ public final class BinaryOffice {
     /** The fonts, number formats and cell formats a workbook defines, and how its dates count */
     private static final class Workbook {
         final List<Font> fonts = new ArrayList<>();
+        /** The CSS of each differential format, which conditional formatting points at */
+        final List<String> dxfs = new ArrayList<>();
         final Map<Integer, String> formats = new java.util.HashMap<>();
         final List<Xf> xfs = new ArrayList<>();
         String[] palette;
+        String[] theme = new String[12];
         boolean date1904;
 
         /** @return the number as text under the cell's number format */
@@ -1043,6 +1046,7 @@ public final class BinaryOffice {
             theme[2] = theme[3];
             theme[3] = swap;
         }
+        wb.theme = theme;
         p = xml(parts, "xl/styles.xml");
         if (p != null) {
             xlsxStyles(wb, p, theme);
@@ -1092,7 +1096,7 @@ public final class BinaryOffice {
     }
 
     /** A colour element: rgb, a theme slot with a tint, or an indexed palette entry */
-    private static String xlsxColor(XmlPullParser p, String[] theme) {
+    static String xlsxColor(XmlPullParser p, String[] theme) {
         final String rgb = p.getAttributeValue(null, "rgb");
         if (rgb != null && rgb.length() >= 6) {
             return "#" + rgb.substring(rgb.length() - 6).toLowerCase();
@@ -1139,8 +1143,41 @@ public final class BinaryOffice {
         boolean cellXfs = false;
         int numFmt = 0, fontId = 0, fillId = 0, borderId = 0, align = 0;
         boolean wrap = false;
+        StringBuilder dxf = null;
+        boolean dxfFont = false;
         for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
             final String tag = p.getName();
+            if ("dxfs".equals(section) && !"dxfs".equals(tag)) {
+                if (event == XmlPullParser.START_TAG) {
+                    final boolean off = "0".equals(p.getAttributeValue(null, "val"));
+                    if ("dxf".equals(tag)) {
+                        dxf = new StringBuilder();
+                    } else if ("font".equals(tag)) {
+                        dxfFont = true;
+                    } else if (dxf != null && dxfFont && "b".equals(tag) && !off) {
+                        dxf.append("font-weight:bold;");
+                    } else if (dxf != null && dxfFont && "i".equals(tag) && !off) {
+                        dxf.append("font-style:italic;");
+                    } else if (dxf != null && dxfFont && "color".equals(tag)) {
+                        final String c = xlsxColor(p, theme);
+                        dxf.append(c == null ? "" : "color:" + c + ";");
+                    } else if (dxf != null && !dxfFont && ("bgColor".equals(tag) || "fgColor".equals(tag))) {
+                        final String c = xlsxColor(p, theme);
+                        dxf.append(c == null ? "" : "background:" + c + ";");
+                    }
+                } else if (event == XmlPullParser.END_TAG) {
+                    if ("font".equals(tag)) {
+                        dxfFont = false;
+                    } else if ("dxf".equals(tag) && dxf != null) {
+                        wb.dxfs.add(dxf.toString());
+                        dxf = null;
+                    }
+                }
+                continue;
+            }
+            if (event == XmlPullParser.END_TAG && "dxfs".equals(tag)) {
+                section = "";
+            }
             if (event == XmlPullParser.START_TAG) {
                 switch (tag) {
                     case "numFmt":
@@ -1287,7 +1324,7 @@ public final class BinaryOffice {
     }
 
     /** @return the 0-based {row, column} of a reference like "AB12" */
-    private static int[] cellRef(String ref) {
+    static int[] cellRef(String ref) {
         int column = 0, i = 0;
         for (; i < ref.length() && Character.isLetter(ref.charAt(i)); i++) {
             column = column * 26 + (Character.toUpperCase(ref.charAt(i)) - 'A' + 1);
@@ -1308,6 +1345,8 @@ public final class BinaryOffice {
         int xf = 0;
         boolean inValue = false, inText = false, hiddenRow = false;
         StringBuilder value = new StringBuilder();
+        final SheetConditional conditional = new SheetConditional();
+        final Map<Long, Double> numbers = new java.util.HashMap<>();
         for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
             final String tag = p.getName();
             if (event == XmlPullParser.START_TAG) {
@@ -1344,6 +1383,15 @@ public final class BinaryOffice {
                     case "t":
                         inText = true;
                         break;
+                    case "conditionalFormatting":
+                    case "cfRule":
+                    case "cfvo":
+                    case "formula":
+                        conditional.start(p, wb.theme);
+                        break;
+                    case "color":
+                        conditional.start(p, wb.theme);
+                        break;
                     case "mergeCell": {
                         final String ref = p.getAttributeValue(null, "ref");
                         if (ref != null && ref.indexOf(':') > 0) {
@@ -1360,7 +1408,9 @@ public final class BinaryOffice {
                 if (inValue || inText) {
                     value.append(p.getText());
                 }
+                conditional.text(p.getText());
             } else if (event == XmlPullParser.END_TAG) {
+                conditional.end(tag);
                 if ("v".equals(tag)) {
                     inValue = false;
                 } else if ("t".equals(tag)) {
@@ -1382,8 +1432,10 @@ public final class BinaryOffice {
                         text = raw;
                     } else if (!raw.trim().isEmpty()) {
                         try {
-                            text = wb.number(xf, Double.parseDouble(raw.trim()));
+                            final double number = Double.parseDouble(raw.trim());
+                            text = wb.number(xf, number);
                             numeric = true;
+                            numbers.put(SheetConditional.key(row, column), number);
                         } catch (NumberFormatException e) {
                             text = raw;
                         }
@@ -1395,6 +1447,9 @@ public final class BinaryOffice {
             }
         }
         rows(cells, sheet, wb, maxRows, maxColumns);
+        if (!conditional.isEmpty()) {
+            conditional.apply(sheet, numbers, wb.dxfs);
+        }
         return sheet;
     }
 
