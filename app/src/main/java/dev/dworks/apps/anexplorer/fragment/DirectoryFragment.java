@@ -59,6 +59,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashSet;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
@@ -87,6 +88,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DirectoryResult;
+import dev.dworks.apps.anexplorer.adapter.ShowSeasonsAdapter;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
@@ -372,6 +374,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				saveDisplayState();
 				loadMarkedPaths();
 				mAdapter.swapResult(result);
+				final List<DocumentInfo> seasons = isShowFolder() ? readSeasons(result) : null;
 
 				// Push latest state up to UI
 				// TODO: if mode change was racing with us, don't overwrite it
@@ -384,6 +387,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				((BaseActivity) context).onDirectoryLoaded();
 
 				updateDisplayState();
+				showSeasons(seasons);
 
 				if (isResumed()) {
 					showList(true);
@@ -719,7 +723,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
         mProgressBar.setColor(ThemeColors.getAccentColor(getActivity()));
 		mIconHelper.setThumbnailsEnabled(state.showThumbnail);
 
-		if (state.derivedMode == MODE_GRID) {
+		// Season carousels need full-width rows, so a show folder stays a list in either view mode
+		if (state.derivedMode == MODE_GRID && mShowAdapter == null) {
 			((RecyclerViewPlus)getListView()).setType(TYPE_GRID);
 		} else {
 			((RecyclerViewPlus)getListView()).setType(TYPE_LIST);
@@ -741,10 +746,58 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		getListView().addItemDecoration(new MarginDecoration(mActivity));
 	}
 
+	/** Set while a TV show is open: its seasons are shown as carousels instead of folder tiles */
+	private ShowSeasonsAdapter mShowAdapter;
+
+	private boolean isShowFolder() {
+		return doc != null && doc.documentId != null && doc.documentId.startsWith("videos_show:");
+	}
+
+	/** Copies the season folders out before the loader can close its cursor */
+	private List<DocumentInfo> readSeasons(DirectoryResult result) {
+		final List<DocumentInfo> seasons = new ArrayList<>();
+		final Cursor cursor = result.cursor;
+		if (cursor != null && cursor.moveToFirst()) {
+			do {
+				final DocumentInfo season = DocumentInfo.fromDirectoryCursor(cursor);
+				if (season.isDirectory()) {
+					seasons.add(season);
+				}
+			} while (cursor.moveToNext());
+		}
+		return seasons;
+	}
+
+	private void showSeasons(List<DocumentInfo> seasons) {
+		if (mShowAdapter != null) {
+			mShowAdapter.destroy();
+			mShowAdapter = null;
+		}
+		final RecyclerViewPlus list = (RecyclerViewPlus) getListView();
+		if (seasons == null || seasons.isEmpty()) {
+			if (list.getAdapter() != mAdapter) {
+				list.setAdapter(mAdapter);
+			}
+			return;
+		}
+		mShowAdapter = new ShowSeasonsAdapter(mActivity, mIconHelper, seasons,
+				new ShowSeasonsAdapter.OnEpisodeClickListener() {
+					@Override
+					public void onEpisodeClick(DocumentInfo episode) {
+						((BaseActivity) getActivity()).onDocumentPicked(episode);
+					}
+				});
+		list.setType(RecyclerViewPlus.TYPE_LIST);
+		list.setAdapter(mShowAdapter);
+	}
+
 	private RecyclerItemClickListener.OnItemClickListener mItemListener
 			= new RecyclerItemClickListener.OnItemClickListener() {
 		@Override
 		public void onItemClick(View view, int position) {
+			if (mShowAdapter != null) {
+				return;
+			}
 			// An app can't be opened from here; its actions are in the menu
 			if (null != root && root.isApp()) {
 				showPopupMenu(view, position);
@@ -772,6 +825,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		@Override
 		public void onItemLongClick(final View view, final int position) {
+			if (mShowAdapter != null) {
+				return;
+			}
 			final int viewType = mAdapter.getItemViewType(position);
 			if (viewType != DocumentsAdapter.ITEM_TYPE_LIST && viewType != DocumentsAdapter.ITEM_TYPE_GRID) {
 				return;
@@ -786,6 +842,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 		@Override
 		public void onItemViewClick(final View view, final int position) {
+			if (mShowAdapter != null) {
+				return;
+			}
 			//final int position = mCurrentView.getPositionForView(v);
 			if (position != ListView.INVALID_POSITION) {
 				int count = mAdapter.getCheckedItemCount();
