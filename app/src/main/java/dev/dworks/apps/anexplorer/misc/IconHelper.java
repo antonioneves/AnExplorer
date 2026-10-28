@@ -287,12 +287,24 @@ public class IconHelper {
         return IconColorUtils.loadMimeColor(context, mimeType, authority, id, defaultColor);
     }
 
+    /** Tag of the name label that the Movies and TV Shows cards show while they have no poster */
+    public static final String POSTER_LABEL_TAG = "poster_label";
+
     private void setImage(ImageView imageView, Bitmap bitmap, String docMimeType, String docPath){
         imageView.setImageBitmap(bitmap);
         final boolean poster = isPoster(bitmap, docMimeType);
         imageView.setScaleType(poster
                 ? ImageView.ScaleType.FIT_CENTER : getIconScaleType(docMimeType, docPath));
         setTextOverlay(imageView, poster);
+        // A show folder has no video mime but its portrait thumbnail is a poster too
+        final boolean portrait = bitmap != null && bitmap.getHeight() > bitmap.getWidth();
+        imageView.setTag(R.id.icon_thumb, portrait);
+        if (imageView.getParent() instanceof View) {
+            final View posterLabel = ((View) imageView.getParent()).findViewWithTag(POSTER_LABEL_TAG);
+            if (posterLabel != null) {
+                posterLabel.setVisibility(portrait ? View.GONE : View.VISIBLE);
+            }
+        }
     }
 
     /**
@@ -300,8 +312,14 @@ public class IconHelper {
      * translucent band over its bottom; other tiles keep the opaque text section below the preview.
      */
     private void setTextOverlay(ImageView thumb, boolean overlay) {
+        thumb.setTag(R.id.icon_thumb, overlay);
         if (!(thumb.getParent() instanceof View)) {
             return;
+        }
+        // The poster already carries the title, so the name label is only for cards without one
+        final View posterLabel = ((View) thumb.getParent()).findViewWithTag(POSTER_LABEL_TAG);
+        if (posterLabel != null && !overlay) {
+            posterLabel.setVisibility(View.VISIBLE);
         }
         final View preview = (View) thumb.getParent();
         if (!(preview.getParent() instanceof ViewGroup)) {

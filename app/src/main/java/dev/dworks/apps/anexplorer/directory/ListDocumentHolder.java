@@ -276,9 +276,12 @@ public class ListDocumentHolder extends DocumentHolder {
             mPosterLabel.setEllipsize(TextUtils.TruncateAt.END);
             mPosterLabel.setTextAppearance(mContext, R.style.TextAppearance_Material3_LabelLarge);
             mPosterLabel.setTextColor(0xFFFFFFFF);
+            mPosterLabel.setTag(IconHelper.POSTER_LABEL_TAG);
             ((FrameLayout) iconThumb.getParent()).addView(mPosterLabel);
         }
-        mPosterLabel.setVisibility(poster ? View.VISIBLE : View.GONE);
+        // Hidden once a poster is showing, which the icon helper records on the thumb
+        final boolean hasPoster = Boolean.TRUE.equals(iconThumb.getTag(R.id.icon_thumb));
+        mPosterLabel.setVisibility(poster && !hasPoster ? View.VISIBLE : View.GONE);
         if (poster) {
             mPosterLabel.setText(mDoc.isDirectory() ? mDoc.displayName
                     : TmdbPosters.title(stripExtension(mDoc.displayName)));
