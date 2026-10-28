@@ -78,7 +78,11 @@ final class PptSlides {
     /** Paragraph properties; {@link #UNSET} means the record does not say */
     private static final class PF {
         int bullet = UNSET, bulletChar = UNSET, bulletFont = UNSET, align = UNSET, lineSpacing = UNSET;
-        int spaceBefore = UNSET, spaceAfter = UNSET, leftMargin = UNSET, rtl = UNSET;
+        int spaceBefore = UNSET, spaceAfter = UNSET, leftMargin = UNSET, rtl = UNSET, indent = UNSET, tab = UNSET;
+        /** The first custom tab stop, in master units, or UNSET */
+        int tabStop = UNSET;
+        /** The bullet's own colour as a raw 32-bit value, or -1 to use the text's */
+        long bulletColor = -1;
 
         /** @return these properties, with the ones they leave out taken from {@code base} */
         PF over(PF base) {
@@ -92,13 +96,17 @@ final class PptSlides {
             out.spaceAfter = spaceAfter != UNSET ? spaceAfter : base.spaceAfter;
             out.leftMargin = leftMargin != UNSET ? leftMargin : base.leftMargin;
             out.rtl = rtl != UNSET ? rtl : base.rtl;
+            out.indent = indent != UNSET ? indent : base.indent;
+            out.tab = tab != UNSET ? tab : base.tab;
+            out.tabStop = tabStop != UNSET ? tabStop : base.tabStop;
+            out.bulletColor = bulletColor != -1 ? bulletColor : base.bulletColor;
             return out;
         }
     }
 
     /** Character properties; the colour is the raw 32-bit value, or -1 when unset */
     private static final class CF {
-        int bold = UNSET, italic = UNSET, underline = UNSET, font = UNSET, size = UNSET;
+        int bold = UNSET, italic = UNSET, underline = UNSET, font = UNSET, size = UNSET, shadow = UNSET, raise = UNSET;
         long color = -1;
 
         CF over(CF base) {
@@ -108,6 +116,8 @@ final class PptSlides {
             out.underline = underline != UNSET ? underline : base.underline;
             out.font = font != UNSET ? font : base.font;
             out.size = size != UNSET ? size : base.size;
+            out.shadow = shadow != UNSET ? shadow : base.shadow;
+            out.raise = raise != UNSET ? raise : base.raise;
             out.color = color != -1 ? color : base.color;
             return out;
         }
@@ -504,6 +514,7 @@ final class PptSlides {
             p += 2;
         }
         if ((mask & 0x0020) != 0) {
+            pf.bulletColor = u32(doc, p) & 0xFFFFFFFFL;
             p += 4;
         }
         if ((mask & 0x0800) != 0) {
@@ -527,13 +538,19 @@ final class PptSlides {
             p += 2;
         }
         if ((mask & 0x0400) != 0) {
+            pf.indent = (short) u16(doc, p);
             p += 2;
         }
         if ((mask & 0x8000) != 0) {
+            pf.tab = (short) u16(doc, p);
             p += 2;
         }
         if ((mask & 0x100000) != 0) {
-            p += 2 + u16(doc, p) * 4;
+            final int stops = u16(doc, p);
+            if (stops > 0) {
+                pf.tabStop = (short) u16(doc, p + 2);
+            }
+            p += 2 + stops * 4;
         }
         if ((mask & 0x10000) != 0) {
             p += 2;
@@ -562,6 +579,9 @@ final class PptSlides {
             if ((mask & 0x0004) != 0) {
                 cf.underline = flags >> 2 & 1;
             }
+            if ((mask & 0x0010) != 0) {
+                cf.shadow = flags >> 4 & 1;
+            }
             p += 2;
         }
         if ((mask & 0x10000) != 0) {
@@ -586,6 +606,7 @@ final class PptSlides {
             p += 4;
         }
         if ((mask & 0x80000) != 0) {
+            cf.raise = (short) u16(doc, p);
             p += 2;
         }
         return p;
@@ -719,6 +740,7 @@ final class PptSlides {
             final PF pf = paraRun < paraProps.size() ? paraProps.get(paraRun).over(base.pf) : base.pf;
             final StringBuilder runs = new StringBuilder();
             double first = -1;
+            String firstColor = null;
             int i = 0;
             final int length = line.length() + 1; // with the paragraph mark
             while (i < length) {
@@ -726,13 +748,16 @@ final class PptSlides {
                 final CF own = charRun < charProps.size() ? charProps.get(charRun) : new CF();
                 final CF cf = own.over(base.cf);
                 final String piece = line.substring(Math.min(i, line.length()), Math.min(line.length(), i + take));
-                final double size = (cf.size != UNSET ? cf.size : titleLike ? 44 : 18) * 4 / 3.0;
+                final double full = (cf.size != UNSET ? cf.size : titleLike ? 44 : 18) * 4 / 3.0;
+                final boolean raised = cf.raise != UNSET && cf.raise != 0;
+                final double size = raised ? full * 0.7 : full;
                 if (first < 0) {
-                    first = size;
+                    first = full;
                 }
                 if (!piece.isEmpty()) {
-                    runs.append("<span style=\"font-size:").append(fmt(size)).append("px;color:")
-                            .append(orElse(textColor(cf.color, context.scheme), context.scheme[titleLike ? 3 : 1]));
+                    final String color = orElse(textColor(cf.color, context.scheme), context.scheme[titleLike ? 3 : 1]);
+                    firstColor = firstColor != null ? firstColor : color;
+                    runs.append("<span style=\"font-size:").append(fmt(size)).append("px;color:").append(color);
                     if (cf.bold == 1) {
                         runs.append(";font-weight:bold");
                     }
@@ -741,6 +766,12 @@ final class PptSlides {
                     }
                     if (cf.underline == 1) {
                         runs.append(";text-decoration:underline");
+                    }
+                    if (cf.shadow == 1) {
+                        runs.append(";text-shadow:1px 1px 1px rgba(0,0,0,.5)");
+                    }
+                    if (raised) {
+                        runs.append(";position:relative;top:").append(fmt(-cf.raise / 100.0 * full)).append("px");
                     }
                     final String font = cf.font != UNSET ? fonts.get(cf.font) : null;
                     if (font != null && !font.isEmpty()) {
@@ -765,9 +796,11 @@ final class PptSlides {
             if (first < 0) {
                 first = (base.cf.size != UNSET ? base.cf.size : 18) * 4 / 3.0;
             }
-            final boolean bullet = pf.bullet == 1;
+            final boolean bullet = pf.bullet == 1 && !line.trim().isEmpty();
             final double left = pf.leftMargin == UNSET ? 0 : mu(pf.leftMargin);
-            final double indent = bullet ? Math.max(left, first * 1.1) : left;
+            final double hang = pf.indent != UNSET && mu(pf.leftMargin == UNSET ? 0 : pf.leftMargin - pf.indent) > 1
+                    ? mu(pf.leftMargin - pf.indent) : first * 1.1;
+            final double indent = bullet ? Math.max(left, hang) : left;
             out.append("<p style=\"margin:").append(fmt(spacing(pf.spaceBefore, first))).append("px 0 ")
                     .append(fmt(spacing(pf.spaceAfter, first))).append("px;text-align:")
                     .append(ALIGN[pf.align == UNSET ? 0 : pf.align]);
@@ -779,12 +812,20 @@ final class PptSlides {
             }
             out.append(";padding-left:").append(fmt(indent)).append("px");
             if (bullet) {
-                out.append(";text-indent:-").append(fmt(first * 1.1)).append("px");
+                out.append(";text-indent:-").append(fmt(hang)).append("px");
+            } else if (pf.indent != UNSET && pf.indent != pf.leftMargin) {
+                out.append(";text-indent:").append(fmt(mu(pf.indent) - left)).append("px");
+            }
+            if (line.indexOf('\t') >= 0) {
+                final int stop = pf.tabStop != UNSET && pf.tabStop > 0 ? pf.tabStop : pf.tab != UNSET && pf.tab > 0 ? pf.tab : 576;
+                out.append(";white-space:pre-wrap;tab-size:").append(fmt(mu(stop))).append("px");
             }
             out.append("\">");
             if (bullet) {
-                out.append("<span style=\"display:inline-block;font-size:").append(fmt(first)).append("px;width:")
-                        .append(fmt(first * 1.1)).append("px;text-indent:0\">")
+                out.append("<span style=\"display:inline-block;color:")
+                        .append(orElse(textColor(pf.bulletColor, context.scheme), orElse(firstColor, context.scheme[1])))
+                        .append(";font-size:").append(fmt(first)).append("px;width:")
+                        .append(fmt(hang)).append("px;text-indent:0\">")
                         .append(bulletGlyph(pf.bulletChar == UNSET ? '•' : (char) pf.bulletChar,
                                 pf.bulletFont == UNSET ? null : fonts.get(pf.bulletFont))).append("</span>");
             }
@@ -1099,7 +1140,7 @@ final class PptSlides {
         }
         final int geom = sp.inst;
         if (geom == 20 || geom == 32) {
-            line(out, style.toString(), stroke == null ? context.scheme[1] : stroke, props);
+            line(out, style.toString(), stroke == null ? context.scheme[1] : stroke, props, box);
             return;
         }
         final List<Rec> options = new ArrayList<>();
@@ -1112,15 +1153,19 @@ final class PptSlides {
         if (path != null) {
             final Integer width = props.get(0x01CB);
             final String solid = fill != null && fill.startsWith("#") ? fill : filled ? context.scheme[4] : "none";
-            out.append("<div style=\"").append(style).append("\"><svg width=\"100%\" height=\"100%\" viewBox=\"")
+            final String drop = shadow(props, context.scheme);
+            out.append("<div style=\"").append(style).append(drop.isEmpty() ? "" : ";" + drop).append("\"><svg width=\"100%\" height=\"100%\" viewBox=\"")
                     .append(path[0]).append("\" preserveAspectRatio=\"none\" style=\"position:absolute;left:0;top:0;overflow:visible\"><path d=\"")
                     .append(path[1]).append("\" fill=\"").append(solid).append("\" stroke=\"")
                     .append(stroke == null ? "none" : stroke).append("\" stroke-width=\"")
-                    .append(fmt(Math.max(0.5, (width == null ? 9525 : width) / 9525.0)))
-                    .append("\" vector-effect=\"non-scaling-stroke\"/></svg>")
+                    .append(fmt(Math.max(0.5, (width == null ? 9525 : width) / 9525.0))).append("\"")
+                    .append(dashes(props.get(0x01CE), (width == null ? 9525 : width) / 9525.0) == null ? ""
+                            : " stroke-dasharray=\"" + dashes(props.get(0x01CE), (width == null ? 9525 : width) / 9525.0) + "\"")
+                    .append(" vector-effect=\"non-scaling-stroke\"/></svg>")
                     .append(text == null ? "" : text).append("</div>");
             return;
         }
+        final String outer = style.toString();
         style.append(";box-sizing:border-box");
         if (fillPicture != null) {
             style.append(";background:url(").append(fillPicture).append(") center/100% 100%");
@@ -1130,11 +1175,20 @@ final class PptSlides {
         if (stroke != null) {
             final Integer width = props.get(0x01CB);
             final Integer dash = props.get(0x01CE);
-            style.append(";border:").append(fmt(Math.max(0.5, (width == null ? 9525 : width) / 9525.0))).append("px ")
-                    .append(dash != null && dash != 0 ? "dashed " : "solid ").append(stroke);
+            final double px = Math.max(0.5, (width == null ? 9525 : width) / 9525.0);
+            style.append(";border:").append(fmt(px)).append("px ").append(borderStyle(props, px)).append(stroke);
         }
-        style.append(Escher.geometry(geom, Math.min(box[2], box[3])));
-        out.append("<div style=\"").append(style).append("\">").append(text == null ? "" : text).append("</div>");
+        final String clip = Escher.geometry(geom, Math.min(box[2], box[3]));
+        final String drop = shadow(props, context.scheme);
+        if (!drop.isEmpty() && !clip.isEmpty()) {
+            // A filter applies before a clip, so the shadow goes on a wrapper that is not clipped
+            out.append("<div style=\"").append(outer).append(";").append(drop).append("\"><div style=\"")
+                    .append(style.toString().replace(outer, "position:absolute;left:0;top:0;width:100%;height:100%"))
+                    .append(clip).append("\">").append(text == null ? "" : text).append("</div></div>");
+            return;
+        }
+        out.append("<div style=\"").append(style).append(clip).append(drop.isEmpty() ? "" : ";" + drop).append("\">")
+                .append(text == null ? "" : text).append("</div>");
     }
 
     private void picture(StringBuilder out, String style, String uri, Map<Integer, Integer> props) {
@@ -1151,15 +1205,114 @@ final class PptSlides {
         }
     }
 
-    /** A straight line along the diagonal of its frame; flips come from the shape's transform */
-    private void line(StringBuilder out, String style, String color, Map<Integer, Integer> props) {
-        final Integer width = props.get(0x01CB);
+    private static final String[] DASHES = {null, "3 1", "1 1", "3 1 1 1", "3 1 1 1 1 1", "1 3", "4 3", "4 3 1 3", "8 3",
+            "8 3 1 3", "8 3 1 3 1 3"};
+
+    /** The SVG dash pattern of an OfficeArt dash type, in multiples of the line width */
+    private static String dashes(Integer dash, double width) {
+        if (dash == null || dash <= 0 || dash >= DASHES.length) {
+            return null;
+        }
+        final StringBuilder out = new StringBuilder();
+        for (String part : DASHES[dash].split(" ")) {
+            out.append(fmt(Integer.parseInt(part) * Math.max(width, 1.5))).append(' ');
+        }
+        return out.toString().trim();
+    }
+
+    /** The CSS border style for the same dash types: dots, dashes or a solid or double line */
+    private static String borderStyle(Map<Integer, Integer> props, double width) {
         final Integer dash = props.get(0x01CE);
-        out.append("<svg style=\"").append(style).append(";overflow:visible\" viewBox=\"0 0 1 1\" ")
-                .append("preserveAspectRatio=\"none\"><line x1=0 y1=0 x2=1 y2=1 stroke=\"").append(color)
-                .append("\" stroke-width=\"").append(fmt(Math.max(0.75, (width == null ? 9525 : width) / 9525.0)))
-                .append("\" vector-effect=\"non-scaling-stroke\"")
-                .append(dash != null && dash != 0 ? " stroke-dasharray=\"6 4\"" : "").append("/></svg>");
+        final Integer style = props.get(0x01CD);
+        if (dash != null && dash > 0) {
+            return dash == 2 || dash == 5 ? "dotted " : "dashed ";
+        }
+        return style != null && style > 0 && width >= 3 ? "double " : "solid ";
+    }
+
+    private int markers;
+
+    /** One arrowhead as an SVG marker, drawn in units of the line width; the id is returned */
+    private String arrowhead(StringBuilder defs, int kind, int widthSize, int lengthSize, String color, boolean start, double unit) {
+        final double[] sizes = {2 * unit, 3 * unit, 5 * unit};
+        final double w = sizes[Math.max(0, Math.min(2, widthSize))], l = sizes[Math.max(0, Math.min(2, lengthSize))];
+        final String id = "ah" + markers++;
+        final String shape;
+        switch (kind) {
+            case 2: // stealth
+                shape = "<path d=\"M0 0L" + fmt(l) + " " + fmt(w / 2) + "L0 " + fmt(w) + "L" + fmt(l * 0.3) + " "
+                        + fmt(w / 2) + "Z\" fill=\"" + color + "\"/>";
+                break;
+            case 3: // diamond
+                shape = "<path d=\"M0 " + fmt(w / 2) + "L" + fmt(l / 2) + " 0L" + fmt(l) + " " + fmt(w / 2) + "L"
+                        + fmt(l / 2) + " " + fmt(w) + "Z\" fill=\"" + color + "\"/>";
+                break;
+            case 4: // oval
+                shape = "<ellipse cx=\"" + fmt(l / 2) + "\" cy=\"" + fmt(w / 2) + "\" rx=\"" + fmt(l / 2) + "\" ry=\""
+                        + fmt(w / 2) + "\" fill=\"" + color + "\"/>";
+                break;
+            case 5: // open
+                shape = "<path d=\"M" + fmt(l) + " 0L0 " + fmt(w / 2) + "L" + fmt(l) + " " + fmt(w)
+                        + "\" fill=\"none\" stroke=\"" + color + "\" stroke-width=\"" + fmt(Math.max(1, unit / 2)) + "\"/>";
+                break;
+            default: // triangle
+                shape = "<path d=\"M0 0L" + fmt(l) + " " + fmt(w / 2) + "L0 " + fmt(w) + "Z\" fill=\"" + color + "\"/>";
+        }
+        // The marker's tip sits on the end of the line: the start one points backwards
+        defs.append("<marker id=\"").append(id).append("\" markerUnits=\"userSpaceOnUse\" markerWidth=\"").append(fmt(l))
+                .append("\" markerHeight=\"").append(fmt(w)).append("\" refX=\"").append(fmt(kind == 4 || kind == 3 ? l / 2 : kind == 5 ? l : l * 0.9))
+                .append("\" refY=\"").append(fmt(w / 2)).append("\" orient=\"").append(start ? "auto-start-reverse" : "auto")
+                .append("\" overflow=\"visible\">").append(shape).append("</marker>");
+        return id;
+    }
+
+    /** A straight line along the diagonal of its frame, with its arrowheads; flips come from the shape's transform */
+    private void line(StringBuilder out, String style, String color, Map<Integer, Integer> props, double[] box) {
+        final Integer width = props.get(0x01CB);
+        final double px = Math.max(0.75, (width == null ? 9525 : width) / 9525.0);
+        final String dash = dashes(props.get(0x01CE), px);
+        final StringBuilder defs = new StringBuilder();
+        String startRef = "", endRef = "";
+        final Integer startKind = props.get(0x01D0), endKind = props.get(0x01D1);
+        if (startKind != null && startKind > 0 && startKind <= 5) {
+            startRef = " marker-start=\"url(#" + arrowhead(defs, startKind, orInt(props.get(0x01D2), 1),
+                    orInt(props.get(0x01D3), 1), color, true, Math.max(px, 2.5)) + ")\"";
+        }
+        if (endKind != null && endKind > 0 && endKind <= 5) {
+            endRef = " marker-end=\"url(#" + arrowhead(defs, endKind, orInt(props.get(0x01D4), 1),
+                    orInt(props.get(0x01D5), 1), color, false, Math.max(px, 2.5)) + ")\"";
+        }
+        out.append("<svg style=\"").append(style).append(";overflow:visible\" viewBox=\"0 0 ")
+                .append(fmt(Math.max(box[2], 0.01))).append(' ').append(fmt(Math.max(box[3], 0.01)))
+                .append("\" preserveAspectRatio=\"none\">");
+        if (defs.length() > 0) {
+            out.append("<defs>").append(defs).append("</defs>");
+        }
+        out.append("<line x1=0 y1=0 x2=\"").append(fmt(Math.max(box[2], 0))).append("\" y2=\"")
+                .append(fmt(Math.max(box[3], 0))).append("\" stroke=\"").append(color).append("\" stroke-width=\"")
+                .append(fmt(px)).append("\"").append(dash != null ? " stroke-dasharray=\"" + dash + "\"" : "")
+                .append(startRef).append(endRef).append("/></svg>");
+    }
+
+    private static int orInt(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    /** A drop shadow filter for a shape with the shadow switched on, or an empty string */
+    private static String shadow(Map<Integer, Integer> props, String[] scheme) {
+        final Integer bools = props.get(0x023F);
+        if (bools == null || (bools & 0x20000) == 0 || (bools & 0x2) == 0) {
+            return "";
+        }
+        final Integer color = props.get(0x0201);
+        final String hex = color == null ? "#808080" : orElse(artColor(color, scheme), "#808080");
+        final Integer opacity = props.get(0x0204);
+        final double alpha = opacity == null ? 1 : Math.max(0, Math.min(1, opacity / 65536.0));
+        final int r = Integer.parseInt(hex.substring(1, 3), 16), g = Integer.parseInt(hex.substring(3, 5), 16),
+                b = Integer.parseInt(hex.substring(5, 7), 16);
+        final Integer dx = props.get(0x0205), dy = props.get(0x0206);
+        return "filter:drop-shadow(" + fmt((dx == null ? 25400 : dx) / 9525.0) + "px " + fmt((dy == null ? 25400 : dy) / 9525.0)
+                + "px 1px rgba(" + r + "," + g + "," + b + "," + fmt(alpha) + "))";
     }
 
     // ---- small helpers ----
