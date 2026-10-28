@@ -60,7 +60,7 @@ public final class OfficeHtml {
 
     /** @return whether the file is one of the binary Office formats this page shows */
     public static boolean supports(String ext) {
-        return "|doc|xls|xlsb|ppt|pps|".contains("|" + ext + "|");
+        return "|doc|xls|xlsx|xlsm|xltx|xlsb|ppt|pps|".contains("|" + ext + "|");
     }
 
     /** @return the whole HTML page; throws if the file is encrypted or unreadable */
@@ -74,6 +74,11 @@ public final class OfficeHtml {
                 break;
             case "xls":
                 sheets(out, BinaryOffice.xls(PreviewFormatter.readAll(in, MAX_BYTES), MAX_ROWS, MAX_COLUMNS));
+                break;
+            case "xlsx":
+            case "xlsm":
+            case "xltx":
+                sheets(out, BinaryOffice.xlsx(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));
                 break;
             case "xlsb":
                 sheets(out, BinaryOffice.xlsb(PreviewFormatter.zip(in, "xl/"), MAX_ROWS, MAX_COLUMNS));

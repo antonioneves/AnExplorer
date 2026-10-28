@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 /**
  * Reads the text out of the binary Office formats: Word (.doc), Excel (.xls, .xlsb) and PowerPoint
  * (.ppt, .pps). Only the text and cell values are read, not the layout or the number formats, so
@@ -940,6 +943,459 @@ public final class BinaryOffice {
             pos = data + length;
             return true;
         }
+    }
+
+
+    // ---- Excel workbook (.xlsx and relatives) ----
+
+    private static XmlPullParser xml(Map<String, byte[]> parts, String name) throws IOException {
+        final byte[] bytes = parts.get(name);
+        if (bytes == null) {
+            return null;
+        }
+        try {
+            final XmlPullParser p = android.util.Xml.newPullParser();
+            // Names are matched with their prefixes, as in r:id
+            p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+            p.setInput(new java.io.ByteArrayInputStream(bytes), null);
+            return p;
+        } catch (XmlPullParserException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /** @return the worksheets of an .xlsx, given its zip parts, with the same looks as the older formats */
+    public static List<Sheet> xlsx(Map<String, byte[]> parts, int maxRows, int maxColumns) throws IOException {
+        try {
+            return readXlsx(parts, maxRows, maxColumns);
+        } catch (XmlPullParserException e) {
+            throw new IOException(e);
+        }
+    }
+
+    private static List<Sheet> readXlsx(Map<String, byte[]> parts, int maxRows, int maxColumns)
+            throws IOException, XmlPullParserException {
+        final Workbook wb = new Workbook();
+        final List<String> shared = new ArrayList<>();
+        XmlPullParser p = xml(parts, "xl/sharedStrings.xml");
+        if (p != null) {
+            StringBuilder current = null;
+            boolean inText = false;
+            int phonetic = 0;
+            for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+                final String tag = p.getName();
+                if (event == XmlPullParser.START_TAG) {
+                    if ("si".equals(tag)) {
+                        current = new StringBuilder();
+                    } else if ("rPh".equals(tag)) {
+                        phonetic++;
+                    } else if ("t".equals(tag) && phonetic == 0) {
+                        inText = true;
+                    }
+                } else if (event == XmlPullParser.END_TAG) {
+                    if ("si".equals(tag) && current != null) {
+                        shared.add(current.toString());
+                    } else if ("rPh".equals(tag)) {
+                        phonetic--;
+                    } else if ("t".equals(tag)) {
+                        inText = false;
+                    }
+                } else if (event == XmlPullParser.TEXT && inText && current != null) {
+                    current.append(p.getText());
+                }
+            }
+        }
+        final String[] theme = new String[12];
+        p = xml(parts, "xl/theme/theme1.xml");
+        if (p != null) {
+            // clrScheme order is dk1, lt1, dk2, lt2, accents, links; cells count lt1, dk1, lt2, dk2
+            final String[] names = {"dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4",
+                    "accent5", "accent6", "hlink", "folHlink"};
+            String slot = null;
+            for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+                if (event != XmlPullParser.START_TAG) {
+                    continue;
+                }
+                final String tag = p.getName();
+                if (tag.startsWith("a:")) {
+                    final String local = tag.substring(2);
+                    for (String n : names) {
+                        if (n.equals(local)) {
+                            slot = local;
+                        }
+                    }
+                    if (slot != null && ("srgbClr".equals(local) || "sysClr".equals(local))) {
+                        String v = "srgbClr".equals(local) ? p.getAttributeValue(null, "val")
+                                : p.getAttributeValue(null, "lastClr");
+                        for (int i = 0; i < names.length; i++) {
+                            if (names[i].equals(slot) && v != null) {
+                                theme[i] = "#" + v.toLowerCase();
+                            }
+                        }
+                        slot = null;
+                    }
+                }
+            }
+            String swap = theme[0];
+            theme[0] = theme[1];
+            theme[1] = swap;
+            swap = theme[2];
+            theme[2] = theme[3];
+            theme[3] = swap;
+        }
+        p = xml(parts, "xl/styles.xml");
+        if (p != null) {
+            xlsxStyles(wb, p, theme);
+        }
+        final Map<String, String> targets = new java.util.HashMap<>();
+        p = xml(parts, "xl/_rels/workbook.xml.rels");
+        if (p != null) {
+            for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+                if (event == XmlPullParser.START_TAG && "Relationship".equals(p.getName())) {
+                    targets.put(p.getAttributeValue(null, "Id"), p.getAttributeValue(null, "Target"));
+                }
+            }
+        }
+        final List<String[]> listed = new ArrayList<>();
+        p = xml(parts, "xl/workbook.xml");
+        if (p == null) {
+            throw new IOException("Not an Excel workbook");
+        }
+        for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+            if (event != XmlPullParser.START_TAG) {
+                continue;
+            }
+            if ("workbookPr".equals(p.getName())) {
+                wb.date1904 = "1".equals(p.getAttributeValue(null, "date1904"))
+                        || "true".equals(p.getAttributeValue(null, "date1904"));
+            } else if ("sheet".equals(p.getName())
+                    && (p.getAttributeValue(null, "state") == null
+                    || "visible".equals(p.getAttributeValue(null, "state")))) {
+                final String target = targets.get(p.getAttributeValue(null, "r:id"));
+                if (target != null) {
+                    listed.add(new String[]{p.getAttributeValue(null, "name"),
+                            target.startsWith("/") ? target.substring(1) : "xl/" + target});
+                }
+            }
+        }
+        final List<Sheet> sheets = new ArrayList<>();
+        for (String[] entry : listed) {
+            p = xml(parts, entry[1]);
+            if (p != null) {
+                sheets.add(xlsxSheet(p, entry[0], shared, wb, maxRows, maxColumns));
+            }
+        }
+        if (sheets.isEmpty()) {
+            throw new IOException("No sheets");
+        }
+        return sheets;
+    }
+
+    /** A colour element: rgb, a theme slot with a tint, or an indexed palette entry */
+    private static String xlsxColor(XmlPullParser p, String[] theme) {
+        final String rgb = p.getAttributeValue(null, "rgb");
+        if (rgb != null && rgb.length() >= 6) {
+            return "#" + rgb.substring(rgb.length() - 6).toLowerCase();
+        }
+        final String slot = p.getAttributeValue(null, "theme");
+        if (slot != null) {
+            int i = Integer.parseInt(slot);
+            String base = i >= 0 && i < theme.length ? theme[i] : null;
+            final String tint = p.getAttributeValue(null, "tint");
+            if (base != null && tint != null) {
+                final double t = Double.parseDouble(tint);
+                final int c = Integer.parseInt(base.substring(1), 16);
+                final StringBuilder out = new StringBuilder("#");
+                for (int shift = 16; shift >= 0; shift -= 8) {
+                    final double v = (c >> shift) & 0xFF;
+                    final int n = (int) Math.round(t < 0 ? v * (1 + t) : v + (255 - v) * t);
+                    out.append(String.format("%02x", Math.max(0, Math.min(255, n))));
+                }
+                return out.toString();
+            }
+            return base;
+        }
+        final String indexed = p.getAttributeValue(null, "indexed");
+        return indexed == null ? null : SheetFormat.color(Integer.parseInt(indexed), null);
+    }
+
+    private static int borderStyle(String style) {
+        if (style == null || "none".equals(style)) {
+            return 0;
+        }
+        return "medium".equals(style) ? 2 : "thick".equals(style) ? 5 : 1;
+    }
+
+    private static void xlsxStyles(Workbook wb, XmlPullParser p, String[] theme)
+            throws IOException, XmlPullParserException {
+        final List<String> fills = new ArrayList<>();
+        final List<int[]> borders = new ArrayList<>();
+        String section = "";
+        Font font = null;
+        int[] border = null;
+        String side = null;
+        String fill = null;
+        boolean solid = false;
+        boolean cellXfs = false;
+        int numFmt = 0, fontId = 0, fillId = 0, borderId = 0, align = 0;
+        boolean wrap = false;
+        for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+            final String tag = p.getName();
+            if (event == XmlPullParser.START_TAG) {
+                switch (tag) {
+                    case "numFmt":
+                        wb.formats.put(Integer.parseInt(p.getAttributeValue(null, "numFmtId")),
+                                p.getAttributeValue(null, "formatCode"));
+                        break;
+                    case "fonts":
+                    case "fills":
+                    case "borders":
+                        section = tag;
+                        break;
+                    case "cellXfs":
+                        cellXfs = true;
+                        section = tag;
+                        break;
+                    case "cellStyleXfs":
+                    case "cellStyles":
+                    case "dxfs":
+                        section = tag;
+                        break;
+                    case "font":
+                        if ("fonts".equals(section)) {
+                            font = new Font();
+                        }
+                        break;
+                    case "b":
+                        if (font != null) {
+                            font.bold = !"0".equals(p.getAttributeValue(null, "val"));
+                        }
+                        break;
+                    case "i":
+                        if (font != null) {
+                            font.italic = !"0".equals(p.getAttributeValue(null, "val"));
+                        }
+                        break;
+                    case "strike":
+                        if (font != null) {
+                            font.strike = !"0".equals(p.getAttributeValue(null, "val"));
+                        }
+                        break;
+                    case "u":
+                        if (font != null) {
+                            font.underline = !"none".equals(p.getAttributeValue(null, "val"));
+                        }
+                        break;
+                    case "sz":
+                        if (font != null) {
+                            font.size = Float.parseFloat(p.getAttributeValue(null, "val"));
+                        }
+                        break;
+                    case "color":
+                        if (font != null) {
+                            font.color = xlsxColor(p, theme);
+                        }
+                        break;
+                    case "fill":
+                        fill = null;
+                        solid = false;
+                        break;
+                    case "patternFill":
+                        solid = "solid".equals(p.getAttributeValue(null, "patternType"));
+                        break;
+                    case "fgColor":
+                        if ("fills".equals(section) && solid) {
+                            fill = xlsxColor(p, theme);
+                        }
+                        break;
+                    case "border":
+                        if ("borders".equals(section)) {
+                            border = new int[4];
+                        }
+                        break;
+                    case "left":
+                    case "right":
+                    case "top":
+                    case "bottom":
+                        if (border != null) {
+                            final int at = "left".equals(tag) ? 0 : "right".equals(tag) ? 1 : "top".equals(tag) ? 2 : 3;
+                            border[at] = borderStyle(p.getAttributeValue(null, "style"));
+                        }
+                        break;
+                    case "xf":
+                        if (cellXfs && "cellXfs".equals(section)) {
+                            numFmt = intAttr(p, "numFmtId");
+                            fontId = intAttr(p, "fontId");
+                            fillId = intAttr(p, "fillId");
+                            borderId = intAttr(p, "borderId");
+                            align = 0;
+                            wrap = false;
+                        }
+                        break;
+                    case "alignment":
+                        if ("cellXfs".equals(section)) {
+                            final String h = p.getAttributeValue(null, "horizontal");
+                            align = "left".equals(h) ? 1 : "center".equals(h) ? 2 : "right".equals(h) ? 3 : 0;
+                            wrap = "1".equals(p.getAttributeValue(null, "wrapText"))
+                                    || "true".equals(p.getAttributeValue(null, "wrapText"));
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            } else if (event == XmlPullParser.END_TAG) {
+                switch (tag) {
+                    case "font":
+                        if (font != null) {
+                            wb.fonts.add(font);
+                            font = null;
+                        }
+                        break;
+                    case "fill":
+                        fills.add(fill);
+                        break;
+                    case "border":
+                        if (border != null) {
+                            borders.add(border);
+                            border = null;
+                        }
+                        break;
+                    case "xf":
+                        if ("cellXfs".equals(section)) {
+                            wb.xfs.add(wb.make(fontId, numFmt, align, wrap,
+                                    borderId < borders.size() ? borders.get(borderId) : new int[4],
+                                    fillId < fills.size() ? fills.get(fillId) : null));
+                        }
+                        break;
+                    case "cellXfs":
+                        section = "";
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    private static int intAttr(XmlPullParser p, String name) {
+        final String v = p.getAttributeValue(null, name);
+        try {
+            return v == null ? 0 : Integer.parseInt(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** @return the 0-based {row, column} of a reference like "AB12" */
+    private static int[] cellRef(String ref) {
+        int column = 0, i = 0;
+        for (; i < ref.length() && Character.isLetter(ref.charAt(i)); i++) {
+            column = column * 26 + (Character.toUpperCase(ref.charAt(i)) - 'A' + 1);
+        }
+        int row = 0;
+        for (; i < ref.length() && Character.isDigit(ref.charAt(i)); i++) {
+            row = row * 10 + ref.charAt(i) - '0';
+        }
+        return new int[]{row - 1, column - 1};
+    }
+
+    private static Sheet xlsxSheet(XmlPullParser p, String name, List<String> shared, Workbook wb, int maxRows,
+                                   int maxColumns) throws IOException, XmlPullParserException {
+        final Sheet sheet = new Sheet(name);
+        final TreeMap<Integer, TreeMap<Integer, Cell>> cells = new TreeMap<>();
+        int row = -1, column = -1;
+        String type = null;
+        int xf = 0;
+        boolean inValue = false, inText = false, hiddenRow = false;
+        StringBuilder value = new StringBuilder();
+        for (int event = p.getEventType(); event != XmlPullParser.END_DOCUMENT; event = p.next()) {
+            final String tag = p.getName();
+            if (event == XmlPullParser.START_TAG) {
+                switch (tag) {
+                    case "col": {
+                        final int min = intAttr(p, "min"), max = Math.min(intAttr(p, "max"), 256);
+                        final String width = p.getAttributeValue(null, "width");
+                        if (width != null && !"1".equals(p.getAttributeValue(null, "hidden"))) {
+                            final int px = Math.round(Float.parseFloat(width) * 7 + 5);
+                            for (int c = min; c <= max; c++) {
+                                sheet.columnWidths.put(c - 1, px);
+                            }
+                        }
+                        break;
+                    }
+                    case "row": {
+                        final String r = p.getAttributeValue(null, "r");
+                        row = r != null ? Integer.parseInt(r) - 1 : row + 1;
+                        column = -1;
+                        hiddenRow = "1".equals(p.getAttributeValue(null, "hidden"));
+                        break;
+                    }
+                    case "c": {
+                        final String ref = p.getAttributeValue(null, "r");
+                        column = ref != null ? cellRef(ref)[1] : column + 1;
+                        type = p.getAttributeValue(null, "t");
+                        xf = intAttr(p, "s");
+                        value.setLength(0);
+                        break;
+                    }
+                    case "v":
+                        inValue = true;
+                        break;
+                    case "t":
+                        inText = true;
+                        break;
+                    case "mergeCell": {
+                        final String ref = p.getAttributeValue(null, "ref");
+                        if (ref != null && ref.indexOf(':') > 0) {
+                            final int[] a = cellRef(ref.substring(0, ref.indexOf(':')));
+                            final int[] b = cellRef(ref.substring(ref.indexOf(':') + 1));
+                            sheet.merges.add(new int[]{a[0], b[0], a[1], b[1]});
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            } else if (event == XmlPullParser.TEXT) {
+                if (inValue || inText) {
+                    value.append(p.getText());
+                }
+            } else if (event == XmlPullParser.END_TAG) {
+                if ("v".equals(tag)) {
+                    inValue = false;
+                } else if ("t".equals(tag)) {
+                    inText = false;
+                } else if ("c".equals(tag) && column >= 0 && row >= 0 && !hiddenRow) {
+                    final String raw = value.toString();
+                    String text = null;
+                    boolean numeric = false;
+                    if ("s".equals(type)) {
+                        try {
+                            final int at = Integer.parseInt(raw.trim());
+                            text = at >= 0 && at < shared.size() ? shared.get(at) : "";
+                        } catch (NumberFormatException e) {
+                            text = "";
+                        }
+                    } else if ("b".equals(type)) {
+                        text = "1".equals(raw.trim()) ? "TRUE" : "FALSE";
+                    } else if ("str".equals(type) || "inlineStr".equals(type) || "e".equals(type) || "d".equals(type)) {
+                        text = raw;
+                    } else if (!raw.trim().isEmpty()) {
+                        try {
+                            text = wb.number(xf, Double.parseDouble(raw.trim()));
+                            numeric = true;
+                        } catch (NumberFormatException e) {
+                            text = raw;
+                        }
+                    } else {
+                        text = "";
+                    }
+                    put(cells, row, column, text, numeric, xf);
+                }
+            }
+        }
+        rows(cells, sheet, wb, maxRows, maxColumns);
+        return sheet;
     }
 
     // ---- PowerPoint 97-2003 ----
