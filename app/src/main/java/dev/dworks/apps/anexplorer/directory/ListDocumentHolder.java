@@ -20,6 +20,7 @@ import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.RecyclerFragment.RecyclerItemClickListener.OnItemClickListener;
 import dev.dworks.apps.anexplorer.cursor.RootCursorWrapper;
+import dev.dworks.apps.anexplorer.misc.TmdbPosters;
 import dev.dworks.apps.anexplorer.misc.IconColorUtils;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
@@ -46,6 +47,8 @@ import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 public class ListDocumentHolder extends DocumentHolder {
 
     private TextView mPosterLabel;
+    private View.OnLayoutChangeListener mPosterSizer;
+    private int mGridHeight;
 
     public ListDocumentHolder(Context context, ViewGroup parent, int layout, OnItemClickListener onItemClickListener,
                               Environment environment) {
@@ -278,7 +281,26 @@ public class ListDocumentHolder extends DocumentHolder {
         mPosterLabel.setVisibility(poster ? View.VISIBLE : View.GONE);
         if (poster) {
             mPosterLabel.setText(mDoc.isDirectory() ? mDoc.displayName
-                    : stripExtension(mDoc.displayName));
+                    : TmdbPosters.title(stripExtension(mDoc.displayName)));
+        }
+        if (mPosterSizer == null && poster) {
+            // Posters are portrait, so the card is 3:2 tall whatever width the column gets
+            mPosterSizer = new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                    final ViewGroup.LayoutParams lp = v.getLayoutParams();
+                    final int want = isPosterList() ? (r - l) * 3 / 2 : mGridHeight;
+                    if (r > l && lp != null && lp.height != want) {
+                        lp.height = want;
+                        v.setLayoutParams(lp);
+                    }
+                }
+            };
+            mGridHeight = itemView.getLayoutParams() == null ? 0 : itemView.getLayoutParams().height;
+            itemView.addOnLayoutChangeListener(mPosterSizer);
+        } else if (!poster && mPosterSizer != null && itemView.getLayoutParams() != null
+                && itemView.getLayoutParams().height != mGridHeight) {
+            itemView.getLayoutParams().height = mGridHeight;
         }
     }
 

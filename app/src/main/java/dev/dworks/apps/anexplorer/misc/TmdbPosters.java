@@ -93,6 +93,12 @@ public final class TmdbPosters {
         return q;
     }
 
+    /** The clean title a file name stands for, like Sintel for Sintel.2010.1080p.mkv, or the name itself when unclear */
+    public static String title(String fileName) {
+        final Query q = parse(fileName);
+        return q == null ? fileName : q.title;
+    }
+
     /** Reads the cache only, so it is safe to call while listing */
     public static int status(Context context, String fileName) {
         final Query q = isEnabled() ? parse(fileName) : null;
