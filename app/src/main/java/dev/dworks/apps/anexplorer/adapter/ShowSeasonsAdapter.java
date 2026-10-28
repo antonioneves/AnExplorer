@@ -8,8 +8,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -283,6 +285,13 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 iconThumb = v.findViewById(R.id.icon_thumb);
                 iconMimeBackground = v.findViewById(R.id.icon_mime_background);
                 title = v.findViewById(android.R.id.title);
+                if (title != null) {
+                    // Label on top, so it doesn't sit over the title printed on posters
+                    title.setBackgroundResource(R.drawable.recent_title_scrim_top);
+                    ((FrameLayout.LayoutParams) title.getLayoutParams()).gravity = Gravity.TOP;
+                    title.setPadding(title.getPaddingLeft(), title.getPaddingBottom(),
+                            title.getPaddingRight(), title.getPaddingTop());
+                }
                 v.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -298,7 +307,9 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 if (title != null) {
                     // The season header already says which show and season, so the card is just the number
                     final EpisodeName parsed = EpisodeName.parse(episode.displayName);
-                    title.setText(parsed != null ? String.valueOf(parsed.episode) : episode.displayName);
+                    title.setText(parsed != null
+                            ? title.getContext().getString(R.string.videos_episode, parsed.episode)
+                            : episode.displayName);
                 }
                 mIconHelper.stopLoading(iconThumb);
                 iconMime.animate().cancel();
