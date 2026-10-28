@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 
 import androidx.recyclerview.widget.RecyclerView;
 import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.misc.EpisodeName;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -295,7 +296,9 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             void bind(DocumentInfo episode) {
                 this.episode = episode;
                 if (title != null) {
-                    title.setText(episode.displayName);
+                    // The season header already says which show and season, so the card is just the number
+                    final EpisodeName parsed = EpisodeName.parse(episode.displayName);
+                    title.setText(parsed != null ? String.valueOf(parsed.episode) : episode.displayName);
                 }
                 mIconHelper.stopLoading(iconThumb);
                 iconMime.animate().cancel();
