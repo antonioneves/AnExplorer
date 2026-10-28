@@ -1287,15 +1287,16 @@ final class PptxSlides {
             // Line height and spacing
             final double base = baseSize(chain, defaults, p, scale);
             final StringBuilder css = new StringBuilder("margin:0;");
+            final boolean rtl = "1".equals(last(chain, "rtl"));
             if (marL != 0 || indent != 0) {
-                css.append("padding-left:").append(fmt(Math.max(0, marL))).append("px;text-indent:")
+                css.append(rtl ? "padding-right:" : "padding-left:").append(fmt(Math.max(0, marL))).append("px;text-indent:")
                         .append(fmt(mark != null ? indent : indent)).append("px;");
             }
             if (algn != null) {
                 css.append("text-align:").append("ctr".equals(algn) ? "center" : "r".equals(algn) ? "right"
                         : "just".equals(algn) ? "justify" : "left").append(';');
             }
-            if ("1".equals(last(chain, "rtl"))) {
+            if (rtl) {
                 css.append("direction:rtl;");
             }
             final Element lnSpc = lastChild(chain, "a:lnSpc");
