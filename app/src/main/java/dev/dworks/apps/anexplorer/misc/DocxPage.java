@@ -9,6 +9,7 @@ import static dev.dworks.apps.anexplorer.misc.OoxmlPackage.num;
 import static dev.dworks.apps.anexplorer.misc.OoxmlPackage.path;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,6 +42,10 @@ final class DocxPage {
     private final List<Element> tableParagraph = new ArrayList<>();
     private final List<Element> tableRun = new ArrayList<>();
     private int depth;
+    /** The text width of the page in px, from which right-aligned tab stops are placed */
+    private double contentWidth = 624;
+    /** Set while the runs of a paragraph with tab stops are written: what a tab writes, so the line can be split there */
+    private String tabGlue;
 
     private DocxPage(OoxmlPackage pkg) {
         this.pkg = pkg;
@@ -63,15 +68,7 @@ final class DocxPage {
         final Element sect = lastSection(body);
         final StringBuilder out = new StringBuilder(pageStyle(sect));
         reference(sect, "w:headerReference", "hd", out);
-        final long cols = num(child(sect, "w:cols"), "w:num", 1);
-        if (cols > 1 && cols <= 6) {
-            final double gap = num(child(sect, "w:cols"), "w:space", 720) / 15;
-            out.append("<div style=\"column-count:").append(cols).append(";column-gap:").append(fmt(gap)).append("px\">");
-            blocks(body, out);
-            out.append("</div>");
-        } else {
-            blocks(body, out);
-        }
+        bodyBlocks(body, out);
         for (int i = 0; i < footnotes.size(); i++) {
             if (i == 0) {
                 out.append("<div class=fn>");
@@ -104,6 +101,7 @@ final class DocxPage {
         if (width < 2880 || width - left - right < 1440) {
             return "";
         }
+        contentWidth = (width - left - right) / 15;
         return "<style>#page{box-sizing:border-box;max-width:calc(100% - 40px);width:" + fmt(width / 15) + "px;padding:"
                 + fmt(top / 15) + "px " + fmt(right / 15) + "px " + fmt(bottom / 15) + "px " + fmt(left / 15)
                 + "px}</style>";
@@ -341,36 +339,78 @@ final class DocxPage {
 
     // ---- block content ----
 
+    /** The body, with each section laid out in the number of columns its own section properties ask for */
+    private void bodyBlocks(Element body, StringBuilder out) {
+        final List<Element> items = children(body, null);
+        final int[] columns = new int[items.size()];
+        final double[] gaps = new double[items.size()];
+        int from = 0;
+        for (int i = 0; i < items.size(); i++) {
+            final Element e = items.get(i);
+            final Element sect = e.getNodeName().equals("w:sectPr") ? e : path(e, "w:pPr", "w:sectPr");
+            if (sect != null || i == items.size() - 1) {
+                final Element cols = child(sect, "w:cols");
+                final long n = num(cols, "w:num", 1);
+                for (int j = from; j <= i; j++) {
+                    columns[j] = n > 1 && n <= 6 ? (int) n : 1;
+                    gaps[j] = num(cols, "w:space", 720) / 15.0;
+                }
+                from = i + 1;
+            }
+        }
+        int open = 1;
+        for (int i = 0; i < items.size(); i++) {
+            if (columns[i] != open) {
+                if (open > 1) {
+                    out.append("</div>");
+                }
+                open = columns[i];
+                if (open > 1) {
+                    out.append("<div style=\"column-count:").append(open).append(";column-gap:")
+                            .append(fmt(gaps[i])).append("px\">");
+                }
+            }
+            block(items.get(i), out);
+        }
+        if (open > 1) {
+            out.append("</div>");
+        }
+    }
+
     private void blocks(Element parent, StringBuilder out) {
         if (parent == null || ++depth > MAX_NESTING) {
             depth--;
             return;
         }
         for (Element e : children(parent, null)) {
-            switch (e.getNodeName()) {
-                case "w:p":
-                    paragraph(e, out);
-                    break;
-                case "w:tbl":
-                    table(e, out);
-                    break;
-                case "w:sdt":
-                    blocks(child(e, "w:sdtContent"), out);
-                    break;
-                case "w:ins":
-                case "w:customXml":
-                    blocks(e, out);
-                    break;
-                case "mc:AlternateContent": {
-                    final Element pick = child(e, "mc:Choice") != null ? child(e, "mc:Choice") : child(e, "mc:Fallback");
-                    blocks(pick, out);
-                    break;
-                }
-                default:
-                    break;
-            }
+            block(e, out);
         }
         depth--;
+    }
+
+    private void block(Element e, StringBuilder out) {
+        switch (e.getNodeName()) {
+            case "w:p":
+                paragraph(e, out);
+                break;
+            case "w:tbl":
+                table(e, out);
+                break;
+            case "w:sdt":
+                blocks(child(e, "w:sdtContent"), out);
+                break;
+            case "w:ins":
+            case "w:customXml":
+                blocks(e, out);
+                break;
+            case "mc:AlternateContent": {
+                final Element pick = child(e, "mc:Choice") != null ? child(e, "mc:Choice") : child(e, "mc:Fallback");
+                blocks(pick, out);
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     private static String numberFormat(String fmt, int n) {
@@ -590,15 +630,89 @@ final class DocxPage {
                     .append(fmt(Math.max(labelWidth, 8))).append("px;").append(markStyle).append("\">")
                     .append(esc(label)).append("</span>");
         }
-        final int before = out.length();
-        inline(p, rChain, out);
-        if (out.length() == before) {
-            out.append("&nbsp;");
+        final List<double[]> stops = tabStops(pChain);
+        final boolean tabbed = !stops.isEmpty() && hasTab(p);
+        final String outerGlue = tabGlue;
+        final StringBuilder content = new StringBuilder();
+        tabGlue = tabbed ? "\u0001" : null;
+        inline(p, rChain, content);
+        tabGlue = outerGlue;
+        if (content.length() == 0) {
+            content.append("&nbsp;");
         }
-        out.append("</p>");
+        out.append(tabbed ? tabbedLine(content.toString(), stops, indent(pChain, "w:left", "w:start") / 15,
+                indent(pChain, "w:right", "w:end") / 15) : content).append("</p>");
         if (child(direct, "w:sectPr") != null && !"continuous".equals(attr(path(direct, "w:sectPr", "w:type"), "w:val"))) {
             out.append("<hr>");
         }
+    }
+
+    /** @return the tab stops in force as {position px, 0 left, 1 center, 2 right, leader 0 none, 1 dotted, 2 dashed, 3 solid} */
+    private static List<double[]> tabStops(List<Element> chain) {
+        final java.util.TreeMap<Double, double[]> stops = new java.util.TreeMap<>();
+        for (Element pr : chain) {
+            for (Element t : children(path(pr, "w:tabs"), "w:tab")) {
+                final double pos = num(t, "w:pos", 0) / 15.0;
+                final String type = attr(t, "w:val");
+                if ("clear".equals(type)) {
+                    stops.remove(pos);
+                } else if (type == null || type.equals("left") || type.equals("start") || type.equals("center")
+                        || type.equals("right") || type.equals("end") || type.equals("decimal")) {
+                    final String leader = attr(t, "w:leader");
+                    stops.put(pos, new double[]{pos, type == null || type.equals("left") || type.equals("start") ? 0
+                            : type.equals("center") ? 1 : 2, leader == null || leader.equals("none") ? 0
+                            : leader.equals("dot") || leader.equals("middleDot") ? 1 : leader.equals("hyphen") ? 2 : 3});
+                }
+            }
+        }
+        return new ArrayList<>(stops.values());
+    }
+
+    private static boolean hasTab(Element p) {
+        final NodeList tabs = p.getElementsByTagName("w:tab");
+        for (int i = 0; i < tabs.getLength(); i++) {
+            if ("w:r".equals(tabs.item(i).getParentNode().getNodeName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Lays a line out between its tab stops: the text after a tab sits at the next stop, flush right or
+     * centred if the stop says so, with a dotted leader before it when asked. Done with a flex row since the
+     * preview has no script to measure text.
+     */
+    private String tabbedLine(String content, List<double[]> stops, double left, double right) {
+        final String[] parts = content.split("\u0001", -1);
+        if (parts.length > 7) {
+            return content.replace("\u0001", "<span style=\"display:inline-block;width:48px\"></span>");
+        }
+        final StringBuilder out = new StringBuilder("<span style=\"display:flex;text-indent:0\">");
+        for (int i = 0; i < parts.length; i++) {
+            final double[] gov = i > 0 && i - 1 < stops.size() ? stops.get(i - 1) : null;
+            final double[] next = i < parts.length - 1 && i < stops.size() ? stops.get(i) : null;
+            if (gov != null && gov[2] > 0) {
+                out.append("<span style=\"flex:1;min-width:6px;border-bottom:1px ")
+                        .append(gov[2] == 1 ? "dotted" : gov[2] == 2 ? "dashed" : "solid")
+                        .append(" currentColor;margin:0 3px .3em\"></span>");
+            }
+            out.append("<span style=\"");
+            if (gov != null && gov[1] == 2) {
+                out.append("flex:none;text-align:right;margin-right:")
+                        .append(fmt(Math.max(0, contentWidth - right - gov[0]))).append("px");
+            } else if (next != null && (next[1] == 0 || next[2] > 0)) {
+                final double start = i == 0 ? left : gov == null ? 0 : gov[0];
+                out.append("flex:none;min-width:").append(next[2] > 0 ? "0" : fmt(Math.max(0, next[0] - start)) + "px");
+            } else {
+                out.append("flex:1");
+                if (gov != null && gov[1] == 1) {
+                    out.append(";text-align:center");
+                }
+            }
+            out.append("\">").append(parts[i]).append("</span>");
+        }
+        return out.append("</span>").toString();
     }
 
     private static double indent(List<Element> chain, String name, String alias) {
@@ -778,6 +892,9 @@ final class DocxPage {
         add(chain, direct);
         final String css = runStyle(chain, base, false);
         final boolean styled = !css.isEmpty();
+        if (tabGlue != null) {
+            tabGlue = styled ? "</span>\u0001<span style=\"" + css + "\">" : "\u0001";
+        }
         if (styled) {
             out.append("<span style=\"").append(css).append("\">");
         }
@@ -795,7 +912,7 @@ final class DocxPage {
                     out.append(esc(OoxmlPackage.text(e)));
                     break;
                 case "w:tab":
-                    out.append("<span style=\"display:inline-block;width:48px\"></span>");
+                    out.append(tabGlue != null ? tabGlue : "<span style=\"display:inline-block;width:48px\"></span>");
                     break;
                 case "w:br":
                 case "w:cr": {
