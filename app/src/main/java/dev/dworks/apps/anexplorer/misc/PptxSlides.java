@@ -34,6 +34,8 @@ final class PptxSlides {
     private final Map<String, OoxmlTheme> themes = new HashMap<>();
     /** Classes of the animated shapes of the slide being written, by shape id, and its number of clicks */
     private final Map<String, String> animated = new HashMap<>();
+    /** Id of the shape being written, to find the builds of its paragraphs */
+    private String shapeId;
     private int clicks;
     private Element defaultText;
     private int markers;
@@ -193,11 +195,18 @@ final class PptxSlides {
                             + attr((Element) effects.item(j), "presetSubtype") : "";
                     final NodeList targets = ((Element) effects.item(j)).getElementsByTagName("p:spTgt");
                     for (int k = 0; k < targets.getLength(); k++) {
-                        final String id = attr((Element) targets.item(k), "spid");
+                        // A paragraph build targets one paragraph of the shape, kept as "id:index"
+                        final Element range = path((Element) targets.item(k), "p:txEl", "p:pRg");
+                        final String shape = attr((Element) targets.item(k), "spid");
+                        final String id = range == null ? shape : shape + ":" + num(range, "st", 0);
                         final String mark = ("entr".equals(kind) ? "k" : "x") + clicks;
                         final String had = animated.get(id);
                         if (id != null && clicks > 0 && (had == null || !had.contains(mark.substring(0, 1)))) {
                             animated.put(id, had == null ? mark + effect : had + " " + mark + effect);
+                        }
+                        for (long q = range == null ? 0 : num(range, "st", 0) + 1; range != null && q <= num(range, "end", 0)
+                                && q < 200 && clicks > 0; q++) {
+                            animated.putIfAbsent(shape + ":" + q, mark + effect);
                         }
                     }
                 }
@@ -295,7 +304,8 @@ final class PptxSlides {
                 : path(e, "p:nvGrpSpPr", "p:cNvPr") != null ? path(e, "p:nvGrpSpPr", "p:cNvPr")
                 : path(e, "p:nvGraphicFramePr", "p:cNvPr") != null ? path(e, "p:nvGraphicFramePr", "p:cNvPr")
                 : path(e, "p:nvCxnSpPr", "p:cNvPr");
-        final String marks = props == null ? null : animated.get(attr(props, "id"));
+        shapeId = props == null ? null : attr(props, "id");
+        final String marks = shapeId == null ? null : animated.get(shapeId);
         if (marks != null) {
             out.append("<div class=\"").append(marks).append("\" style=\"display:contents\">");
             plain(e, part, ctx, tx, template, out);
@@ -1731,7 +1741,10 @@ final class PptxSlides {
         }
         final OoxmlTheme theme = ctx.theme;
         final int[] counters = new int[10];
+        final boolean ofShape = body.getParentNode() != null && "p:sp".equals(body.getParentNode().getNodeName());
+        int index = -1;
         for (Element p : children(body, "a:p")) {
+            index++;
             final Element pPr = child(p, "a:pPr");
             final int level = (int) Math.max(0, Math.min(8, num(pPr, "lvl", 0)));
             final List<Element> chain = new ArrayList<>();
@@ -1804,7 +1817,8 @@ final class PptxSlides {
             }
             css.append("margin-top:").append(fmt(spacing(lastChild(chain, "a:spcBef"), base))).append("px;")
                     .append("margin-bottom:").append(fmt(spacing(lastChild(chain, "a:spcAft"), base))).append("px;");
-            out.append("<p style=\"").append(css).append("\">");
+            final String build = ofShape && shapeId != null ? animated.get(shapeId + ":" + index) : null;
+            out.append(build == null ? "<p" : "<p class=\"" + build + "\"").append(" style=\"").append(css).append("\">");
             if (mark != null) {
                 final Element bc = lastChild(chain, "a:buClr");
                 String markColor = bc == null ? null : theme.color(bc);
