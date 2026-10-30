@@ -958,10 +958,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			info.setVisible(count == 1);
 			final MenuItem unbookmark = menu.findItem(R.id.menu_unbookmark);
 			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
-			final boolean bookmarked = count == 1 && !checked.isEmpty() && isBookmarkedDoc(checked.get(0));
-			bookmark.setVisible(count == 1 && !isRecycleBin() && !bookmarked);
+			// Same as the item menu: only folders can be bookmarked, media files are starred
+			final DocumentInfo single = count == 1 && !checked.isEmpty() ? checked.get(0) : null;
+			final boolean canBookmark = null != single && !isRecycleBin()
+					&& single.isBookmarkSupported() && Utils.isDir(single.mimeType) && !isOperationSupported;
+			final boolean bookmarked = canBookmark && isBookmarkedDoc(single);
+			bookmark.setVisible(canBookmark && !bookmarked);
 			if (unbookmark != null) {
-				unbookmark.setVisible(count == 1 && !isRecycleBin() && bookmarked);
+				unbookmark.setVisible(canBookmark && bookmarked);
 			}
 			updateStarItems(menu, getCheckedDocuments());
 
@@ -1177,7 +1181,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return false;
 		}
 		for (DocumentInfo doc : docs) {
-			if (!ExternalStorageProvider.AUTHORITY.equals(doc.authority) || TextUtils.isEmpty(doc.path)) {
+			final boolean local = ExternalStorageProvider.AUTHORITY.equals(doc.authority)
+					|| MediaDocumentsProvider.AUTHORITY.equals(doc.authority);
+			if (!local || TextUtils.isEmpty(doc.path)) {
 				return false;
 			}
 		}
