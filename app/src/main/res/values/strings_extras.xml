@@ -299,10 +299,6 @@
     <string name="detail_path">Path</string>
     <string name="detail_title">Details</string>
     <string name="connection_path">Shared path</string>
-    <string name="feedback_title">Enjoying AnExplorer?</string>
-    <string name="feedback_message">Rate the app in Play Store. Spread the love!</string>
-    <string name="feedback_rate">Rate</string>
-    <string name="feedback_support">Support</string>
     <string name="note_load_failed">Unable to load the file</string>
     <string name="saf_title">Grant access to external storage</string>
     <string name="saf_message">Select the root (outermost) folder of %1$s on the next screen to grant access</string>

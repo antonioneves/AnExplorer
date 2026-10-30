@@ -29,7 +29,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
@@ -44,10 +43,7 @@ import android.text.Html;
 import android.text.Spanned;
 import android.text.format.DateUtils;
 import android.util.DisplayMetrics;
-import android.view.KeyCharacterMap;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.webkit.WebView;
 import android.widget.Button;
 
@@ -61,7 +57,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 import java.util.Locale;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -267,14 +262,6 @@ public class Utils extends UtilsFlavour{
         return result;
     }
 
-    public static boolean hasSoftNavBar(Context context){
-        boolean hasMenuKey = ViewConfiguration.get(context).hasPermanentMenuKey();
-        boolean hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
-
-        return !hasMenuKey && !hasBackKey;
-
-    }
-
     private static final int BRIGHTNESS_THRESHOLD = 150;
     public static boolean isColorDark(int color) {
         return ((30 * Color.red(color) +
@@ -342,50 +329,8 @@ public class Utils extends UtilsFlavour{
         return MimePredicate.mimeMatches(DocumentsContract.Document.MIME_TYPE_DIR, mimeType);
     }
 
-    public static boolean isProVersion(){
-        return true;
-    }
-
-    public static boolean isOtherBuild(){
-        return false;
-    }
-
     public static boolean isGoogleBuild(){
         return true;
-    }
-
-    public static boolean isAmazonBuild(){
-        return false;
-    }
-
-    public static Uri getAppUri(){
-        if(isAmazonBuild()){
-            return Uri.parse("amzn://apps/android?p=" + BuildConfig.APPLICATION_ID);
-        }
-
-        return Uri.parse("market://details?id=" + BuildConfig.APPLICATION_ID);
-    }
-
-    public static Uri getAppShareUri(){
-        if(isAmazonBuild()){
-            return Uri.parse("https://www.amazon.com/gp/mas/dl/android?p=" + BuildConfig.APPLICATION_ID);
-        }
-
-        return Uri.parse("https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID);
-    }
-
-    public static Uri getAppStoreUri(){
-        if(isAmazonBuild()){
-            return Uri.parse("http://www.amazon.com/gp/mas/dl/android?p=" + BuildConfig.APPLICATION_ID + "&showAll=1");
-        }
-        return Uri.parse("https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID);
-    }
-
-    public static Uri getAppProStoreUri(){
-        if(isAmazonBuild()){
-            return Uri.parse("http://www.amazon.com/gp/mas/dl/android?p=" + BuildConfig.APPLICATION_ID+".pro" + "&showAll=1");
-        }
-        return Uri.parse("https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID+".pro");
     }
 
     public static boolean hasFeature(Context context, String feature) {
@@ -481,13 +426,6 @@ public class Utils extends UtilsFlavour{
 
         int[] colors = new int[]{color, color, color, color};
         return new ColorStateList(states, colors);
-    }
-
-    public static void openPlaystore(Context çontext){
-        Intent intent = new Intent(Intent.ACTION_VIEW, Utils.getAppUri());
-        if(Utils.isIntentAvailable(çontext, intent)) {
-            çontext.startActivity(intent);
-        }
     }
 
     public static Spanned fromHtml(String text) {

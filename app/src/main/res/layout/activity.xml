@@ -113,12 +113,6 @@
             </androidx.appcompat.widget.Toolbar>
 
             <FrameLayout
-                android:id="@+id/container_rate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:elevation="8dp" />
-
-            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1">

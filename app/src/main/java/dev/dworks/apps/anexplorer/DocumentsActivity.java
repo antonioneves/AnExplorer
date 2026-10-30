@@ -52,7 +52,6 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.Handler;
 
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.view.MenuItemCompat;
@@ -140,7 +139,6 @@ import dev.dworks.apps.anexplorer.misc.PinViewHelper.PINDialogFragment;
 import dev.dworks.apps.anexplorer.misc.ProviderExecutor;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
-import dev.dworks.apps.anexplorer.misc.SystemBarTintManager;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentStack;
@@ -244,11 +242,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public void onCreate(Bundle icicle) {
         setTheme(R.style.DocumentsTheme_Document);
-        if(Utils.hasLollipop()){
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        } else if(Utils.hasKitKat()){
-            setTheme(R.style.DocumentsTheme_Translucent);
-        }
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         setUpStatusBar();
         // The TV keyboard is a panel in the middle of the screen; resizing the window around it
         // leaves a black band, so keep the app full size behind it
@@ -297,11 +291,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         mToolbar.setTitleTextAppearance(context, R.style.TextAppearance_AppCompat_Widget_ActionBar_Title);
         applyTvTitleColor();
-        if(Utils.hasKitKat() && !Utils.hasLollipop()) {
-            ((LinearLayout.LayoutParams) mToolbar.getLayoutParams()).setMargins(0, getStatusBarHeight(this), 0, 0);
-            mToolbar.setPadding(0, getStatusBarHeight(this), 0, 0);
-        }
-
 
         mToolbarStack = (PopupSpinner) findViewById(R.id.stack);
         mToolbarStack.setOnItemSelectedListener(mStackListener);
@@ -754,7 +743,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return mToolbarActionMode.onCreateMenu(menu);
         }
         getMenuInflater().inflate(R.menu.activity, menu);
-        replaceSortSubMenu(menu);
 
         final MenuItem searchMenu = menu.findItem(R.id.menu_search);
         mSearchMenuItem = searchMenu;
@@ -865,8 +853,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         menu.findItem(R.id.menu_create_file).setVisible(showActionMenu());
         final MenuItem search = menu.findItem(R.id.menu_search);
         final MenuItem sort = menu.findItem(R.id.menu_sort);
-        // Not in the menu on TV, where sorting has its own panel (showSortPanel)
-        final MenuItem sortSize = menu.findItem(R.id.menu_sort_size);
         final MenuItem grid = menu.findItem(R.id.menu_grid);
         final MenuItem list = menu.findItem(R.id.menu_list);
         final MenuItem settings = menu.findItem(R.id.menu_settings);
@@ -898,11 +884,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
             mIgnoreNextCollapse = true;
             search.collapseActionView();
-        }
-
-        // Only sort by size when visible
-        if (null != sortSize) {
-            sortSize.setVisible(mState.showSize);
         }
 
         final boolean searchVisible;
@@ -1133,25 +1114,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
      */
     public void onStateChanged() {
         invalidateMenu();
-    }
-
-    /**
-     * A toolbar item with a submenu always opens it as the old drop-down, so on TV the sort item
-     * becomes a plain button that opens {@link #showSortPanel()}.
-     */
-    private void replaceSortSubMenu(Menu menu) {
-        final MenuItem sort = menu.findItem(R.id.menu_sort);
-        if (null == sort) {
-            return;
-        }
-        final int group = sort.getGroupId();
-        final int order = sort.getOrder();
-        final CharSequence title = sort.getTitle();
-        final Drawable icon = sort.getIcon();
-        menu.removeItem(R.id.menu_sort);
-        menu.add(group, R.id.menu_sort, order, title)
-                .setIcon(icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
     }
 
     /** "Sort by" panel under the sort button, with the current order checked. */
@@ -2773,23 +2735,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void setUpDefaultStatusBar() {
         int color = ContextCompat.getColor(this, R.color.alertColor);
-        if(Utils.hasLollipop()){
-            getWindow().setStatusBarColor(color);
-        }
-        else if(Utils.hasKitKat()){
-            SystemBarTintManager systemBarTintManager = new SystemBarTintManager(this);
-            systemBarTintManager.setTintColor(Utils.getStatusBarColor(color));
-            systemBarTintManager.setStatusBarTintEnabled(true);
-        }
-    }
-
-    public static int getStatusBarHeight(Context context) {
-        int result = 0;
-        int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resourceId > 0) {
-            result = context.getResources().getDimensionPixelSize(resourceId);
-        }
-        return result;
+        getWindow().setStatusBarColor(color);
     }
 
     private boolean showActionMenu() {

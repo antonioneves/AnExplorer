@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.recyclerview.widget.LinearSnapHelper;
@@ -132,10 +131,5 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
             }
         }
         return false;
-    }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        return super.dispatchTouchEvent(ev);
     }
 }

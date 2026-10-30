@@ -21,7 +21,7 @@ import android.os.Bundle;
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
 import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 
-/** Hosts {@link QuickShareFragment} on its own, for the phone's overflow menu. */
+/** Hosts {@link QuickShareFragment} on its own, for the Quick Share root. */
 public class QuickShareReceiveActivity extends ActionBarActivity {
 
     public static final String TAG = "QuickShareReceive";
