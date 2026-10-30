@@ -2545,6 +2545,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         private View customView;
         private int onColor;
         private Drawable toolbarBackground;
+        private int appTabsVisibility;
+        private int videoTabsVisibility;
 
         ToolbarActionMode(ActionMode.Callback callback) {
             this.callback = callback;
@@ -2560,6 +2562,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             toolbarBackground = mToolbar.getBackground();
             getSupportActionBar().setBackgroundDrawable(background);
             mToolbar.setTitleTextColor(onColor);
+            // The tabs name the screen and would read as actions in the selection header
+            final View appTabs = findViewById(R.id.app_tabs);
+            final View videoTabs = findViewById(R.id.video_tabs);
+            appTabsVisibility = appTabs.getVisibility();
+            videoTabsVisibility = videoTabs.getVisibility();
+            appTabs.setVisibility(View.GONE);
+            videoTabs.setVisibility(View.GONE);
             mToolbarStack.setVisibility(View.GONE);
             mToolbarStack.setAdapter(null);
             final Drawable close = ContextCompat.getDrawable(DocumentsActivity.this, R.drawable.ic_action_close).mutate();
@@ -2692,6 +2701,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                     R.style.TextAppearance_AppCompat_Widget_ActionBar_Title);
             applyTvTitleColor();
             mToolbar.setBackground(toolbarBackground);
+            findViewById(R.id.app_tabs).setVisibility(appTabsVisibility);
+            findViewById(R.id.video_tabs).setVisibility(videoTabsVisibility);
             updateActionBar();
             supportInvalidateOptionsMenu();
         }
