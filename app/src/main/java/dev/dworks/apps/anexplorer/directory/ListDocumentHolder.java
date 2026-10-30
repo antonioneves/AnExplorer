@@ -149,7 +149,8 @@ public class ListDocumentHolder extends DocumentHolder {
         }
 
         final boolean local = !TextUtils.isEmpty(mDoc.path)
-                && ExternalStorageProvider.AUTHORITY.equals(mDoc.authority);
+                && (ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)
+                || MediaDocumentsProvider.AUTHORITY.equals(mDoc.authority));
         if (badgeStarred != null) {
             badgeStarred.setVisibility(local && mEnv.isStarred(mDoc.path) ? View.VISIBLE : View.GONE);
         }
