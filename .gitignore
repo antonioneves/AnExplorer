@@ -30,3 +30,6 @@ demo/apk/
 local.properties
 keystore.properties
 app/google-services.json
+.DS_Store
+app/.DS_Store
+repomix-output.xml
