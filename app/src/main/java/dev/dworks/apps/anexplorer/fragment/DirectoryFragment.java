@@ -158,6 +158,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private int mRefocusPosition = -1;
 	private boolean mReloadAppsOnResume;
 	private int mLastCheckedPosition = -1;
+	// Episodes checked in a show folder's carousels; the file list keeps its own selection
+	private final ArrayList<DocumentInfo> mSelectedEpisodes = new ArrayList<>();
+	private boolean mSelectingEpisodes;
+	private ActionMode mEpisodeActionMode;
 
 	private int mLastMode = MODE_UNKNOWN;
 	private int mLastSortOrder = SORT_ORDER_UNKNOWN;
@@ -616,7 +620,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		updateDisplayState();
 		if (mShowAdapter != null) {
 			// Back from the player, where the viewed and viewing marks may have changed
-			mShowAdapter.notifyDataSetChanged();
+			mShowAdapter.notifyEpisodesChanged();
 		}
 		if (!mUninstallQueue.isEmpty()) {
 			uninstallNext();
@@ -788,7 +792,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			return;
 		}
-		mShowAdapter = new ShowSeasonsAdapter(mActivity, mIconHelper, seasons,
+		mShowAdapter = new ShowSeasonsAdapter(mActivity, mIconHelper, seasons, mStarredPaths,
 				new ShowSeasonsAdapter.OnEpisodeClickListener() {
 					@Override
 					public void onEpisodeClick(DocumentInfo episode) {
@@ -796,21 +800,20 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					}
 
 					@Override
-					public void onEpisodeLongClick(final DocumentInfo episode, View view) {
-						final PopupMenu popup = new PopupMenu(getActivity(), view);
-						popup.getMenuInflater().inflate(R.menu.popup_directory, popup.getMenu());
-						final Menu menu = popup.getMenu();
-						for (int i = 0; i < menu.size(); i++) {
-							menu.getItem(i).setVisible(false);
-						}
-						menu.findItem(R.id.menu_show_in_folder).setVisible(true);
-						SideMenuPopup.show(view, menu, new SideMenuPopup.OnMenuItemClickListener() {
-							@Override
-							public boolean onMenuItemClick(MenuItem item) {
-								((BaseActivity) getActivity()).showInFolder(episode.path);
-								return true;
+					public void onEpisodeLongClick(DocumentInfo episode, View view) {
+						showEpisodePopupMenu(view, episode);
+					}
+
+					@Override
+					public void onEpisodeSelected(DocumentInfo episode, boolean selected) {
+						if (selected) {
+							if (!hasEpisode(episode)) {
+								mSelectedEpisodes.add(episode);
 							}
-						});
+						} else {
+							removeEpisode(episode);
+						}
+						updateEpisodeSelection();
 					}
 				});
 		list.setType(RecyclerViewPlus.TYPE_LIST);
@@ -902,8 +905,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		public boolean onCreateActionMode(ActionMode mode, Menu menu) {
 			editMode = root != null && (root.isEditSupported() || copiesAcross());
 			mode.getMenuInflater().inflate(R.menu.mode_directory, menu);
-			int count = mAdapter.getCheckedItemCount();
-			mode.setTitle(count+"");
+			int count = selectionCount();
+			mode.setTitle(getResources().getString(R.string.mode_selected_count, count));
 			return true;
 		}
 
@@ -918,7 +921,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					activity.setActionMode(true);
 				}
 			}
-			final int count = mAdapter.getCheckedItemCount();
+			final int count = selectionCount();
 			final State state = getDisplayState(DirectoryFragment.this);
 
 			final MenuItem open = menu.findItem(R.id.menu_open);
@@ -927,10 +930,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final MenuItem rename = menu.findItem(R.id.menu_rename);
 
 			final boolean manageMode = state.action == ACTION_BROWSE;
-			final boolean canDelete = doc != null && doc.isDeleteSupported();
-			final boolean canRename = doc != null && doc.isRenameSupported();
+			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
+			final boolean canDelete = mSelectingEpisodes ? allDeletable(checked)
+					: doc != null && doc.isDeleteSupported();
+			final boolean canRename = mSelectingEpisodes ? count == 1 && !checked.isEmpty()
+					&& checked.get(0).isRenameSupported() : doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
-			openWith.setVisible(manageMode && canOpenWith(getCheckedDocuments()));
+			openWith.setVisible(manageMode && canOpenWith(checked));
 			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode && !isRecycleBin());
@@ -956,12 +962,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			final MenuItem cut = menu.findItem(R.id.menu_cut);
 			final MenuItem compress = menu.findItem(R.id.menu_compress);
 			copy.setVisible(editMode);
-			cut.setVisible(editMode && (!copiesAcross() || allDeletable(getCheckedDocuments())));
+			cut.setVisible(editMode && (!copiesAcross() || allDeletable(checked)));
 			compress.setVisible(editMode && !copiesAcross() && !isOperationSupported);
 
 			info.setVisible(count == 1);
 			final MenuItem unbookmark = menu.findItem(R.id.menu_unbookmark);
-			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
 			// Same as the item menu: only folders can be bookmarked, media files are starred
 			final DocumentInfo single = count == 1 && !checked.isEmpty() ? checked.get(0) : null;
 			final boolean canBookmark = null != single && !isRecycleBin()
@@ -971,7 +976,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			if (unbookmark != null) {
 				unbookmark.setVisible(canBookmark && bookmarked);
 			}
-			updateStarItems(menu, getCheckedDocuments());
+			updateStarItems(menu, checked);
+			// Select all belongs to the file list, which has its own positions
+			menu.findItem(R.id.menu_select_all).setVisible(!mSelectingEpisodes);
 
 			if (null != root && root.isApp()) {
 				for (int i = 0; i < menu.size(); i++) {
@@ -992,6 +999,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		@Override
 		public void onDestroyActionMode(ActionMode mode) {
             selectAll = true;
+			if (mSelectingEpisodes) {
+				mSelectingEpisodes = false;
+				mEpisodeActionMode = null;
+				mSelectedEpisodes.clear();
+				if (mShowAdapter != null) {
+					mShowAdapter.setSelection(false, mSelectedEpisodes);
+				}
+			}
 			final Context context = getActivity();
 			// The bar's buttons go with it, and focus would fall to the first thing on screen, the
 			// sidebar; it goes back to the files instead, where the selection was
@@ -1229,6 +1244,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		Utils.showSnackBar(getActivity(), getString(star ? R.string.starred : R.string.unstarred));
 		loadMarkedPaths();
 		mAdapter.notifyDataSetChanged();
+		if (mShowAdapter != null) {
+			// The star badge on the episode cards follows the same list
+			mShowAdapter.notifyEpisodesChanged();
+		}
 	}
 
 	/** Reads which paths are starred or bookmarked, for the badges on the rows */
@@ -1385,6 +1404,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			if (mType == TYPE_RECENT_OPEN) {
 				onUserSortOrderChanged();
+			} else if (isShowFolder()) {
+				// The carousels are rebuilt from the loader, so a deleted episode drops out
+				if (mSelectingEpisodes && id == R.id.menu_delete) {
+					clearSelection();
+				}
+				getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
 			}
 		}
 	}
@@ -1524,76 +1549,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	private void showPopupMenu(View view, final int position) {
-		PopupMenu popup = new PopupMenu(getActivity(), view);
-
+		final PopupMenu popup = new PopupMenu(getActivity(), view);
 		popup.getMenuInflater().inflate(R.menu.popup_directory, popup.getMenu());
 		// TV reaches multi-select through this menu, since long press opens it
 		popup.getMenu().findItem(R.id.menu_select_item).setVisible(true);
-		popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-			@Override
-			public boolean onMenuItemClick(MenuItem menuItem) {
-				return onPopupMenuItemClick(menuItem, position);
-			}
-		});
-		
-		final State state = getDisplayState(DirectoryFragment.this);
-		final MenuItem openWith = popup.getMenu().findItem(R.id.menu_open_with);
-		final MenuItem delete = popup.getMenu().findItem(R.id.menu_delete);
-		final MenuItem rename = popup.getMenu().findItem(R.id.menu_rename);
-		final MenuItem copy = popup.getMenu().findItem(R.id.menu_copy);
-		final MenuItem cut = popup.getMenu().findItem(R.id.menu_cut);
-        final MenuItem compress = popup.getMenu().findItem(R.id.menu_compress);
-        final MenuItem uncompress = popup.getMenu().findItem(R.id.menu_uncompress);
-        final MenuItem bookmark = popup.getMenu().findItem(R.id.menu_bookmark);
-        final MenuItem unbookmark = popup.getMenu().findItem(R.id.menu_unbookmark);
-
-        final Cursor cursor = mAdapter.getItem(position);
-        final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
-		final boolean manageMode = state.action == ACTION_BROWSE;
-		if(null != doc){
-			final boolean isCompressed = doc != null && MimePredicate.mimeMatches(MimePredicate.COMPRESSED_MIMES, doc.mimeType);
-			if(null != compress)
-				compress.setVisible(manageMode && doc.isArchiveSupported() && !isCompressed && !isOperationSupported);
-			if(null != uncompress)
-				uncompress.setVisible(manageMode && doc.isArchiveSupported() && isCompressed && !isOperationSupported);
-			final boolean canBookmark = manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported;
-			final boolean bookmarked = isBookmarkedDoc(doc);
-			if(null != bookmark) {
-				bookmark.setVisible(canBookmark && !bookmarked);
-			}
-			if(null != unbookmark) {
-				unbookmark.setVisible(canBookmark && bookmarked);
-			}
-			final ArrayList<DocumentInfo> single = new ArrayList<>();
-			single.add(doc);
-			openWith.setVisible(manageMode && canOpenWith(single));
-			final MenuItem quickShare = popup.getMenu().findItem(R.id.menu_quickshare);
-			if (quickShare != null) {
-				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType) && !isRecycleBin());
-			}
-			popup.getMenu().findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
-			popup.getMenu().findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
-			if (manageMode) {
-				updateStarItems(popup.getMenu(), single);
-			}
-			delete.setVisible(manageMode && doc.isDeleteSupported());
-			rename.setVisible(manageMode && doc.isRenameSupported());
-			copy.setVisible(manageMode && (doc.isCopySupported() || copiesAcross()));
-			cut.setVisible(manageMode && (doc.isMoveSupported()
-					|| (copiesAcross() && doc.isDeleteSupported())));
-			popup.getMenu().findItem(R.id.menu_show_in_folder).setVisible(manageMode && inMoviesOrShows() && !TextUtils.isEmpty(doc.path));
-		}
-
-		if (null != root && root.isApp()) {
-			final Menu menu = popup.getMenu();
-			for (int i = 0; i < menu.size(); i++) {
-				menu.getItem(i).setVisible(false);
-			}
-			menu.findItem(R.id.menu_select_item).setVisible(true);
-			menu.findItem(R.id.menu_save_apk).setVisible(true);
-			menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
-			menu.findItem(R.id.menu_app_info).setVisible(true);
-		}
+		final Cursor cursor = mAdapter.getItem(position);
+		final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
+		preparePopupMenu(popup.getMenu(), doc);
 
 		// Beside the item, so every option fits on screen without scrolling
 		SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
@@ -1602,6 +1564,90 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				return onPopupMenuItemClick(menuItem, position);
 			}
 		});
+	}
+
+	/** The same menu on an episode card inside a show folder */
+	private void showEpisodePopupMenu(View view, final DocumentInfo episode) {
+		final PopupMenu popup = new PopupMenu(getActivity(), view);
+		popup.getMenuInflater().inflate(R.menu.popup_directory, popup.getMenu());
+		popup.getMenu().findItem(R.id.menu_select_item).setVisible(true);
+		preparePopupMenu(popup.getMenu(), episode);
+
+		SideMenuPopup.show(view, popup.getMenu(), new SideMenuPopup.OnMenuItemClickListener() {
+			@Override
+			public boolean onMenuItemClick(MenuItem menuItem) {
+				if (menuItem.getItemId() == R.id.menu_select_item) {
+					startEpisodeSelection(episode);
+					return true;
+				}
+				final ArrayList<DocumentInfo> docs = new ArrayList<>();
+				docs.add(episode);
+				return handleMenuAction(menuItem, docs);
+			}
+		});
+	}
+
+	/** Hides the options that don't apply to this file or folder, leaving the rest of the menu */
+	private void preparePopupMenu(Menu menu, DocumentInfo doc) {
+		final State state = getDisplayState(DirectoryFragment.this);
+		final MenuItem openWith = menu.findItem(R.id.menu_open_with);
+		final MenuItem delete = menu.findItem(R.id.menu_delete);
+		final MenuItem rename = menu.findItem(R.id.menu_rename);
+		final MenuItem copy = menu.findItem(R.id.menu_copy);
+		final MenuItem cut = menu.findItem(R.id.menu_cut);
+		final MenuItem compress = menu.findItem(R.id.menu_compress);
+		final MenuItem uncompress = menu.findItem(R.id.menu_uncompress);
+		final MenuItem bookmark = menu.findItem(R.id.menu_bookmark);
+		final MenuItem unbookmark = menu.findItem(R.id.menu_unbookmark);
+
+		final boolean manageMode = state.action == ACTION_BROWSE;
+		if (null != doc) {
+			final boolean isCompressed = MimePredicate.mimeMatches(MimePredicate.COMPRESSED_MIMES, doc.mimeType);
+			if (null != compress) {
+				compress.setVisible(manageMode && doc.isArchiveSupported() && !isCompressed && !isOperationSupported);
+			}
+			if (null != uncompress) {
+				uncompress.setVisible(manageMode && doc.isArchiveSupported() && isCompressed && !isOperationSupported);
+			}
+			final boolean canBookmark = manageMode && doc.isBookmarkSupported() && Utils.isDir(doc.mimeType) && !isOperationSupported;
+			final boolean bookmarked = isBookmarkedDoc(doc);
+			if (null != bookmark) {
+				bookmark.setVisible(canBookmark && !bookmarked);
+			}
+			if (null != unbookmark) {
+				unbookmark.setVisible(canBookmark && bookmarked);
+			}
+			final ArrayList<DocumentInfo> single = new ArrayList<>();
+			single.add(doc);
+			openWith.setVisible(manageMode && canOpenWith(single));
+			final MenuItem quickShare = menu.findItem(R.id.menu_quickshare);
+			if (quickShare != null) {
+				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType) && !isRecycleBin());
+			}
+			menu.findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
+			menu.findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
+			if (manageMode) {
+				updateStarItems(menu, single);
+			}
+			delete.setVisible(manageMode && doc.isDeleteSupported());
+			rename.setVisible(manageMode && doc.isRenameSupported());
+			copy.setVisible(manageMode && (doc.isCopySupported() || copiesAcross()));
+			cut.setVisible(manageMode && (doc.isMoveSupported()
+					|| (copiesAcross() && doc.isDeleteSupported())));
+			// Episodes live in a show folder that has no path of its own, so their own path counts
+			menu.findItem(R.id.menu_show_in_folder).setVisible(manageMode
+					&& (inMoviesOrShows() || isShowFolder()) && !TextUtils.isEmpty(doc.path));
+		}
+
+		if (null != root && root.isApp()) {
+			for (int i = 0; i < menu.size(); i++) {
+				menu.getItem(i).setVisible(false);
+			}
+			menu.findItem(R.id.menu_select_item).setVisible(true);
+			menu.findItem(R.id.menu_save_apk).setVisible(true);
+			menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
+			menu.findItem(R.id.menu_app_info).setVisible(true);
+		}
 	}
 
 	@Override
@@ -1662,6 +1708,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** Unselects everything; false when nothing was selected */
 	public boolean clearSelection() {
+		if (mSelectingEpisodes) {
+			if (mEpisodeActionMode != null) {
+				mEpisodeActionMode.finish();
+			}
+			return true;
+		}
 		if (mMultiChoiceHelper == null || mMultiChoiceHelper.getCheckedItemCount() == 0) {
 			return false;
 		}
@@ -1670,6 +1722,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	private ArrayList<DocumentInfo> getCheckedDocuments() {
+		if (mSelectingEpisodes) {
+			return new ArrayList<>(mSelectedEpisodes);
+		}
 		final SparseBooleanArray checked = mAdapter.getCheckedItemPositions();
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();
 		final int size = checked.size();
@@ -1683,6 +1738,55 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 		}
 		return docs;
+	}
+
+	private int selectionCount() {
+		return mSelectingEpisodes ? mSelectedEpisodes.size() : mAdapter.getCheckedItemCount();
+	}
+
+	private boolean hasEpisode(DocumentInfo episode) {
+		for (DocumentInfo selected : mSelectedEpisodes) {
+			if (selected.documentId.equals(episode.documentId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void removeEpisode(DocumentInfo episode) {
+		for (int i = mSelectedEpisodes.size() - 1; i >= 0; i--) {
+			if (mSelectedEpisodes.get(i).documentId.equals(episode.documentId)) {
+				mSelectedEpisodes.remove(i);
+			}
+		}
+	}
+
+	/** Starts selecting episodes in the show folder's carousels, from the one long-pressed */
+	private void startEpisodeSelection(DocumentInfo episode) {
+		mSelectingEpisodes = true;
+		mSelectedEpisodes.clear();
+		mSelectedEpisodes.add(episode);
+		if (mShowAdapter != null) {
+			mShowAdapter.setSelection(true, mSelectedEpisodes);
+		}
+		mEpisodeActionMode = ((BaseActivity) getActivity()).startSupportActionMode(mMultiListener);
+		if (mEpisodeActionMode != null) {
+			mEpisodeActionMode.setTitle(getResources().getString(
+					R.string.mode_selected_count, mSelectedEpisodes.size()));
+		}
+	}
+
+	/** Keeps the selection bar's count and actions in step with the episode cards */
+	private void updateEpisodeSelection() {
+		if (mSelectedEpisodes.isEmpty()) {
+			if (mEpisodeActionMode != null) {
+				mEpisodeActionMode.finish();
+			}
+		} else if (mEpisodeActionMode != null) {
+			mEpisodeActionMode.setTitle(getResources().getString(
+					R.string.mode_selected_count, mSelectedEpisodes.size()));
+			mEpisodeActionMode.invalidate();
+		}
 	}
 
 	public boolean handleMenuAction(MenuItem item){

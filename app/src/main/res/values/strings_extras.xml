@@ -264,6 +264,7 @@
     <string name="menu_star">Star</string>
     <string name="menu_unstar">Unstar</string>
     <string name="starred">Starred</string>
+    <string name="selected">Selected</string>
     <string name="unstarred">Removed from Starred</string>
     <string name="empty_starred">Nothing starred yet</string>
     <string name="empty_starred_hint">Press Menu on a file or folder and choose Star to find it here</string>
