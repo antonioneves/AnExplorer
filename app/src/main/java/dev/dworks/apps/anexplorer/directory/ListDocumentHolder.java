@@ -148,14 +148,11 @@ public class ListDocumentHolder extends DocumentHolder {
             }
         }
 
-        final boolean local = !TextUtils.isEmpty(mDoc.path)
-                && (ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)
-                || MediaDocumentsProvider.AUTHORITY.equals(mDoc.authority));
         if (badgeStarred != null) {
-            badgeStarred.setVisibility(local && mEnv.isStarred(mDoc.path) ? View.VISIBLE : View.GONE);
+            badgeStarred.setVisibility(isStarred() ? View.VISIBLE : View.GONE);
         }
         if (badgeBookmarked != null) {
-            badgeBookmarked.setVisibility(local && Utils.isDir(mDoc.mimeType)
+            badgeBookmarked.setVisibility(isLocal() && Utils.isDir(mDoc.mimeType)
                     && mEnv.isBookmarked(mDoc.path) ? View.VISIBLE : View.GONE);
         }
 
@@ -261,7 +258,11 @@ public class ListDocumentHolder extends DocumentHolder {
             return;
         }
         final boolean poster = isPosterList();
+        final boolean starred = poster && isStarred();
         textSection.setVisibility(poster ? View.GONE : View.VISIBLE);
+        if (badgeStarredPoster != null) {
+            badgeStarredPoster.setVisibility(starred ? View.VISIBLE : View.GONE);
+        }
         if (mPosterLabel == null) {
             if (!poster) {
                 return;
@@ -279,6 +280,12 @@ public class ListDocumentHolder extends DocumentHolder {
             mPosterLabel.setTextColor(0xFFFFFFFF);
             mPosterLabel.setTag(IconHelper.POSTER_LABEL_TAG);
             ((FrameLayout) iconThumb.getParent()).addView(mPosterLabel);
+        }
+        if (poster) {
+            // A starred card keeps the top end clear for its badge
+            final float density = mContext.getResources().getDisplayMetrics().density;
+            mPosterLabel.setPadding((int) (12 * density), (int) (8 * density),
+                    (int) ((starred ? 48 : 12) * density), (int) (24 * density));
         }
         // Hidden once a poster is showing, which the icon helper records on the thumb
         final boolean hasPoster = Boolean.TRUE.equals(iconThumb.getTag(R.id.icon_thumb));
@@ -311,6 +318,17 @@ public class ListDocumentHolder extends DocumentHolder {
     private static String stripExtension(String name) {
         final int dot = name == null ? -1 : name.lastIndexOf('.');
         return dot > 0 ? name.substring(0, dot) : name;
+    }
+
+    /** Starred and bookmarked are stored by path, which media files have too */
+    private boolean isLocal() {
+        return !TextUtils.isEmpty(mDoc.path)
+                && (ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)
+                || MediaDocumentsProvider.AUTHORITY.equals(mDoc.authority));
+    }
+
+    private boolean isStarred() {
+        return isLocal() && mEnv.isStarred(mDoc.path);
     }
 
     @Override

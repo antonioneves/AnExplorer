@@ -728,10 +728,14 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		mIconHelper.setThumbnailsEnabled(state.showThumbnail);
 
 		// Season carousels need full-width rows, so a show folder stays a list in either view mode
+		final RecyclerViewPlus list = (RecyclerViewPlus) getListView();
+		// Movies and TV shows show posters, so their columns are narrower than the file grid's
+		list.setColumnWidth(getResources().getDimensionPixelSize(
+				inMoviesOrShows() ? R.dimen.grid_poster_width : R.dimen.grid_item_width));
 		if (state.derivedMode == MODE_GRID && mShowAdapter == null) {
-			((RecyclerViewPlus)getListView()).setType(TYPE_GRID);
+			list.setType(TYPE_GRID);
 		} else {
-			((RecyclerViewPlus)getListView()).setType(TYPE_LIST);
+			list.setType(TYPE_LIST);
 		}
 		mIconHelper.setViewMode(state.derivedMode);
 		setItemDivider();

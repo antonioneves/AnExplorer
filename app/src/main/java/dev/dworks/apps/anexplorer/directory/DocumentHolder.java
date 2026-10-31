@@ -33,6 +33,7 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
     protected final ImageView icon1;
     protected final ImageView icon2;
     protected final View badgeStarred;
+    protected final View badgeStarredPoster;
     protected final View badgeBookmarked;
     protected final TextView summary;
     protected final TextView date;
@@ -73,6 +74,7 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
         icon1 = (ImageView) itemView.findViewById(android.R.id.icon1);
         icon2 = (ImageView) itemView.findViewById(android.R.id.icon2);
         badgeStarred = itemView.findViewById(R.id.badge_starred);
+        badgeStarredPoster = itemView.findViewById(R.id.badge_starred_poster);
         badgeBookmarked = itemView.findViewById(R.id.badge_bookmarked);
         summary = (TextView) itemView.findViewById(android.R.id.summary);
         date = (TextView) itemView.findViewById(R.id.date);

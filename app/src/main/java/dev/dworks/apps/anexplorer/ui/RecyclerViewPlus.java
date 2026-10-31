@@ -60,6 +60,14 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
         updateLayoutManager();
     }
 
+    /** Changes the width each grid column aims for, so a screen can show smaller or larger cards */
+    public void setColumnWidth(int width) {
+        if (columnWidth != width) {
+            columnWidth = width;
+            requestLayout();
+        }
+    }
+
     private void updateLayoutManager(){
         switch (mType){
             case TYPE_LIST:

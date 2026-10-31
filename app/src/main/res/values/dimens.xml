@@ -36,6 +36,8 @@
 
     <dimen name="grid_item_width">160dp</dimen>
     <dimen name="grid_item_height">144dp</dimen>
+    <!-- Movies and TV shows are posters, so their cards aim for a narrower column -->
+    <dimen name="grid_poster_width">120dp</dimen>
     <dimen name="grid_item_padding">4dp</dimen>
 
     <dimen name="list_item_height">64dp</dimen>

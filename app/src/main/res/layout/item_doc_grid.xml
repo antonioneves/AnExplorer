@@ -61,6 +61,21 @@
                 android:contentDescription="@null"
                 android:scaleType="centerCrop" />
 
+            <!-- Over the poster: the text section that holds the other star badge is hidden there -->
+            <ImageView
+                android:id="@+id/badge_starred_poster"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/poster_badge_background"
+                android:contentDescription="@string/starred"
+                android:padding="5dp"
+                android:src="@drawable/ic_star"
+                android:visibility="gone"
+                app:tint="@color/defaultThemeColor" />
+
         </FrameLayout>
 
         <LinearLayout
