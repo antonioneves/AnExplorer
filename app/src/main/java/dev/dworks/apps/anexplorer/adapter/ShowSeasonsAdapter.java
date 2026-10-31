@@ -48,8 +48,10 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         void onEpisodeSelected(DocumentInfo episode, boolean selected);
     }
 
-    private static final int TYPE_HEADER = 0;
-    private static final int TYPE_ROW = 1;
+    // The folder list shares its recycled view pool with this adapter, so these must not match
+    // DocumentsAdapter's list and grid item types or it hands over a file row to bind as a season
+    private static final int TYPE_HEADER = 100;
+    private static final int TYPE_ROW = 101;
     private static final String PREF_SEASON_COLLAPSED = "show_season_collapsed_";
 
     private static final ExecutorService LOADER = Executors.newSingleThreadExecutor();
