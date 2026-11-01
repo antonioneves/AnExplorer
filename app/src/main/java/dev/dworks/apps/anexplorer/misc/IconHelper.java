@@ -157,18 +157,19 @@ public class IconHelper {
         boolean loadedThumbnail = false;
 
         final String docAuthority = uri.getAuthority();
+        final String docId = DocumentsContract.getDocumentId(uri);
+        final boolean showFolder = isShowFolder(docAuthority, docId);
 
         final boolean supportsThumbnail = (docFlags & DocumentsContract.Document.FLAG_SUPPORTS_THUMBNAIL) != 0;
-        final boolean allowThumbnail = (mMode == MODE_GRID)
+        final boolean allowThumbnail = (mMode == MODE_GRID) || showFolder
                 || MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, mimeType);
         final boolean showThumbnail = supportsThumbnail && allowThumbnail && mThumbnailsEnabled;
         if (showThumbnail) {
             loadedThumbnail =
                 loadThumbnail(uri, docAuthority, docLastModified, docPath,
-                        mimeType, iconThumb, iconMime, subIconMime);
+                        mimeType, showFolder, iconThumb, iconMime, subIconMime);
         }
 
-        final String docId = DocumentsContract.getDocumentId(uri);
         final Drawable mimeIcon = getDocumentIcon(mContext, docAuthority,
                 docId, mimeType, docIcon);
 
@@ -190,15 +191,22 @@ public class IconHelper {
         }
     }
 
+    /** A show or season is a folder whose thumbnail is the show poster */
+    private static boolean isShowFolder(String docAuthority, String docId) {
+        return MediaDocumentsProvider.AUTHORITY.equals(docAuthority)
+                && (docId.startsWith(MediaDocumentsProvider.TYPE_VIDEOS_SHOW + ":")
+                || docId.startsWith(MediaDocumentsProvider.TYPE_VIDEOS_SEASON + ":"));
+    }
+
     private boolean loadThumbnail(Uri uri, String docAuthority, long docLastModified, final String docPath,
-                                  final String mimeType, final ImageView iconThumb,
+                                  final String mimeType, final boolean showFolder, final ImageView iconThumb,
                                   final ImageView iconMime, final View subIconMime) {
         final ThumbnailCache.Result result = mThumbnailCache.getThumbnail(uri, mCurrentSize);
 
         try {
             final Bitmap cachedThumbnail = result.getThumbnail();
             if(result.isExactHit()){
-                setImage(iconThumb, cachedThumbnail, mimeType, docPath);
+                setImage(iconThumb, cachedThumbnail, mimeType, docPath, showFolder);
                 subIconMime.setVisibility(View.INVISIBLE);
             }
 
@@ -212,7 +220,7 @@ public class IconHelper {
                     @Override
                     public void accept(Bitmap bitmap) {
                         if (bitmap != null) {
-                            setImage(iconThumb, bitmap, mimeType, docPath);
+                            setImage(iconThumb, bitmap, mimeType, docPath, showFolder);
                             subIconMime.setVisibility(View.INVISIBLE);
                             animator.accept(iconMime, iconThumb);
                         } else {
@@ -290,9 +298,10 @@ public class IconHelper {
     /** Tag of the name label that the Movies and TV Shows cards show while they have no poster */
     public static final String POSTER_LABEL_TAG = "poster_label";
 
-    private void setImage(ImageView imageView, Bitmap bitmap, String docMimeType, String docPath){
+    private void setImage(ImageView imageView, Bitmap bitmap, String docMimeType, String docPath,
+                          boolean showFolder) {
         imageView.setImageBitmap(bitmap);
-        final boolean poster = isPoster(bitmap, docMimeType);
+        final boolean poster = isPoster(bitmap, docMimeType, showFolder);
         imageView.setScaleType(poster
                 ? ImageView.ScaleType.FIT_CENTER : getIconScaleType(docMimeType, docPath));
         setTextOverlay(imageView, poster);
@@ -358,10 +367,10 @@ public class IconHelper {
         });
     }
 
-    /** A portrait video thumbnail is a TMDB poster, which is shown whole instead of cropped to the tile */
-    private static boolean isPoster(Bitmap bitmap, String docMimeType) {
-        return bitmap != null && docMimeType != null && docMimeType.startsWith("video/")
-                && bitmap.getHeight() > bitmap.getWidth();
+    /** A portrait thumbnail is a poster: a TMDB one for videos, and the show poster for a show folder */
+    private static boolean isPoster(Bitmap bitmap, String docMimeType, boolean showFolder) {
+        return bitmap != null && bitmap.getHeight() > bitmap.getWidth()
+                && (showFolder || (docMimeType != null && docMimeType.startsWith("video/")));
     }
 
     private ImageView.ScaleType getIconScaleType(String docMimeType, String docPath){

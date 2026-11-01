@@ -28,15 +28,21 @@ import java.util.concurrent.Executors;
 import androidx.recyclerview.widget.RecyclerView;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.EpisodeName;
+import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
+import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
+
+import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_GRID;
+import static dev.dworks.apps.anexplorer.BaseActivity.State.MODE_LIST;
 
 /**
- * The seasons of a TV show as collapsible groups, each a header over a horizontal row of its
- * episodes, the same look as the recent media on Home. The provider hands the episodes of a season
- * back already ordered by episode number, so they are shown in the order they arrive.
+ * The seasons of a TV show as collapsible groups, each a header over its episodes. In grid mode
+ * the episodes are poster cards in a horizontal row, like the recent media on Home; in list mode
+ * they are file rows. The provider hands the episodes of a season back already ordered by episode
+ * number, so they are shown in the order they arrive.
  */
 public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -52,6 +58,8 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     // DocumentsAdapter's list and grid item types or it hands over a file row to bind as a season
     private static final int TYPE_HEADER = 100;
     private static final int TYPE_ROW = 101;
+    private static final int TYPE_EPISODE_CARD = 200;
+    private static final int TYPE_EPISODE_LIST = 201;
     private static final String PREF_SEASON_COLLAPSED = "show_season_collapsed_";
 
     private static final ExecutorService LOADER = Executors.newSingleThreadExecutor();
@@ -78,13 +86,16 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final List<Season> mSeasons = new ArrayList<>();
     private final List<Season> mItems = new ArrayList<>();
     private final List<Integer> mItemTypes = new ArrayList<>();
+    private int mMode;
     private boolean mSelecting;
     private boolean mDestroyed;
 
-    public ShowSeasonsAdapter(Context context, IconHelper iconHelper, List<DocumentInfo> seasons,
-                              Set<String> starredPaths, OnEpisodeClickListener listener) {
+    public ShowSeasonsAdapter(Context context, IconHelper iconHelper, int mode,
+                              List<DocumentInfo> seasons, Set<String> starredPaths,
+                              OnEpisodeClickListener listener) {
         mContext = context;
         mIconHelper = iconHelper;
+        mMode = mode;
         mStarredPaths = starredPaths;
         mListener = listener;
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -108,6 +119,17 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             mSelectedIds.add(episode.documentId);
         }
         notifyEpisodesChanged();
+    }
+
+    /** Switches the episodes between poster cards and list rows with the folder's view mode */
+    public void setMode(int mode) {
+        if (mMode == mode) {
+            return;
+        }
+        mMode = mode;
+        notifyEpisodesChanged();
+        // The rows themselves change their layout manager, so every one needs a new layout
+        notifyDataSetChanged();
     }
 
     private void setEpisodeSelected(DocumentInfo episode, boolean selected) {
@@ -285,7 +307,12 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     }
 
     private class RowViewHolder extends RecyclerView.ViewHolder {
-        private final RecyclerView recyclerView;
+        private final RecyclerViewPlus recyclerView;
+        private final int paddingStart;
+        private final int paddingTop;
+        private final int paddingEnd;
+        private final int paddingBottom;
+        private final int minHeight;
 
         RowViewHolder(View v) {
             super(v);
@@ -296,9 +323,21 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             v.setLongClickable(false);
             v.setFocusable(false);
             recyclerView = v.findViewById(R.id.recyclerview);
+            paddingStart = recyclerView.getPaddingStart();
+            paddingTop = recyclerView.getPaddingTop();
+            paddingEnd = recyclerView.getPaddingEnd();
+            paddingBottom = recyclerView.getPaddingBottom();
+            minHeight = recyclerView.getMinimumHeight();
         }
 
         void bind(Season season) {
+            final boolean list = mMode == MODE_LIST;
+            // A list row fills the section, while the carousel keeps the screen edge padding
+            recyclerView.setType(list ? RecyclerViewPlus.TYPE_LIST : RecyclerViewPlus.TYPE_GALLERY);
+            recyclerView.setTrapFocusAtEnd(!list);
+            recyclerView.setPaddingRelative(list ? 0 : paddingStart, list ? 0 : paddingTop,
+                    list ? 0 : paddingEnd, list ? 0 : paddingBottom);
+            recyclerView.setMinimumHeight(list ? 0 : minHeight);
             recyclerView.setAdapter(season.adapter);
         }
     }
@@ -316,9 +355,15 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         @Override
+        public int getItemViewType(int position) {
+            return mMode == MODE_GRID ? TYPE_EPISODE_CARD : TYPE_EPISODE_LIST;
+        }
+
+        @Override
         public EpisodeViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            return new EpisodeViewHolder(LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_recent, parent, false));
+            final boolean card = viewType == TYPE_EPISODE_CARD;
+            return new EpisodeViewHolder(LayoutInflater.from(parent.getContext()).inflate(
+                    card ? R.layout.item_recent : R.layout.item_episode_list, parent, false), card);
         }
 
         @Override
@@ -331,63 +376,45 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             private final ImageView iconThumb;
             private final View iconMimeBackground;
             private final TextView title;
+            private final TextView summary;
+            private final TextView date;
             private final ImageView watchBadge;
             private final ImageView starBadge;
             private final ImageView checkBadge;
             private DocumentInfo episode;
 
-            EpisodeViewHolder(View v) {
+            EpisodeViewHolder(View v, boolean card) {
                 super(v);
                 iconMime = v.findViewById(R.id.icon_mime);
                 iconThumb = v.findViewById(R.id.icon_thumb);
                 iconMimeBackground = v.findViewById(R.id.icon_mime_background);
                 title = v.findViewById(android.R.id.title);
-                if (title != null) {
+                summary = v.findViewById(android.R.id.summary);
+                date = v.findViewById(R.id.date);
+                if (card) {
                     // Label on top, so it doesn't sit over the title printed on posters
                     title.setBackgroundResource(R.drawable.recent_title_scrim_top);
                     ((FrameLayout.LayoutParams) title.getLayoutParams()).gravity = Gravity.TOP;
                     title.setPadding(title.getPaddingLeft(), title.getPaddingBottom(),
                             title.getPaddingRight(), title.getPaddingTop());
+                    final int size = v.getResources().getDimensionPixelSize(R.dimen.episode_badge_size);
+                    final int margin = size / 4;
+                    // Bottom corner, opposite the label on top
+                    watchBadge = addBadge(v, size, margin, Gravity.BOTTOM | Gravity.END,
+                            R.drawable.watch_badge_scrim, 0);
+                    // A starred episode keeps a star in the bottom corner, like the movie posters
+                    starBadge = addBadge(v, size, margin, Gravity.BOTTOM | Gravity.START,
+                            R.drawable.poster_badge_background, R.drawable.ic_star);
+                    // The selection check covers the star's corner while selecting
+                    checkBadge = addBadge(v, size, margin, Gravity.BOTTOM | Gravity.START,
+                            R.drawable.watch_badge_scrim, R.drawable.checkmark_white);
+                    starBadge.setContentDescription(v.getContext().getString(R.string.starred));
+                    checkBadge.setContentDescription(v.getContext().getString(R.string.selected));
+                } else {
+                    watchBadge = v.findViewById(R.id.badge_watch);
+                    starBadge = v.findViewById(R.id.badge_starred);
+                    checkBadge = v.findViewById(R.id.badge_selected);
                 }
-                final int size = v.getResources().getDimensionPixelSize(R.dimen.episode_badge_size);
-                final int margin = size / 4;
-                // Bottom corner, opposite the label on top
-                watchBadge = new ImageView(v.getContext());
-                final FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(size, size,
-                        Gravity.BOTTOM | Gravity.END);
-                badgeParams.setMargins(margin, margin, margin, margin);
-                watchBadge.setLayoutParams(badgeParams);
-                watchBadge.setBackgroundResource(R.drawable.watch_badge_scrim);
-                watchBadge.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
-                watchBadge.setVisibility(View.GONE);
-                ((FrameLayout) iconThumb.getParent()).addView(watchBadge);
-
-                // A starred episode keeps a star in the bottom corner, like the movie posters
-                starBadge = new ImageView(v.getContext());
-                final FrameLayout.LayoutParams starParams = new FrameLayout.LayoutParams(size, size,
-                        Gravity.BOTTOM | Gravity.START);
-                starParams.setMargins(margin, margin, margin, margin);
-                starBadge.setLayoutParams(starParams);
-                starBadge.setBackgroundResource(R.drawable.poster_badge_background);
-                starBadge.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
-                starBadge.setImageResource(R.drawable.ic_star);
-                starBadge.setContentDescription(v.getContext().getString(R.string.starred));
-                starBadge.setVisibility(View.GONE);
-                ((FrameLayout) iconThumb.getParent()).addView(starBadge);
-
-                // The selection check covers the star's corner while selecting
-                checkBadge = new ImageView(v.getContext());
-                final FrameLayout.LayoutParams checkParams = new FrameLayout.LayoutParams(size, size,
-                        Gravity.BOTTOM | Gravity.START);
-                checkParams.setMargins(margin, margin, margin, margin);
-                checkBadge.setLayoutParams(checkParams);
-                checkBadge.setBackgroundResource(R.drawable.watch_badge_scrim);
-                checkBadge.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
-                checkBadge.setImageResource(R.drawable.checkmark_white);
-                checkBadge.setContentDescription(v.getContext().getString(R.string.selected));
-                checkBadge.setVisibility(View.GONE);
-                ((FrameLayout) iconThumb.getParent()).addView(checkBadge);
-
                 v.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -417,6 +444,22 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 });
             }
 
+            private ImageView addBadge(View v, int size, int margin, int gravity,
+                                       int background, int icon) {
+                final ImageView badge = new ImageView(v.getContext());
+                final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(size, size, gravity);
+                params.setMargins(margin, margin, margin, margin);
+                badge.setLayoutParams(params);
+                badge.setBackgroundResource(background);
+                badge.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
+                if (icon != 0) {
+                    badge.setImageResource(icon);
+                }
+                badge.setVisibility(View.GONE);
+                ((FrameLayout) iconThumb.getParent()).addView(badge);
+                return badge;
+            }
+
             void bind(DocumentInfo episode) {
                 this.episode = episode;
                 final int state = mHistory.getState(episode.documentId);
@@ -432,12 +475,26 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 starBadge.setVisibility(starred && !selected ? View.VISIBLE : View.GONE);
                 checkBadge.setVisibility(selected ? View.VISIBLE : View.GONE);
                 itemView.setActivated(selected);
+                final EpisodeName parsed = EpisodeName.parse(episode.displayName);
                 if (title != null) {
                     // The season header already says which show and season, so the card is just the number
-                    final EpisodeName parsed = EpisodeName.parse(episode.displayName);
                     title.setText(parsed != null
                             ? title.getContext().getString(R.string.videos_episode, parsed.episode)
                             : episode.displayName);
+                }
+                if (summary != null) {
+                    // The list row keeps the file name as its second line
+                    summary.setText(parsed != null ? episode.displayName : null);
+                    summary.setVisibility(parsed != null ? View.VISIBLE : View.GONE);
+                }
+                if (date != null) {
+                    if (episode.lastModified == -1) {
+                        date.setText(null);
+                        date.setVisibility(View.GONE);
+                    } else {
+                        date.setText(Utils.formatTime(date.getContext(), episode.lastModified));
+                        date.setVisibility(View.VISIBLE);
+                    }
                 }
                 mIconHelper.stopLoading(iconThumb);
                 iconMime.animate().cancel();

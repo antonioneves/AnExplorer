@@ -29,6 +29,7 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
     private int mType = TYPE_LIST;
     private int columnWidth = -1;
     private Context mContext;
+    private boolean mTrapFocusAtEnd = true;
 
     public RecyclerViewPlus(Context context) {
         this(context, null);
@@ -120,11 +121,16 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
     @Override
     public View focusSearch(View focused, int direction) {
         final View next = super.focusSearch(focused, direction);
-        if (direction == View.FOCUS_DOWN && isVertical() && focused != null
+        if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical() && focused != null
                 && isDescendant(focused) && (next == null || !isDescendant(next))) {
             return focused;
         }
         return next;
+    }
+
+    /** A nested list lets focus leave at its end, instead of holding it on the last row */
+    public void setTrapFocusAtEnd(boolean trap) {
+        mTrapFocusAtEnd = trap;
     }
 
     private boolean isVertical() {

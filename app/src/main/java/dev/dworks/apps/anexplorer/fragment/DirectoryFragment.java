@@ -731,17 +731,21 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
         mProgressBar.setColor(ThemeColors.getAccentColor(getActivity()));
 		mIconHelper.setThumbnailsEnabled(state.showThumbnail);
 
-		// Season carousels need full-width rows, so a show folder stays a list in either view mode
+		// A show folder's rows are season sections, so the outer list stays full width; the
+		// episodes inside follow the view mode.
 		final RecyclerViewPlus list = (RecyclerViewPlus) getListView();
 		// Movies and TV shows show posters, so their columns are narrower than the file grid's
 		list.setColumnWidth(getResources().getDimensionPixelSize(
 				inMoviesOrShows() ? R.dimen.grid_poster_width : R.dimen.grid_item_width));
-		if (state.derivedMode == MODE_GRID && mShowAdapter == null) {
+		if (state.derivedMode == MODE_GRID && !isShowFolder()) {
 			list.setType(TYPE_GRID);
 		} else {
 			list.setType(TYPE_LIST);
 		}
 		mIconHelper.setViewMode(state.derivedMode);
+		if (mShowAdapter != null) {
+			mShowAdapter.setMode(state.derivedMode);
+		}
 		setItemDivider();
 		restoreDisplaySate();
 
@@ -792,7 +796,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			return;
 		}
-		mShowAdapter = new ShowSeasonsAdapter(mActivity, mIconHelper, seasons, mStarredPaths,
+		mShowAdapter = new ShowSeasonsAdapter(mActivity, mIconHelper,
+				getDisplayState(this).derivedMode, seasons, mStarredPaths,
 				new ShowSeasonsAdapter.OnEpisodeClickListener() {
 					@Override
 					public void onEpisodeClick(DocumentInfo episode) {
