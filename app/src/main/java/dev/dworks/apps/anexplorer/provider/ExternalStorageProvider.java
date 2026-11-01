@@ -36,6 +36,7 @@ import android.os.FileObserver;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.os.storage.StorageManager;
+import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import androidx.core.os.EnvironmentCompat;
 import android.support.provider.DocumentFile;
@@ -1020,6 +1021,7 @@ public class ExternalStorageProvider extends StorageProvider {
             if (!RecycleBin.delete(file)) {
                 throw new IllegalStateException("Failed to delete " + file);
             }
+            removeBookmarks(file);
             notifyDocumentsChanged(docId);
             notifyRecycleBinChanged();
             return;
@@ -1027,6 +1029,7 @@ public class ExternalStorageProvider extends StorageProvider {
         // A drive the bin can't be made on, e.g. one only reachable through the system picker,
         // still deletes for good
         if (moveToRecycleBin(file)) {
+            removeBookmarks(file);
             notifyDocumentsChanged(docId);
             return;
         }
@@ -1036,8 +1039,46 @@ public class ExternalStorageProvider extends StorageProvider {
             throw new IllegalStateException("Failed to delete " + file);
         }
 
+        removeBookmarks(file);
         FileUtils.removeMediaStore(getContext(), file);
         notifyDocumentsChanged(docId);
+    }
+
+    /** Bookmarks are stored by path, so a deleted folder would otherwise stay in the sidebar */
+    private void removeBookmarks(File file) {
+        final String path = file.getAbsolutePath();
+        final String prefix = path + File.separator;
+        final ContentResolver resolver = getContext().getContentResolver();
+        final Uri bookmarks = ExplorerProvider.buildBookmark();
+        final ArrayList<String> ids = new ArrayList<>();
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(bookmarks,
+                    new String[]{BaseColumns._ID, ExplorerProvider.BookmarkColumns.PATH},
+                    null, null, null);
+            while (null != cursor && cursor.moveToNext()) {
+                final String bookmarked = cursor.getString(1);
+                // Also drops the bookmarks of folders inside a deleted folder
+                if (path.equals(bookmarked)
+                        || (null != bookmarked && bookmarked.startsWith(prefix))) {
+                    ids.add(cursor.getString(0));
+                }
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        final StringBuilder selection = new StringBuilder(BaseColumns._ID + " IN (");
+        final String[] args = new String[ids.size()];
+        for (int i = 0; i < ids.size(); i++) {
+            selection.append(i == 0 ? "?" : ",?");
+            args[i] = ids.get(i);
+        }
+        selection.append(')');
+        resolver.delete(bookmarks, selection.toString(), args);
+        RootsCache.updateRoots(getContext(), AUTHORITY);
     }
 
     @Override

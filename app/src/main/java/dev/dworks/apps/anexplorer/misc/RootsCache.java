@@ -248,8 +248,15 @@ public class RootsCache {
             final long delta = SystemClock.elapsedRealtime() - start;
             Log.d(TAG, "Update found " + mTaskRoots.size() + " roots in " + delta + "ms");
             synchronized (mLock) {
-                mRoots = mTaskRoots;
-                mStoppedAuthorities = mTaskStoppedAuthorities;
+                if (null != mAuthority) {
+                    // Copying only the changed authority avoids a late task writing back the
+                    // stale copy it made of the others while this one was refreshing
+                    mRoots.remove(mAuthority);
+                    mRoots.putAll(mAuthority, mTaskRoots.get(mAuthority));
+                } else {
+                    mRoots = mTaskRoots;
+                    mStoppedAuthorities = mTaskStoppedAuthorities;
+                }
             }
             mFirstLoad.countDown();
             resolver.notifyChange(sNotificationUri, null, false);
