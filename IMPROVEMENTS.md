@@ -57,6 +57,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Focus goes back to the sidebar after tapping the toolbar with touch.
 - After a touch tap, the first D-pad key only leaves touch mode.
 - A touch long-press behaves oddly in the file list.
-- Home shortcut cards have no long-press or Menu action, and Menu in the sidebar does nothing.
+- Home shortcut cards have no long-press or Menu action; decide what such an action would do.
 - The System root's icon and its place in the sort order.
 - The search box's close animation.

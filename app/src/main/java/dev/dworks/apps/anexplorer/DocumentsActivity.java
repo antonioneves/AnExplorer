@@ -76,6 +76,7 @@ import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
@@ -927,6 +928,19 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
             final View focused = getCurrentFocus();
+            // A list takes the focus for all its rows, so its selected row is the item
+            if (focused instanceof AbsListView) {
+                final AbsListView list = (AbsListView) focused;
+                final View row = list.getSelectedView();
+                final AdapterView.OnItemLongClickListener listener = list.getOnItemLongClickListener();
+                if (row != null && listener != null) {
+                    if (event.getAction() == KeyEvent.ACTION_UP && event.getRepeatCount() == 0) {
+                        listener.onItemLongClick(list, row, list.getSelectedItemPosition(),
+                                list.getSelectedItemId());
+                    }
+                    return true;
+                }
+            }
             if (focused != null && focused.isLongClickable()) {
                 if (event.getAction() == KeyEvent.ACTION_UP && event.getRepeatCount() == 0) {
                     focused.performLongClick();
