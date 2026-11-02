@@ -103,3 +103,7 @@ License
     limitations under the License.
 
 
+
+The app bundles libVLC (https://code.videolan.org/videolan/libvlcjni), which is licensed under the
+LGPL 2.1 or later. It is used unmodified, as a separate library, to play formats the built-in player
+can't read.

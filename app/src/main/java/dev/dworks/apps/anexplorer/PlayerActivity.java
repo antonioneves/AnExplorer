@@ -1,6 +1,7 @@
 package dev.dworks.apps.anexplorer;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -84,8 +85,15 @@ public class PlayerActivity extends Activity {
         mPlayer.addListener(new Player.Listener() {
             @Override
             public void onPlayerError(PlaybackException error) {
-                Log.w("PlayerActivity", "Playback failed", error);
-                Toast.makeText(PlayerActivity.this, R.string.toast_no_application, Toast.LENGTH_LONG).show();
+                Log.w("PlayerActivity", "Playback failed, trying libVLC", error);
+                final Intent vlc = new Intent(PlayerActivity.this, VlcPlayerActivity.class)
+                        .setData(getIntent().getData())
+                        .putExtra(EXTRA_WATCH_KEY, getIntent().getStringExtra(EXTRA_WATCH_KEY));
+                try {
+                    startActivity(vlc);
+                } catch (Exception e) {
+                    Toast.makeText(PlayerActivity.this, R.string.toast_no_application, Toast.LENGTH_LONG).show();
+                }
                 finish();
             }
 

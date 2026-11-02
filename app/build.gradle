@@ -23,6 +23,11 @@ android {
         versionName rootProject.generateVersionName()
         vectorDrawables.useSupportLibrary = true
 
+        // libVLC is large, and Android TVs are all ARM
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+
         // Cloud app keys, from keystore.properties (see README). Google Drive needs none: it is
         // registered in the Google Cloud console by package name and signing certificate
         buildConfigField "String", "DROPBOX_CLIENT_ID", "\"${propOrEmpty('DROPBOX_CLIENT_ID')}\""
@@ -112,5 +117,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.8.0'
     implementation 'androidx.media3:media3-ui:1.8.0'
     implementation 'org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1'
+    // Plays what ExoPlayer can't read (AVI, WMV, APE, ...); LGPL, so it stays a separate library
+    implementation 'org.videolan.android:libvlc-all:3.7.7'
     testImplementation 'junit:junit:4.13.2'
 }
