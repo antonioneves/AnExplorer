@@ -63,7 +63,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - A touch long-press behaves oddly in the file list.
 - Home shortcut cards have no long-press or Menu action, and Menu in the sidebar does nothing.
 - The Recycle Bin and WebDAV have limits (no bin on network storage).
-- The Quick Share Stop button isn't aligned with the rest of the screen.
 - The System root's icon and its place in the sort order.
 - The search box's close animation.
 - The Locked folder is opt-in (the `lockedFolder` setting, off by default).
