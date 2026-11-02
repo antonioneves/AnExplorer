@@ -27,7 +27,7 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Translations: the strings added recently are English only.
 - Trakt: real sign-in, the code screen, matching and both-way sync are untested, and Trakt's current terms and limits haven't been checked.
 - Text fields: check the on-screen keyboard's left key still moves the cursor, and the Note editor, Save field and dark theme with the remote-focus changes.
-- Unit tests for `EpisodeName.parse`, the Trakt key matching and `SortingCursorWrapper`.
+- Unit tests for the Trakt key matching and `SortingCursorWrapper`.
 - Split `DocumentsActivity` and `DirectoryFragment` (each over 2,000 lines), starting with the search and toolbar code.
 - Measure startup on the weakest TV (the Grundig) before optimizing it.
 
