@@ -82,7 +82,7 @@
     <dimen name="detail_inset_horizontal">48dp</dimen>
     <dimen name="detail_inset_vertical">27dp</dimen>
     <!-- Space between the file cards -->
-    <dimen name="doc_card_spacing">12dp</dimen>
+    <dimen name="doc_card_spacing">8dp</dimen>
     <dimen name="roots_title_icon_size">36dp</dimen>
     <dimen name="connection_dialog_margin">24dp</dimen>
     <dimen name="episode_badge_size">28dp</dimen>
