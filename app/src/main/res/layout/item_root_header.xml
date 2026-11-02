@@ -34,4 +34,15 @@
         android:textColor="?android:attr/textColorTertiary"
         tools:text="Media" />
 
+    <!-- Drawn here, not as the list's group indicator, which has no state for a collapsed group -->
+    <ImageView
+        android:id="@+id/expander"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="14dp"
+        android:layout_marginRight="14dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/expander_close" />
+
 </FrameLayout>

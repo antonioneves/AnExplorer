@@ -168,7 +168,9 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             return row.getView(convertView, parent);
         }
         final GroupItem item = new GroupItem((GroupInfo) getGroup(groupPosition));
-        return item.getView(convertView, parent);
+        final View view = item.getView(convertView, parent);
+        item.bindExpander(view, getGroupId(groupPosition), isExpanded);
+        return view;
     }
 
     @Override

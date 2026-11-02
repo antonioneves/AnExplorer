@@ -65,7 +65,6 @@
     <dimen name="toolbar_h_padding">4dp</dimen>
     <dimen name="side_navigation_width">256dp</dimen>
 
-    <dimen name="expander_inset">8dp</dimen>
 
     <integer name="recycler_type">2</integer>
     <dimen name="big_spacing">24dp</dimen>

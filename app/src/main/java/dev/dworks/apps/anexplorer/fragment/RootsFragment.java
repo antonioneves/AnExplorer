@@ -38,7 +38,6 @@ import android.os.Parcelable;
 import android.provider.Settings;
 import androidx.appcompat.app.AlertDialog;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -150,22 +149,6 @@ public class RootsFragment extends Fragment {
             return content != null && content.requestFocus();
         });
 
-        DisplayMetrics metrics = new DisplayMetrics();
-        getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        int width = getResources().getDimensionPixelSize(R.dimen.side_navigation_width);
-
-        boolean rtl = Utils.isRTL();
-        int leftPadding = rtl ? 10 : 60;
-        int rightPadding = rtl ? 50 : 10;
-        int leftWidth = width - Utils.dpToPx(leftPadding);
-        int rightWidth = width - Utils.dpToPx(rightPadding);
-
-        if(Utils.hasJellyBeanMR2()){
-            mList.setIndicatorBoundsRelative(leftWidth, rightWidth);
-
-        } else {
-            mList.setIndicatorBounds(leftWidth, rightWidth);
-        }
         return view;
     }
 
@@ -487,6 +470,20 @@ public class RootsFragment extends Fragment {
         public void bindView(View convertView) {
             final TextView title = (TextView) convertView.findViewById(android.R.id.title);
             title.setText(mLabel);
+        }
+
+        /** The arrow points up while open and rotates down when closed; a recycled row just snaps */
+        public void bindExpander(View view, long groupId, boolean expanded) {
+            final View arrow = view.findViewById(R.id.expander);
+            final float rotation = expanded ? 0f : 180f;
+            final Object last = arrow.getTag(R.id.expander);
+            arrow.setTag(R.id.expander, groupId * 2 + (expanded ? 1 : 0));
+            if (last instanceof Long && (Long) last / 2 == groupId && (Long) last != groupId * 2 + (expanded ? 1 : 0)) {
+                arrow.animate().rotation(rotation).setDuration(200).start();
+            } else {
+                arrow.animate().cancel();
+                arrow.setRotation(rotation);
+            }
         }
 
     }

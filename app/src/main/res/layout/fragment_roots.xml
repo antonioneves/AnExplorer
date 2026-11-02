@@ -49,7 +49,7 @@
             android:layout_weight="1"
             android:clipToPadding="false"
             android:divider="@null"
-            android:groupIndicator="@drawable/expander_group"
+            android:groupIndicator="@null"
             android:paddingTop="8dp" />
 
         <include layout="@layout/pro_layout" />
