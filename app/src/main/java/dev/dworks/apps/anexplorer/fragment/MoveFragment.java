@@ -150,9 +150,13 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		}
 	}
 
+	/** The bar only shows where the files can be pasted: Home, Connections and the like hide it */
 	public void setSaveEnabled(boolean enabled) {
 		mMoveInfo.setEnabled(enabled);
 		mSave.setEnabled(enabled);
+		if (getView() != null) {
+			getView().setVisibility(enabled ? View.VISIBLE : View.GONE);
+		}
 	}
 
 	public void setPending(boolean pending) {
