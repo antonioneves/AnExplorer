@@ -570,7 +570,50 @@ public class MediaDocumentsProvider extends StorageProvider {
 
     @Override
     public void deleteDocument(String docId) throws FileNotFoundException {
-        final Uri target = getUriForDocumentId(docId);
+        final Ident ident = getIdentForDocId(docId);
+        if (TYPE_VIDEOS_SHOW.equals(ident.type) || TYPE_VIDEOS_SEASON.equals(ident.type)) {
+            deleteEpisodes(ident);
+            return;
+        }
+        deleteMedia(getUriForDocumentId(docId));
+    }
+
+    /**
+     * Deleting a show or a season deletes the episodes listed in it, no more: the same
+     * recognised ones the folder shows, so a video of another title never goes with it.
+     */
+    private void deleteEpisodes(Ident ident) throws FileNotFoundException {
+        final boolean season = TYPE_VIDEOS_SEASON.equals(ident.type);
+        final long showId = season ? ident.id / 1000 : ident.id;
+        final java.util.ArrayList<Uri> episodes = new java.util.ArrayList<>();
+        final long token = Binder.clearCallingIdentity();
+        try {
+            final Cursor cursor = getContext().getContentResolver().query(Video.Media.EXTERNAL_CONTENT_URI,
+                    VideoQuery.PROJECTION, null, null, null);
+            try {
+                while (cursor != null && cursor.moveToNext()) {
+                    final String name = cursor.getString(VideoQuery.DISPLAY_NAME);
+                    final EpisodeName episode = EpisodeName.parse(name);
+                    if (episode != null && episode.showId() == showId
+                            && (!season || episode.season == (int) (ident.id % 1000))
+                            && isRecognized(name)) {
+                        episodes.add(ContentUris.withAppendedId(Video.Media.EXTERNAL_CONTENT_URI,
+                                cursor.getLong(VideoQuery._ID)));
+                    }
+                }
+            } finally {
+                IoUtils.closeQuietly(cursor);
+            }
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+        for (Uri episode : episodes) {
+            deleteMedia(episode);
+        }
+        getContext().getContentResolver().notifyChange(Video.Media.EXTERNAL_CONTENT_URI, null, false);
+    }
+
+    private void deleteMedia(Uri target) {
 
         // Delegate to real provider
         final long token = Binder.clearCallingIdentity();
@@ -904,7 +947,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SEASON, showId * 1000 + season));
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.videos_season, season));
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
-        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL);
+        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
     }
 
     /**
@@ -937,7 +980,7 @@ public class MediaDocumentsProvider extends StorageProvider {
         row.add(Document.COLUMN_DOCUMENT_ID, getDocIdForIdent(TYPE_VIDEOS_SHOW, episode.showId()));
         row.add(Document.COLUMN_DISPLAY_NAME, episode.show);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
-        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL);
+        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_THUMBNAIL | Document.FLAG_SUPPORTS_DELETE);
     }
 
     private interface ArtistQuery {
