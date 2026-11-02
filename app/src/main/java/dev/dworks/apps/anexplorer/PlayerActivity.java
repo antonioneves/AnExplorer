@@ -10,6 +10,10 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import androidx.annotation.OptIn;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
@@ -33,6 +37,20 @@ public class PlayerActivity extends Activity {
     public static final String EXTRA_WATCH_KEY = "watch_key";
 
     private static final int CONTROLS_TIMEOUT_MS = 4000;
+
+    /**
+     * ExoPlayer spends seconds probing these before it fails, so they go straight to libVLC. Any
+     * other format ExoPlayer can't read still gets there through onPlayerError.
+     */
+    private static final Set<String> VLC_ONLY_TYPES = new HashSet<>(Arrays.asList(
+            "video/x-ms-wmv", "video/x-ms-asf", "video/vnd.rn-realvideo", "video/wtv", "video/x-amv",
+            "video/mxf", "video/x-mtv", "video/x-nsv", "video/x-nuv", "video/x-nut", "video/x-gxf",
+            "video/x-mxg", "video/x-gvi", "video/x-bink", "video/x-dv", "video/dv", "video/x-dirac",
+            "video/x-xesc",
+            "audio/x-ms-wma", "audio/x-ape", "audio/x-wavpack", "audio/x-dsf", "audio/x-musepack",
+            "audio/x-oma", "audio/x-tta", "audio/x-vqf", "audio/x-xa", "audio/x-w64", "audio/x-voc",
+            "audio/x-caf", "audio/x-pn-realaudio", "audio/x-mod", "audio/x-xm", "audio/x-s3m",
+            "audio/x-it", "audio/x-669"));
 
     private PlayerView mPlayerView;
     private Player mPlayer;
@@ -79,6 +97,13 @@ public class PlayerActivity extends Activity {
             finish();
             return;
         }
+        mEnded = false;
+        mHistory = new WatchHistory(this);
+        mWatchKey = getIntent().getStringExtra(EXTRA_WATCH_KEY);
+        if (VLC_ONLY_TYPES.contains(getIntent().getType())) {
+            startVlc();
+            return;
+        }
         mPlayer = new ExoPlayer.Builder(this,
                 new DefaultRenderersFactory(this)
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
@@ -86,9 +111,6 @@ public class PlayerActivity extends Activity {
         mPlayer.addListener(mListener);
         mPlayerView.setPlayer(mPlayer);
         mPlayer.setMediaItem(MediaItem.fromUri(uri));
-        mEnded = false;
-        mHistory = new WatchHistory(this);
-        mWatchKey = getIntent().getStringExtra(EXTRA_WATCH_KEY);
         start();
     }
 
@@ -120,6 +142,10 @@ public class PlayerActivity extends Activity {
     /** The formats ExoPlayer can't read go to libVLC, which plays through the same controls */
     private void switchToVlc() {
         mPlayer.release();
+        startVlc();
+    }
+
+    private void startVlc() {
         mPlayer = new VlcPlayer(this, getIntent().getData());
         mPlayer.addListener(mListener);
         // libVLC reports no tracks, so the black shutter would otherwise cover its picture
