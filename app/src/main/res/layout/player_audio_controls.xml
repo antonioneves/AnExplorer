@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The video player's bar without what a single audio file has no use for: previous, next,
+     subtitles and settings. The ids are the ones media3's PlayerControlView looks for. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:id="@id/exo_bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="28dp"
+        android:layout_marginEnd="48dp"
+        android:layout_marginStart="48dp"
+        android:background="@drawable/player_bar_background"
+        android:gravity="center_vertical"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal"
+        android:paddingEnd="20dp"
+        android:paddingStart="20dp">
+
+        <ImageButton
+            android:id="@id/exo_rew"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_rewind_description"
+            android:src="@drawable/ic_player_rewind" />
+
+        <ImageButton
+            android:id="@id/exo_play_pause"
+            style="@style/PlayerButton"
+            android:src="@drawable/exo_styled_controls_play" />
+
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/exo_controls_fastforward_description"
+            android:src="@drawable/ic_player_forward" />
+
+        <TextView
+            android:id="@id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:includeFontPadding="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp" />
+
+        <androidx.media3.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            app:bar_height="4dp"
+            app:buffered_color="#66FFFFFF"
+            app:played_color="@color/accentColor"
+            app:scrubber_drawable="@drawable/player_timebar_scrubber"
+            app:unplayed_color="#33FFFFFF" />
+
+        <TextView
+            android:id="@id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:includeFontPadding="false"
+            android:textColor="#B3FFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+</merge>

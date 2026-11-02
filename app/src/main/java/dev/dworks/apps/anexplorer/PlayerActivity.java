@@ -1,13 +1,18 @@
 package dev.dworks.apps.anexplorer;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Arrays;
@@ -16,6 +21,7 @@ import java.util.Set;
 
 import androidx.annotation.OptIn;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
@@ -35,6 +41,8 @@ public class PlayerActivity extends Activity {
 
     /** Document id of the video, so the episode cards can show how far it got */
     public static final String EXTRA_WATCH_KEY = "watch_key";
+    /** File name, shown for audio files with no title tag */
+    public static final String EXTRA_NAME = "player_name";
 
     private static final int CONTROLS_TIMEOUT_MS = 4000;
 
@@ -54,6 +62,7 @@ public class PlayerActivity extends Activity {
 
     private PlayerView mPlayerView;
     private Player mPlayer;
+    private boolean mAudio;
     private boolean mScrubbing;
     private boolean mEnded;
     private String mWatchKey;
@@ -65,7 +74,16 @@ public class PlayerActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        mPlayerView = new PlayerView(this);
+        final String type = getIntent().getType();
+        mAudio = type != null && type.startsWith("audio/");
+        if (mAudio) {
+            setContentView(R.layout.player_audio);
+            mPlayerView = findViewById(R.id.player_view);
+            showNowPlaying(MediaMetadata.EMPTY);
+        } else {
+            mPlayerView = new PlayerView(this);
+            setContentView(mPlayerView);
+        }
         mPlayerView.setFocusable(true);
         // The stock slide-down stutters on TVs, so the controls fade in and out instead
         mPlayerView.setControllerAnimationEnabled(false);
@@ -86,7 +104,6 @@ public class PlayerActivity extends Activity {
             timeBar.setFocusable(true);
             timeBar.setOnFocusChangeListener((v, hasFocus) -> setScrubbing(false));
         }
-        setContentView(mPlayerView);
     }
 
     @Override
@@ -137,7 +154,65 @@ public class PlayerActivity extends Activity {
                 finish();
             }
         }
+
+        @Override
+        public void onMediaMetadataChanged(MediaMetadata metadata) {
+            if (mAudio) {
+                showNowPlaying(metadata);
+            }
+        }
     };
+
+    /**
+     * The tags come from the player already reading the file: opening it a second time to read them
+     * could break playback on network storage that only allows one transfer per connection.
+     */
+    private void showNowPlaying(MediaMetadata metadata) {
+        final TextView title = findViewById(R.id.player_title);
+        title.setText(TextUtils.isEmpty(metadata.title) ? fileName() : metadata.title);
+        showTag(findViewById(R.id.player_artist), metadata.artist);
+        showTag(findViewById(R.id.player_album), metadata.albumTitle);
+        final Bitmap art = decodeArtwork(metadata.artworkData);
+        if (art != null) {
+            final ImageView view = findViewById(R.id.player_art);
+            view.setPadding(0, 0, 0, 0);
+            view.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            view.setClipToOutline(true);
+            view.setImageBitmap(art);
+        }
+    }
+
+    private static void showTag(TextView view, CharSequence tag) {
+        view.setText(tag);
+        view.setVisibility(TextUtils.isEmpty(tag) ? View.GONE : View.VISIBLE);
+    }
+
+    private String fileName() {
+        final String name = getIntent().getStringExtra(EXTRA_NAME);
+        if (name != null) {
+            return name;
+        }
+        final Uri uri = getIntent().getData();
+        final String segment = uri == null ? null : uri.getLastPathSegment();
+        return segment == null ? "" : segment.substring(segment.lastIndexOf('/') + 1);
+    }
+
+    /** Covers can be several thousand pixels wide, far more than the space they get here */
+    private Bitmap decodeArtwork(byte[] data) {
+        if (data == null) {
+            return null;
+        }
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(data, 0, data.length, options);
+        final int size = findViewById(R.id.player_art).getLayoutParams().width;
+        options.inSampleSize = 1;
+        while (Math.min(options.outWidth, options.outHeight) / (options.inSampleSize * 2) >= size) {
+            options.inSampleSize *= 2;
+        }
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeByteArray(data, 0, data.length, options);
+    }
 
     /** The formats ExoPlayer can't read go to libVLC, which plays through the same controls */
     private void switchToVlc() {
@@ -160,7 +235,12 @@ public class PlayerActivity extends Activity {
         }
         mPlayer.prepare();
         mPlayer.play();
-        mPlayerView.requestFocus();
+        if (mAudio) {
+            mPlayerView.showController();
+            mPlayerView.findViewById(androidx.media3.ui.R.id.exo_play_pause).requestFocus();
+        } else {
+            mPlayerView.requestFocus();
+        }
     }
 
     private void setScrubbing(boolean scrubbing) {
@@ -185,7 +265,10 @@ public class PlayerActivity extends Activity {
                 controls.animate().alpha(1f).setDuration(200).withEndAction(null);
             }
         }
-        mPlayerView.postDelayed(mHideControls, CONTROLS_TIMEOUT_MS);
+        // With no picture to uncover, hiding the controls would only leave an empty screen
+        if (!mAudio) {
+            mPlayerView.postDelayed(mHideControls, CONTROLS_TIMEOUT_MS);
+        }
     }
 
     private void fadeOutControls() {

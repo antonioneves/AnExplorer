@@ -12,6 +12,7 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.SimpleBasePlayer;
@@ -23,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.interfaces.IMedia;
 import org.videolan.libvlc.interfaces.IVLCVout;
 
 import java.util.ArrayList;
@@ -63,6 +65,8 @@ public final class VlcPlayer extends SimpleBasePlayer {
     private int mPlaybackState = Player.STATE_IDLE;
     private long mPendingSeek = C.TIME_UNSET;
     private PlaybackException mError;
+    @Nullable
+    private MediaMetadata mMetadata;
 
     public VlcPlayer(Context context, Uri uri) {
         super(Looper.getMainLooper());
@@ -91,6 +95,10 @@ public final class VlcPlayer extends SimpleBasePlayer {
                     mPlayer.setTime(mPendingSeek);
                     mPendingSeek = C.TIME_UNSET;
                 }
+                if (!mStarted) {
+                    readMetadata();
+                    invalidateState();
+                }
                 mStarted = true;
                 state = Player.STATE_READY;
                 break;
@@ -117,6 +125,22 @@ public final class VlcPlayer extends SimpleBasePlayer {
         }
     }
 
+    /** libVLC has the file's tags once it is playing it */
+    private void readMetadata() {
+        final IMedia media = mPlayer.getMedia();
+        if (media == null) {
+            return;
+        }
+        // A file with no title tag gets its location as the title, which for us is "fd://129"
+        final String title = media.getMeta(IMedia.Meta.Title, true);
+        mMetadata = new MediaMetadata.Builder()
+                .setTitle(title != null && title.startsWith("fd://") ? null : title)
+                .setArtist(media.getMeta(IMedia.Meta.Artist, true))
+                .setAlbumTitle(media.getMeta(IMedia.Meta.Album, true))
+                .build();
+        media.release();
+    }
+
     @Override
     protected State getState() {
         if (!mReleased) {
@@ -125,6 +149,7 @@ public final class VlcPlayer extends SimpleBasePlayer {
         }
         final MediaItemData item = new MediaItemData.Builder(mUri)
                 .setMediaItem(mMediaItem)
+                .setMediaMetadata(mMetadata)
                 .setDurationUs(mLength != C.TIME_UNSET ? mLength * 1000 : C.TIME_UNSET)
                 .setIsSeekable(true)
                 .build();

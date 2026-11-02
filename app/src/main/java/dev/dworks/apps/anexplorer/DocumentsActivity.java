@@ -2145,6 +2145,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             if (isPlayable(doc.mimeType, doc.displayName)) {
                 view.setClass(this, PlayerActivity.class);
                 view.putExtra(PlayerActivity.EXTRA_WATCH_KEY, doc.documentId);
+                view.putExtra(PlayerActivity.EXTRA_NAME, doc.displayName);
             } else if (PreviewActivity.supports(doc.mimeType, doc.displayName)) {
                 view.setClass(this, PreviewActivity.class);
                 view.putExtra(PreviewActivity.EXTRA_NAME, doc.displayName);
