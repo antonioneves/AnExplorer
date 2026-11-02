@@ -44,6 +44,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import androidx.annotation.GuardedBy;
 import dev.dworks.apps.anexplorer.network.NetworkClient;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.network.NetworkFile;
 
@@ -197,8 +198,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 // Tells an unreachable server apart from an empty folder
                 final Bundle extras = new Bundle();
                 extras.putString(DocumentsContract.EXTRA_ERROR,
-                        getContext().getString(again instanceof WebDavNetworkClient.LoginRefusedException
-                                ? R.string.server_login_refused : R.string.server_connect_failed));
+                        getContext().getString(errorMessage(again)));
                 result.setExtras(extras);
                 files = new FTPFile[0];
             }
@@ -207,6 +207,16 @@ public class NetworkStorageProvider extends DocumentsProvider {
             includeFile(result, null, new NetworkFile(parent, file));
         }
         return result;
+    }
+
+    private static int errorMessage(IOException e) {
+        if (e instanceof WebDavNetworkClient.LoginRefusedException) {
+            return R.string.server_login_refused;
+        }
+        if (e instanceof SmbNetworkClient.SharesUnavailableException) {
+            return R.string.server_shares_unavailable;
+        }
+        return R.string.server_connect_failed;
     }
 
     private static FTPFile[] listFiles(NetworkConnection connection, NetworkFile folder)

@@ -23,7 +23,7 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Set the release secrets in GitHub (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) so the release workflow can sign builds.
 - Audit every move path to confirm the source is deleted only after the copy is confirmed complete.
 - More unit tests: the sidebar grouping in `RootsExpandableAdapter.processRoots` needs a `Context` for its titles; passing the titles in would make it testable.
-- Show a friendlier message when listing an SMB server's shares fails, instead of the raw smbj error.
+- SMB: check the new messages for a refused login and a server that won't list its shares (built, not seen on a real server).
 - Translations: the strings added recently are English only.
 - Trakt: real sign-in, the code screen, matching and both-way sync are untested, and Trakt's current terms and limits haven't been checked.
 - Text fields: check the on-screen keyboard's left key still moves the cursor, and the Note editor, Save field and dark theme with the remote-focus changes.

@@ -62,6 +62,13 @@ public class SmbNetworkClient extends NetworkClient {
     public static final String SCHEME = "smb";
     public static final int DEFAULT_PORT = 445;
 
+    /** The server is there, but won't say which shares it has; a share named in the connection still opens */
+    public static class SharesUnavailableException extends IOException {
+        SharesUnavailableException(Throwable cause) {
+            super(cause);
+        }
+    }
+
     /** Folders and printers both appear as shares; only these hold files */
     private static final int SHARE_TYPE_MASK = 0xFF;
     private static final int SHARE_TYPE_DISK = 0;
@@ -151,6 +158,11 @@ public class SmbNetworkClient extends NetworkClient {
             if (share != null) {
                 share(share);
             }
+        } catch (SMBApiException e) {
+            if (e.getStatus() == NtStatus.STATUS_LOGON_FAILURE) {
+                throw new WebDavNetworkClient.LoginRefusedException(e.getMessage());
+            }
+            throw dropped(e);
         } catch (SMBRuntimeException e) {
             throw dropped(e);
         }
@@ -394,7 +406,7 @@ public class SmbNetworkClient extends NetworkClient {
             transport.bind(Interface.SRVSVC_V3_0, Interface.NDR_32BIT_V2);
             shares = new ServerService(transport).getShares1();
         } catch (SMBRuntimeException e) {
-            throw dropped(e);
+            throw new SharesUnavailableException(dropped(e));
         }
         final List<FTPFile> files = new ArrayList<>();
         for (NetShareInfo1 share : shares) {
