@@ -124,7 +124,6 @@ dependencies {
     implementation 'androidx.interpolator:interpolator:1.0.0'
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.vectordrawable:vectordrawable-animated:1.2.0'
-    implementation 'com.github.javiersantos:AppUpdater:2.7'
     // Embedded player; the ffmpeg decoder adds the audio codecs ExoPlayer lacks (DTS, AC3, ...)
     implementation 'androidx.media3:media3-exoplayer:1.8.0'
     implementation 'androidx.media3:media3-ui:1.8.0'

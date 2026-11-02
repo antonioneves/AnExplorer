@@ -93,10 +93,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.github.javiersantos.appupdater.AppUpdater;
-import com.github.javiersantos.appupdater.enums.Display;
-import com.github.javiersantos.appupdater.enums.UpdateFrom;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -350,16 +346,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if(!PermissionUtil.hasStoragePermission(this)) {
             requestStoragePermissions();
         }
-        checkLatestVersion();
-    }
-
-    private void checkLatestVersion() {
-        UpdateFrom updateFrom = Utils.isGoogleBuild() ? UpdateFrom.GOOGLE_PLAY : UpdateFrom.AMAZON;
-        AppUpdater appUpdater = new AppUpdater(this)
-                .showEvery(3)
-                .setUpdateFrom(updateFrom)
-                .setDisplay(Display.DIALOG);
-        appUpdater.start();
     }
 
     @Override

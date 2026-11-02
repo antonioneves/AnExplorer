@@ -329,10 +329,6 @@ public class Utils extends UtilsFlavour{
         return MimePredicate.mimeMatches(DocumentsContract.Document.MIME_TYPE_DIR, mimeType);
     }
 
-    public static boolean isGoogleBuild(){
-        return true;
-    }
-
     public static boolean hasFeature(Context context, String feature) {
         return context.getPackageManager().hasSystemFeature(feature);
     }
