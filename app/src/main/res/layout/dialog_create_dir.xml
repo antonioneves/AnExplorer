@@ -20,7 +20,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:padding="?android:attr/listPreferredItemPaddingRight">
 
-    <EditText
+    <dev.dworks.apps.anexplorer.ui.RemoteEditText
         android:id="@android:id/text1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

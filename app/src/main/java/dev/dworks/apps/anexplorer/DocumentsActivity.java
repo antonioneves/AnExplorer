@@ -144,6 +144,7 @@ import dev.dworks.apps.anexplorer.model.DocumentsContract.Root;
 import dev.dworks.apps.anexplorer.model.DurableUtils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.ui.RemoteText;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
@@ -1322,11 +1323,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
-    private static boolean isSearchKeyboardShown(View field) {
-        final WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(field);
-        return insets != null && insets.isVisible(WindowInsetsCompat.Type.ime());
-    }
-
     private void showSearchKeyboard(View field) {
         field.requestFocus();
         final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -1454,17 +1450,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                         || keyCode == KeyEvent.KEYCODE_ENTER)) {
                     showSearchKeyboard(v);
                 }
-                // With the keyboard hidden, the remote's left and right leave the field instead of
-                // walking the cursor letter by letter. Keys sent by the keyboard itself still move
-                // the cursor: it repeats them until the cursor moves, so swallowing them loops forever
-                if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
-                        && (event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == 0 && !isSearchKeyboardShown(v)) {
+                // With the keyboard hidden, the remote's left and right leave the field
+                if (RemoteText.isRemoteMove(v, keyCode, event)) {
                     if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                        final View next = v.focusSearch(keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                ? View.FOCUS_LEFT : View.FOCUS_RIGHT);
-                        if (next != null) {
-                            next.requestFocus();
-                        }
+                        RemoteText.moveFocus(v, keyCode);
                     }
                     return true;
                 }

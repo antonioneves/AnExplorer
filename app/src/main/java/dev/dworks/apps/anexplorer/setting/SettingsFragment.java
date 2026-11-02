@@ -39,6 +39,7 @@ import dev.dworks.apps.anexplorer.misc.Trakt;
 import dev.dworks.apps.anexplorer.misc.TraktSignInActivity;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
+import dev.dworks.apps.anexplorer.ui.RemoteEditText;
 
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_ADVANCED_DEVICES;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_FILE_HIDDEN;
@@ -253,7 +254,7 @@ public class SettingsFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 final Context context = getActivity();
-                final EditText input = new EditText(context);
+                final EditText input = new RemoteEditText(context);
                 input.setSingleLine(true);
                 input.setHint(R.string.pref_cloud_key_hint);
                 input.setInputType(InputType.TYPE_CLASS_TEXT | (secret

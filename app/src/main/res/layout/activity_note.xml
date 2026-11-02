@@ -24,7 +24,7 @@
                 android:scrollbarStyle="outsideOverlay"
                 android:scrollbars="vertical">
 
-                <EditText
+                <dev.dworks.apps.anexplorer.ui.RemoteEditText
                     android:id="@+id/input"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

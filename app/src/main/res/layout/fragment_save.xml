@@ -41,13 +41,12 @@
             android:textAppearance="?android:attr/textAppearanceSmall"
             app:srcCompat="@drawable/ic_action_close" />
 
-        <EditText
+        <dev.dworks.apps.anexplorer.ui.RemoteEditText
             android:id="@android:id/title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="start"
             android:layout_weight="1"
-            android:selectAllOnFocus="true"
             android:singleLine="true"
             android:textAlignment="viewStart"
             android:textColor="@android:color/white"
