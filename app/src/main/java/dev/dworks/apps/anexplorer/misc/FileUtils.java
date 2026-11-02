@@ -496,7 +496,7 @@ public class FileUtils {
         final int lastDot = name.lastIndexOf('.');
         if (lastDot >= 0) {
             final String extension = name.substring(lastDot + 1).toLowerCase();
-            final String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            final String mime = MimeTypes.getMimeTypeFromExtension(extension);
             if (mime != null) {
                 return mime;
             }

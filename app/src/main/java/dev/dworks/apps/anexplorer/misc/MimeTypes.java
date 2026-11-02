@@ -10,11 +10,16 @@ public final class MimeTypes {
 
     public static final String ALL_MIME_TYPES = "*/*";
     private static final HashMap<String, String> MIME_TYPES = new HashMap<String, String>();
+    /** Extensions the platform maps to something else, though they are media files */
+    private static final HashMap<String, String> MEDIA_OVERRIDES = new HashMap<String, String>();
     public static final String BASIC_MIME_TYPE = "application/octet-stream";
 
     private MimeTypes() {}
 
     static {
+        MEDIA_OVERRIDES.put("mpc", "audio/x-musepack");
+        MEDIA_OVERRIDES.put("mxf", "video/mxf");
+
         MIME_TYPES.put("asm", "text/x-asm");
         MIME_TYPES.put("def", "text/plain");
         MIME_TYPES.put("in", "text/plain");
@@ -124,6 +129,64 @@ public final class MimeTypes {
         MIME_TYPES.put("adts", "audio/aac");
         MIME_TYPES.put("mid", "audio/midi");
         MIME_TYPES.put("midi", "audio/midi");
+
+        // Formats VLC opens that neither the platform map nor the lists above cover
+        MIME_TYPES.put("m2t", "video/mp2t");
+        MIME_TYPES.put("tod", "video/mp2t");
+        MIME_TYPES.put("tts", "video/mp2t");
+        MIME_TYPES.put("rec", "video/mp2t");
+        MIME_TYPES.put("vro", "video/mpeg");
+        MIME_TYPES.put("m1v", "video/mpeg");
+        MIME_TYPES.put("mp2v", "video/mpeg");
+        MIME_TYPES.put("mpv2", "video/mpeg");
+        MIME_TYPES.put("mpeg1", "video/mpeg");
+        MIME_TYPES.put("mpeg2", "video/mpeg");
+        MIME_TYPES.put("mp4v", "video/mp4");
+        MIME_TYPES.put("ismv", "video/mp4");
+        MIME_TYPES.put("3gp2", "video/3gpp2");
+        MIME_TYPES.put("3gpp", "video/3gpp");
+        MIME_TYPES.put("wm", "video/x-ms-wmv");
+        MIME_TYPES.put("mtv", "video/x-mtv");
+        MIME_TYPES.put("nsv", "video/x-nsv");
+        MIME_TYPES.put("nuv", "video/x-nuv");
+        MIME_TYPES.put("nut", "video/x-nut");
+        MIME_TYPES.put("gxf", "video/x-gxf");
+        MIME_TYPES.put("mxg", "video/x-mxg");
+        MIME_TYPES.put("gvi", "video/x-gvi");
+        MIME_TYPES.put("bik", "video/x-bink");
+        MIME_TYPES.put("dv", "video/x-dv");
+        MIME_TYPES.put("drc", "video/x-dirac");
+        MIME_TYPES.put("xesc", "video/x-xesc");
+        MIME_TYPES.put("ogx", "application/ogg");
+
+        MIME_TYPES.put("3ga", "audio/3gpp");
+        MIME_TYPES.put("a52", "audio/ac3");
+        MIME_TYPES.put("aob", "audio/vnd.dvd.aob");
+        MIME_TYPES.put("mlp", "audio/x-mlp");
+        MIME_TYPES.put("adt", "audio/aac");
+        MIME_TYPES.put("mp1", "audio/mpeg");
+        MIME_TYPES.put("mp2", "audio/mpeg");
+        MIME_TYPES.put("mpga", "audio/mpeg");
+        MIME_TYPES.put("oma", "audio/x-oma");
+        MIME_TYPES.put("tta", "audio/x-tta");
+        MIME_TYPES.put("vqf", "audio/x-vqf");
+        MIME_TYPES.put("xa", "audio/x-xa");
+        MIME_TYPES.put("w64", "audio/x-w64");
+        MIME_TYPES.put("voc", "audio/x-voc");
+        MIME_TYPES.put("caf", "audio/x-caf");
+        MIME_TYPES.put("awb", "audio/amr-wb");
+        MIME_TYPES.put("amr", "audio/amr");
+        MIME_TYPES.put("rmi", "audio/midi");
+        MIME_TYPES.put("m4p", "audio/mp4");
+        MIME_TYPES.put("aifc", "audio/x-aiff");
+        MIME_TYPES.put("ra", "audio/x-pn-realaudio");
+
+        // Tracker modules
+        MIME_TYPES.put("mod", "audio/x-mod");
+        MIME_TYPES.put("xm", "audio/x-xm");
+        MIME_TYPES.put("s3m", "audio/x-s3m");
+        MIME_TYPES.put("it", "audio/x-it");
+        MIME_TYPES.put("669", "audio/x-669");
     }
 
     public static String getMimeTypeFromExtension(String extension) {
@@ -131,7 +194,10 @@ public final class MimeTypes {
 
         if (!TextUtils.isEmpty(extension)) {
             final String extensionLowerCase = extension.toLowerCase(Locale.getDefault());
-            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extensionLowerCase);
+            type = MEDIA_OVERRIDES.get(extensionLowerCase);
+            if (type == null) {
+                type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extensionLowerCase);
+            }
             if (type == null) {
                 //extra mime types map
                 type = MIME_TYPES.get(extensionLowerCase);
