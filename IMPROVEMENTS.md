@@ -53,10 +53,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Unstarring one of two Starred items, and focus in the list afterwards.
 
 ## Known issues
-- In the nested Home gallery, Down doesn't always move to the next row.
-- Focus goes back to the sidebar after tapping the toolbar with touch.
-- After a touch tap, the first D-pad key only leaves touch mode.
-- A touch long-press behaves oddly in the file list.
 - Home shortcut cards have no long-press or Menu action; decide what such an action would do.
 - The System root's icon and its place in the sort order.
 - The search box's close animation.
