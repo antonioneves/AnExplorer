@@ -305,7 +305,7 @@ public final class Trakt {
     }
 
     /** How a video is looked up: show, season and episode for an episode, else title and year */
-    private static String watchedKey(String fileName) {
+    static String watchedKey(String fileName) {
         final EpisodeName episode = EpisodeName.parse(fileName);
         if (episode != null) {
             return "e:" + normalize(episode.show) + ":" + episode.season + ":" + episode.episode;

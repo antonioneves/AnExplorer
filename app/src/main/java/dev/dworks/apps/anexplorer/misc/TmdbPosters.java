@@ -64,7 +64,7 @@ public final class TmdbPosters {
     }
 
     private static Query parse(String fileName) {
-        if (TextUtils.isEmpty(fileName)) {
+        if (fileName == null || fileName.isEmpty()) {
             return null;
         }
         final String base = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
