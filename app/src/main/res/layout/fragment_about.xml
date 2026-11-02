@@ -9,11 +9,10 @@
     android:padding="24dp">
 
     <ImageView
-        android:id="@+id/about_logo"
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:contentDescription="@null"
-        android:src="@drawable/logo_splash" />
+        android:src="@drawable/ic_app_folder" />
 
     <TextView
         android:id="@+id/about_version"
