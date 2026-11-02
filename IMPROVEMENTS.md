@@ -62,7 +62,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - After a touch tap, the first D-pad key only leaves touch mode.
 - A touch long-press behaves oddly in the file list.
 - Home shortcut cards have no long-press or Menu action, and Menu in the sidebar does nothing.
-- Starred is lost when a file is renamed or moved.
 - The Recycle Bin and WebDAV have limits (no bin on network storage).
 - The Quick Share Stop button isn't aligned with the rest of the screen.
 - The System root's icon and its place in the sort order.

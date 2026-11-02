@@ -20,6 +20,7 @@ package dev.dworks.apps.anexplorer.provider;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
@@ -517,6 +518,36 @@ public class ExternalStorageProvider extends StorageProvider {
             root.docId = getDocIdForFile(root.path);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * A star is kept by path, so a renamed or moved file, or a file inside a renamed or moved
+     * folder, would lose it. The stars follow the file to its new path.
+     */
+    private void carryStars(File before, File after) {
+        final ContentResolver resolver = getContext().getContentResolver();
+        final String prefix = before.getPath() + File.separator;
+        final ArrayList<String> moved = new ArrayList<>();
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(ExplorerProvider.buildStarred(),
+                    new String[]{ExplorerProvider.StarredColumns.PATH}, null, null, null);
+            while (null != cursor && cursor.moveToNext()) {
+                final String path = cursor.getString(0);
+                if (path.equals(before.getPath()) || path.startsWith(prefix)) {
+                    moved.add(path);
+                }
+            }
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        for (String path : moved) {
+            resolver.delete(ExplorerProvider.buildStarred(),
+                    ExplorerProvider.StarredColumns.PATH + "=?", new String[]{path});
+            final ContentValues values = new ContentValues();
+            values.put(ExplorerProvider.StarredColumns.PATH, after.getPath() + path.substring(before.getPath().length()));
+            resolver.insert(ExplorerProvider.buildStarred(), values);
         }
     }
 
@@ -1096,6 +1127,7 @@ public class ExternalStorageProvider extends StorageProvider {
         if (!documentFile.renameTo(displayName)) {
             throw new IllegalStateException("Failed to rename to " + after);
         }
+        carryStars(before, after);
         final String afterDocId = getDocIdForFile(after);
         if (!TextUtils.equals(docId, afterDocId)) {
             notifyDocumentsChanged(afterDocId);
@@ -1116,7 +1148,9 @@ public class ExternalStorageProvider extends StorageProvider {
     public String moveDocument(String sourceDocumentId, String sourceParentDocumentId,
                                String targetParentDocumentId)
             throws FileNotFoundException {
+        final File before = getFileForDocId(sourceDocumentId);
         final String afterDocId = move(sourceDocumentId, targetParentDocumentId);
+        carryStars(before, getFileForDocId(afterDocId));
         // The folder the document left changes too
         notifyDocumentsChanged(sourceDocumentId);
         notifyDocumentsChanged(afterDocId);
