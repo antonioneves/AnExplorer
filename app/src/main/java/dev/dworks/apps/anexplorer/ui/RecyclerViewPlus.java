@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
+import java.util.ArrayList;
 
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
@@ -116,16 +117,29 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
 
     /**
      * DOWN from the last row has nowhere to go inside the list, and the focus finder would
-     * otherwise pick the nearest view below it, often in the sidebar
+     * otherwise pick the nearest view below it, often in the sidebar. A view under the list
+     * itself, like the paste bar, is still reachable.
      */
     @Override
     public View focusSearch(View focused, int direction) {
         final View next = super.focusSearch(focused, direction);
         if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical() && focused != null
                 && isDescendant(focused) && (next == null || !isDescendant(next))) {
-            return focused;
+            final View bar = findBottomBarButton();
+            return bar != null ? bar : focused;
         }
         return next;
+    }
+
+    /** The paste or save bar under the list, which the focus finder would skip for the sidebar */
+    private View findBottomBarButton() {
+        final View bar = getRootView().findViewById(R.id.container_save);
+        if (bar == null || bar.getVisibility() != View.VISIBLE) {
+            return null;
+        }
+        final ArrayList<View> buttons = new ArrayList<>();
+        bar.addFocusables(buttons, View.FOCUS_DOWN);
+        return buttons.isEmpty() ? null : buttons.get(buttons.size() - 1);
     }
 
     /** A nested list lets focus leave at its end, instead of holding it on the last row */

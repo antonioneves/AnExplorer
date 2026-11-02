@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A button on the paste bar, which is coloured: the D-pad focus is a white ring -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="#33FFFFFF" />
+            <stroke android:width="3dp" android:color="@android:color/white" />
+        </shape>
+    </item>
+
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="#33FFFFFF" />
+        </shape>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

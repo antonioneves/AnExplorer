@@ -20,12 +20,12 @@ package dev.dworks.apps.anexplorer.fragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,6 +34,7 @@ import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
+import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -47,10 +48,10 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	private DocumentInfo mReplaceTarget;
 	private TextView mMoveInfo;
 	private TextView mRootInfo;
-	private ImageButton mSave;
+	private View mSave;
 	private MaterialProgressBar mProgress;
 
-	private ImageButton mCancel;
+	private View mCancel;
 	private ArrayList<DocumentInfo> docs;
 
 	private static final String EXTRA_DELETE_AFTER = "delete_after";
@@ -93,9 +94,9 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		//final Context context = inflater.getContext();
 
 		final View view = inflater.inflate(R.layout.fragment_move, container, false);
-		view.findViewById(R.id.background).setBackgroundColor(ThemeColors.getPrimaryColor(view.getContext()));
+		view.findViewById(R.id.background).setBackgroundTintList(ColorStateList.valueOf(ThemeColors.getPrimaryColor(view.getContext())));
 
-		mCancel = (ImageButton) view.findViewById(android.R.id.button2);
+		mCancel = view.findViewById(android.R.id.button2);
 		mCancel.setOnClickListener(this);
 
 		mMoveInfo = (TextView) view.findViewById(android.R.id.title);
@@ -104,7 +105,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		
 		mRootInfo = (TextView) view.findViewById(android.R.id.text1);
 
-		mSave = (ImageButton) view.findViewById(android.R.id.button1);
+		mSave = view.findViewById(android.R.id.button1);
 		mSave.setOnClickListener(this);
 		mSave.setEnabled(false);
 
@@ -119,6 +120,15 @@ public class MoveFragment extends Fragment implements OnClickListener{
         super.onActivityCreated(savedInstanceState);
         if (mReplaceTarget != null) {
             mRootInfo.setText(mReplaceTarget.displayName);
+        } else if (getActivity() instanceof DocumentsActivity) {
+            // Shown while already in the folder, so nothing has set the target yet
+            final DocumentsActivity activity = (DocumentsActivity) getActivity();
+            final DocumentInfo cwd = activity.getCurrentDirectory();
+            final RootInfo root = activity.getCurrentRoot();
+            if (cwd != null) {
+                setReplaceTarget(cwd, activity.getDisplayState().stack.size() <= 1 && root != null
+                        ? root.title : null);
+            }
         }
     }
 
@@ -128,10 +138,15 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	 * navigates outside the target directory.
 	 */
 	public void setReplaceTarget(DocumentInfo replaceTarget) {
+		setReplaceTarget(replaceTarget, null);
+	}
+
+	/** The top folder of a storage has no name of its own, so the caller passes the root's title */
+	public void setReplaceTarget(DocumentInfo replaceTarget, CharSequence displayName) {
 		mReplaceTarget = replaceTarget;
 
 		if (mRootInfo != null && mReplaceTarget != null) {
-			mRootInfo.setText(replaceTarget.displayName);
+			mRootInfo.setText(displayName != null ? displayName : replaceTarget.displayName);
 		}
 	}
 

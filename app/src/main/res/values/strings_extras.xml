@@ -352,7 +352,7 @@
     <string name="group_more">More</string>
     <string name="server_error">Something went wrong</string>
     <string name="delete_connection">Delete connection?</string>
-    <string name="paste_in">Paste %1$s in </string>
+    <string name="paste_in">Paste %1$s in</string>
     <string name="progress_deleting">Deleting files…</string>
     <string name="progress_uncompressing">Uncompressing files…</string>
     <string name="progress_compressing">Compressing files…</string>

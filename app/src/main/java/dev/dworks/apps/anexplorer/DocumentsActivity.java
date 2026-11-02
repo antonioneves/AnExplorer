@@ -1824,7 +1824,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
         final MoveFragment move = MoveFragment.get(fm);
         if (move != null) {
-            move.setReplaceTarget(cwd);
+            move.setReplaceTarget(cwd, (mState.stack.size() <= 1) && null != root ? root.title : null);
         }
 
         final RootsCommonFragment roots = RootsCommonFragment.get(fm);

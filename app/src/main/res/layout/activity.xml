@@ -123,9 +123,7 @@
             <FrameLayout
                 android:id="@+id/container_save"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/material_grey_50"
-                android:elevation="8dp" />
+                android:layout_height="wrap_content" />
 
         </LinearLayout>
 

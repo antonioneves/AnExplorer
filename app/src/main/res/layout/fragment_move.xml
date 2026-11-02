@@ -16,74 +16,69 @@
 
 <dev.dworks.apps.anexplorer.ui.CommonFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#323232"
-    android:minHeight="@dimen/list_item_height">
+    android:paddingStart="8dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
+        android:id="@+id/background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom"
+        android:background="@drawable/move_bar_background"
         android:baselineAligned="false"
-        app:boxedEdges="left|bottom|right"
-        android:minHeight="?android:attr/listPreferredItemHeightSmall"
-        android:orientation="horizontal">
-
-        <ImageButton
-            android:id="@android:id/button2"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@android:string/cancel"
-            android:padding="16dp"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            app:srcCompat="@drawable/ic_action_close" />
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="12dp">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
             <TextView
                 android:id="@android:id/title"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="start"
                 android:singleLine="true"
-                android:textAlignment="viewStart"
                 android:textColor="@android:color/white"
-                android:textSize="14sp" />
+                android:textSize="18sp" />
 
             <TextView
                 android:id="@android:id/text1"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="start"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="middle"
                 android:singleLine="true"
                 android:textAlignment="viewStart"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="18sp"
+                android:textStyle="bold" />
         </LinearLayout>
+
+        <TextView
+            android:id="@android:id/button2"
+            style="@style/MoveBarButton"
+            android:text="@android:string/cancel" />
 
         <FrameLayout
             android:layout_width="wrap_content"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp">
 
-            <ImageButton
+            <TextView
                 android:id="@android:id/button1"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:background="?android:attr/selectableItemBackground"
-                android:contentDescription="@string/menu_paste"
-                android:padding="16dp"
+                style="@style/MoveBarButton"
                 android:text="@string/menu_paste"
-                android:textAllCaps="true"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                app:srcCompat="@drawable/ic_action_done" />
+                android:textStyle="bold" />
 
             <dev.dworks.apps.anexplorer.ui.MaterialProgressBar
                 android:id="@android:id/progress"
