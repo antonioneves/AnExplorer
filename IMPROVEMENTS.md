@@ -53,21 +53,10 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Unstarring one of two Starred items, and focus in the list afterwards.
 
 ## Known issues
-- Down from the breadcrumb skips the first header.
-- The "Remove bookmark?" dialog has odd focus, and a bookmark can show twice in the sidebar.
-- **APKs: Up from the app tabs goes to the view toggle in the toolbar.** Left as it is, because it's the only way to reach the toolbar from there. An explicit `nextFocusUp` could point it somewhere better.
-- **Empty sidebar after switching theme**: reported, but didn't reproduce. The Network & Cloud group was once seen briefly empty while the roots loaded.
 - In the nested Home gallery, Down doesn't always move to the next row.
 - Focus goes back to the sidebar after tapping the toolbar with touch.
 - After a touch tap, the first D-pad key only leaves touch mode.
 - A touch long-press behaves oddly in the file list.
 - Home shortcut cards have no long-press or Menu action, and Menu in the sidebar does nothing.
-- The Recycle Bin and WebDAV have limits (no bin on network storage).
 - The System root's icon and its place in the sort order.
 - The search box's close animation.
-- The Locked folder is opt-in (the `lockedFolder` setting, off by default).
-- The app's first load on the emulator is slow.
-
-## Development notes
-- `uiautomator dump` can report stale focus. `adb shell dumpsys activity top` and the view with the `F` flag is more reliable.
-- The Television_720p AVD could use less RAM.
