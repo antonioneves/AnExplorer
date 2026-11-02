@@ -12,6 +12,7 @@
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textStyle="bold"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
     <TextView

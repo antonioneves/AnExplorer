@@ -78,6 +78,9 @@
     <integer name="home_shortcut_span">3</integer>
     <dimen name="home_shortcut_spacing">10dp</dimen>
     <dimen name="card_corner_radius">16dp</dimen>
+    <!-- How much of the screen stays visible around the Info panel -->
+    <dimen name="detail_inset_horizontal">48dp</dimen>
+    <dimen name="detail_inset_vertical">27dp</dimen>
     <!-- Space between the file cards -->
     <dimen name="doc_card_spacing">12dp</dimen>
     <dimen name="roots_title_icon_size">36dp</dimen>

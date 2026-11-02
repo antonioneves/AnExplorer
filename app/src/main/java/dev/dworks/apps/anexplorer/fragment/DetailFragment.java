@@ -24,6 +24,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.InsetDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -39,6 +40,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
@@ -62,12 +64,13 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.IconColorUtils;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
-import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.TmdbDetails;
+import dev.dworks.apps.anexplorer.misc.TmdbPosters;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
+import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.CircleImage;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -99,6 +102,7 @@ public class DetailFragment extends DialogFragment {
     private LinearLayout tmdbRows;
     private TextView tmdbOverviewLabel;
     private TextView tmdbOverview;
+    private ScrollView detailScroll;
     private AsyncTask<Void, Void, TmdbDetails.Info> tmdbTask;
 
     public static void showAsDialog(FragmentManager fm, DocumentInfo doc) {
@@ -148,6 +152,7 @@ public class DetailFragment extends DialogFragment {
 		tmdbRows = (LinearLayout) view.findViewById(R.id.tmdb_rows);
 		tmdbOverviewLabel = (TextView) view.findViewById(R.id.tmdb_overview_label);
 		tmdbOverview = (TextView) view.findViewById(R.id.tmdb_overview);
+		detailScroll = (ScrollView) view.findViewById(R.id.detail_scroll);
 
 		iconMime = (ImageView) view.findViewById(R.id.icon_mime);
 		iconThumb = (ImageView) view.findViewById(R.id.icon_thumb);
@@ -171,7 +176,14 @@ public class DetailFragment extends DialogFragment {
 							.build());
 			background.setFillColor(ColorStateList.valueOf(MaterialColors.getColor(getView(),
 					com.google.android.material.R.attr.colorSurfaceContainerHigh)));
-			getDialog().getWindow().setBackgroundDrawable(background);
+			// A full window with an inset background keeps the screen showing around the card,
+			// however long the path or the TMDB text is, and lets the height follow the content
+			final int insetX = getResources().getDimensionPixelSize(R.dimen.detail_inset_horizontal);
+			final int insetY = getResources().getDimensionPixelSize(R.dimen.detail_inset_vertical);
+			getDialog().getWindow().setBackgroundDrawable(
+					new InsetDrawable(background, insetX, insetY, insetX, insetY));
+			getDialog().getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
+					ViewGroup.LayoutParams.WRAP_CONTENT);
 		}
 		
 		name.setText(doc.displayName);
@@ -204,9 +216,8 @@ public class DetailFragment extends DialogFragment {
 		if (TmdbDetails.canLoad(doc)) {
 			tmdbTask = new TmdbTask().execute();
 		}
-		final View root = getView();
-		if (root != null) {
-			root.requestFocus();
+		if (detailScroll != null) {
+			detailScroll.requestFocus();
 		}
 	}
 
@@ -382,6 +393,14 @@ public class DetailFragment extends DialogFragment {
 		return value;
 	}
 
+	/** Whether the media provider gives this folder the poster of its show */
+	private boolean isShowDocument() {
+		return MediaDocumentsProvider.AUTHORITY.equals(doc.authority)
+				&& doc.documentId != null
+				&& (doc.documentId.startsWith(MediaDocumentsProvider.TYPE_VIDEOS_SHOW + ":")
+				|| doc.documentId.startsWith(MediaDocumentsProvider.TYPE_VIDEOS_SEASON + ":"));
+	}
+
 	private class DetailTask extends AsyncTask<Void, Void, Void>{
 
 		private Bitmap result;
@@ -392,9 +411,10 @@ public class DetailFragment extends DialogFragment {
 		@Override
 		protected Void doInBackground(Void... params) {
 			filePath = doc.path;
+			final boolean directory = Utils.isDir(doc.mimeType);
 
-			if (!Utils.isDir(doc.mimeType)) {
-                final boolean allowThumbnail = MimePredicate.mimeMatches(MimePredicate.VISUAL_MIMES, doc.mimeType);
+			// Show folders have no file size, but their poster is still worth loading
+			if (!directory || isShowDocument()) {
 				int thumbSize = getResources().getDimensionPixelSize(R.dimen.grid_width);
 				Point mThumbSize = new Point(thumbSize, thumbSize);
 				final Uri uri = DocumentsContract.buildDocumentUri(doc.authority, doc.documentId);
@@ -402,12 +422,16 @@ public class DetailFragment extends DialogFragment {
 				final ContentResolver resolver = context.getContentResolver();
 				ContentProviderClient client = null;
 				try {
-
-					if (doc.mimeType.equals(Document.MIME_TYPE_APK) && !TextUtils.isEmpty(filePath)) {
-						result = ((BitmapDrawable) IconUtils.loadPackagePathIcon(context, filePath, Document.MIME_TYPE_APK)).getBitmap();
-					} else {
-						client = DocumentsApplication.acquireUnstableProviderOrThrow(resolver, uri.getAuthority());
-						result = DocumentsContract.getDocumentThumbnail(resolver, uri, mThumbSize, null);
+					if (TmdbDetails.canLoad(doc) && !directory) {
+						result = TmdbPosters.load(context, doc.displayName);
+					}
+					if (result == null) {
+						if (doc.mimeType.equals(Document.MIME_TYPE_APK) && !TextUtils.isEmpty(filePath)) {
+							result = ((BitmapDrawable) IconUtils.loadPackagePathIcon(context, filePath, Document.MIME_TYPE_APK)).getBitmap();
+						} else {
+							client = DocumentsApplication.acquireUnstableProviderOrThrow(resolver, uri.getAuthority());
+							result = DocumentsContract.getDocumentThumbnail(resolver, uri, mThumbSize, null);
+						}
 					}
 				} catch (Exception e) {
 					if (!(e instanceof OperationCanceledException)) {
@@ -418,9 +442,12 @@ public class DetailFragment extends DialogFragment {
 					ContentProviderClientCompat.releaseQuietly(client);
 				}
 
-				sizeString = Formatter.formatFileSize(context, doc.size);
+				if (!directory) {
+					sizeString = Formatter.formatFileSize(context, doc.size);
+				}
 			}
-			else{
+
+			if (directory) {
 				if(!TextUtils.isEmpty(filePath)){
 					File dir = new File(filePath);
 					// The listing no longer carries the file count, so count it here
