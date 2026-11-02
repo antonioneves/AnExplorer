@@ -138,6 +138,12 @@ public class RootsFragment extends Fragment {
         mList.setSelector(android.R.color.transparent);
         // The list sits beside the content, so focus search can miss it; send RIGHT there directly
         mList.setOnKeyListener((v, keyCode, event) -> {
+            // Past the first or last row, focus search would leave the sidebar for the content
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                final int selected = mList.getSelectedItemPosition();
+                return selected != ListView.INVALID_POSITION && (keyCode == KeyEvent.KEYCODE_DPAD_UP
+                        ? selected == 0 : selected == mList.getCount() - 1);
+            }
             final int toContent = Utils.isRTL() ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT;
             if (keyCode != toContent || event.getAction() != KeyEvent.ACTION_DOWN) return false;
             final View content = getActivity().findViewById(R.id.container_directory);
