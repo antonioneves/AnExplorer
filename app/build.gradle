@@ -14,6 +14,9 @@ def propOrEmpty = { String key -> props.containsKey(key) ? props[key] : (project
 android {
     namespace "dev.dworks.apps.anexplorer"
     compileSdk rootProject.ext.compileSdkVersion
+    // Nothing here is compiled with it: the build needs its llvm-strip, or libc++_shared.so from
+    // libVLC goes into the APK with 8 MB of debug symbols
+    ndkVersion "28.2.13676358"
 
     defaultConfig {
         applicationId "dev.dworks.apps.anexplorer"
