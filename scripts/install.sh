@@ -23,11 +23,17 @@ else
 fi
 ./gradlew -q "$task"
 
-apk=app/build/outputs/apk/$variant/app-$variant.apk
-if [ ! -f "$apk" ]; then
-    echo "No $apk: a release build without keystore.properties is unsigned and can't be installed" >&2
+adb connect "$address" > /dev/null
+
+# One APK per CPU, so pick the first ABI the TV supports that has a build
+for abi in $(adb -s "$address" shell getprop ro.product.cpu.abilist | tr -d '\r' | tr ',' ' '); do
+    apk=app/build/outputs/apk/$variant/app-$abi-$variant.apk
+    [ -f "$apk" ] && break
+    apk=
+done
+if [ -z "$apk" ]; then
+    echo "No APK for this TV's CPU: a release build without keystore.properties is unsigned and can't be installed" >&2
     exit 1
 fi
 
-adb connect "$address" > /dev/null
 adb -s "$address" install -r "$apk"

@@ -14,7 +14,7 @@ An Android file manager that now targets **Android TV only**. Every change is de
 The SDK levels and version are set in the root `build.gradle` (`ext`). `minSdk` is 23 and `compileSdk`/`targetSdk` is 37.
 
 ## Build and test
-- Debug build: `./gradlew -q :app:assembleDebug`, then `adb -s <serial> install -r app/build/outputs/apk/debug/*.apk`.
+- Debug build: `./gradlew -q :app:assembleDebug`, which makes one APK per CPU (`app-arm64-v8a-debug.apk`, `app-armeabi-v7a-debug.apk`). Install the one that matches the device with `adb -s <serial> install -r`, or run `scripts/install.sh debug <address>`.
 - Protocol tests: `./gradlew :protocol:test`.
 - The release build is minified with R8. `keystore.properties` holds the signing secrets: never print it, log it or commit changes to it.
 - To check a release build on a device that has the debug build: re-sign a copy of the release APK with `~/.android/debug.keystore` (alias `androiddebugkey`, password `android`) using `apksigner`, then install it over the debug build.
