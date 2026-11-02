@@ -101,7 +101,6 @@ dependencies {
     implementation project(':protocol')
     implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.jaredrummler:android-processes:1.1.1'
     implementation 'me.jahnen.libaums:core:0.10.0'
     implementation 'org.apache.ftpserver:ftpserver-core:1.2.1'
     implementation 'commons-net:commons-net:3.13.0'
