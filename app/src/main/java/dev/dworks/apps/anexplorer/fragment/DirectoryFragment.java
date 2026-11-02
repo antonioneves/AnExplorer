@@ -402,6 +402,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				mLastSortOrder = state.derivedSortOrder;
 				// Don't take focus from the search field while the user is typing, or from the
 				// sidebar while the user is moving through it, or from the tab they just picked
+				if (null != state.backFocusDocId) {
+					mRefocusPosition = positionOf(state.backFocusDocId);
+					state.backFocusDocId = null;
+				}
 				if (mRefocusPosition >= 0) {
 					// The files changed after the selection bar closed, deleted ones gone
 					focusRow();
@@ -409,8 +413,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				} else if (mKeepTabFocus) {
 					focusSelectedTab();
 				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus
-						&& !(mAdapter.isEmpty() && (mAppTabs.getVisibility() == View.VISIBLE
-						|| mVideoTabs.getVisibility() == View.VISIBLE))) {
+						&& !(mAdapter.isEmpty() && hasTabs())) {
 					getListView().requestFocus();
 				}
 			}
@@ -432,6 +435,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** APKs shows tabs for installed apps, system apps and APK files, like Google Files */
 	private void setUpAppTabs() {
+		if (null == mAppTabs) {
+			return;
+		}
 		mAppTabs.setTag(this);
 		if (null == root || !(root.isApp() || root.isApk())) {
 			mAppTabs.setVisibility(View.GONE);
@@ -451,6 +457,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	 * season they are hidden: BACK returns to the tab it was opened from.
 	 */
 	private void setUpVideoTabs() {
+		if (null == mVideoTabs) {
+			return;
+		}
 		mVideoTabs.setTag(this);
 		mVideoTabs.setVisibility(View.GONE);
 		if (null == root || !root.isVideos() || null == doc) {
@@ -500,6 +509,17 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		});
 	}
 
+	/** The row of a document in the list, or -1 when it isn't there */
+	private int positionOf(String documentId) {
+		for (int i = 0; i < mAdapter.getItemCount(); i++) {
+			final Cursor cursor = mAdapter.getItem(i);
+			if (null != cursor && documentId.equals(getCursorString(cursor, Document.COLUMN_DOCUMENT_ID))) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	/**
 	 * Focuses the row at mRefocusPosition, or the last one when fewer are left, once the list
 	 * has laid out what it holds now; before that the rows on screen may be ones just deleted
@@ -533,10 +553,18 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		});
 	}
 
+	private static boolean isVisible(View view) {
+		return null != view && view.getVisibility() == View.VISIBLE;
+	}
+
+	/** True while the APKs or Videos tabs are showing in the toolbar */
+	private boolean hasTabs() {
+		return isVisible(mAppTabs) || isVisible(mVideoTabs);
+	}
+
 	/** Puts focus back on the tab picked, as swapping the folder can drop it. */
 	private void focusSelectedTab() {
-		final View strip = mAppTabs.getVisibility() == View.VISIBLE ? mAppTabs
-				: mVideoTabs.getVisibility() == View.VISIBLE ? mVideoTabs : null;
+		final View strip = isVisible(mAppTabs) ? mAppTabs : isVisible(mVideoTabs) ? mVideoTabs : null;
 		if (null == strip) {
 			return;
 		}
@@ -1488,7 +1516,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void setEmptyState() {
 		// An empty list would swallow focus that should reach the APKs tabs
-		if (mAppTabs.getVisibility() == View.VISIBLE || mVideoTabs.getVisibility() == View.VISIBLE) {
+		if (hasTabs()) {
 			getListView().setFocusable(!mAdapter.isEmpty());
 		}
 		if (!mAdapter.isEmpty()) {

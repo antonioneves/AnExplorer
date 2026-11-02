@@ -1523,6 +1523,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         }
         if (mState.stackTouched && mState.stack.size() > 1) {
+            final DocumentInfo left = mState.stack.peek();
+            mState.backFocusDocId = null != left ? left.documentId : null;
             mState.stack.pop();
             onCurrentDirectoryChanged(ANIM_UP);
             return true;

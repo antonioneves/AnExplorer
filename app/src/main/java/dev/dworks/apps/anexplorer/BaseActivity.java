@@ -125,6 +125,8 @@ public abstract class BaseActivity extends ActionBarActivity {
         public boolean showAdvanced = false;
         public boolean stackTouched = false;
         public boolean restored = false;
+        /** The folder BACK just left, so the list it returns to can focus it */
+        public String backFocusDocId;
 
         /** Current user navigation stack; empty implies recents. */
         public DocumentStack stack = new DocumentStack();

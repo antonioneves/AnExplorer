@@ -313,7 +313,7 @@ public class RootsCache {
         try {
             client = DocumentsApplication.acquireUnstableProviderOrThrow(resolver, authority);
             cursor = client.query(rootsUri, null, null, null, null);
-            while (cursor.moveToNext()) {
+            while (cursor != null && cursor.moveToNext()) {
                 final RootInfo root = RootInfo.fromRootsCursor(authority, cursor);
                 roots.add(root);
             }

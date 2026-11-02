@@ -195,7 +195,15 @@ public class DetailFragment extends DialogFragment {
         else{
             path_layout.setVisibility(View.GONE);
         }
-		modified.setText(Utils.formatTime(getActivity(), doc.lastModified));
+		if (doc.lastModified > 0) {
+			modified.setText(Utils.formatTime(getActivity(), doc.lastModified));
+		} else {
+			// A show is a group of episodes with no date of its own, which would read as 1970
+			((View) modified.getParent()).setVisibility(View.GONE);
+		}
+		if (isShowDocument()) {
+			((View) size.getParent()).setVisibility(View.GONE);
+		}
 		type.setText(IconUtils.getTypeNameFromMimeType(doc.mimeType));
 		
 		if(!TextUtils.isEmpty(doc.summary)){

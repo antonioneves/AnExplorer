@@ -10,6 +10,13 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
 - A history of Quick Share transfers.
+- Continue Watching in the Android TV launcher's Watch Next row, built on the watch history.
+- A media session in the players, so the remote's media keys, Assistant and the system "now playing" card work, plus playback speed and a sleep timer.
+- Download subtitles for a video, using the title, season and episode already matched with TMDB.
+- Find SMB and FTP servers on the network (`NsdManager`) instead of typing an address with the remote.
+- Browse DLNA/UPnP media servers.
+- A parental PIN that locks the app, hidden folders or deleting.
+- Check for a new release on GitHub (the old update check was removed).
 
 ## Quality
 - Run a focus test on an Android TV emulator in CI, driving the D-pad and checking where focus lands.
@@ -18,6 +25,11 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - More unit tests: the sidebar grouping in `RootsExpandableAdapter.processRoots` needs a `Context` for its titles; passing the titles in would make it testable.
 - Show a friendlier message when listing an SMB server's shares fails, instead of the raw smbj error.
 - Translations: the strings added recently are English only.
+- Trakt: real sign-in, the code screen, matching and both-way sync are untested, and Trakt's current terms and limits haven't been checked.
+- Text fields: check the on-screen keyboard's left key still moves the cursor, and the Note editor, Save field and dark theme with the remote-focus changes.
+- Unit tests for `EpisodeName.parse`, the Trakt key matching and `SortingCursorWrapper`.
+- Split `DocumentsActivity` and `DirectoryFragment` (each over 2,000 lines), starting with the search and toolbar code.
+- Measure startup on the weakest TV (the Grundig) before optimizing it.
 
 ## Retest on the real TVs
 Update the Xiaomi and Grundig TVs to the latest build, then check:
@@ -41,6 +53,9 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Unstarring one of two Starred items, and focus in the list afterwards.
 
 ## Known issues
+- In the connection dialog, Up from Host or Port doesn't reach the Name field.
+- Down from the breadcrumb skips the first header.
+- The "Remove bookmark?" dialog has odd focus, and a bookmark can show twice in the sidebar.
 - **APKs: Up from the app tabs goes to the view toggle in the toolbar.** Left as it is, because it's the only way to reach the toolbar from there. An explicit `nextFocusUp` could point it somewhere better.
 - **Empty sidebar after switching theme**: reported, but didn't reproduce. The Network & Cloud group was once seen briefly empty while the roots loaded.
 - After a theme switch recreates the screen, focus lands on the `settings_scroll` ScrollView.
