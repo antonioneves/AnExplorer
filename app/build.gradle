@@ -32,13 +32,14 @@ android {
         // TMDB API key for movie and show covers; empty means no cover lookup
         buildConfigField "String", "TMDB_API_KEY", "\"${propOrEmpty('TMDB_API_KEY')}\""
     }
-    // libVLC is large, so each Android TV gets an APK with only its own ARM libraries
+    // libVLC is large, so each Android TV gets an APK with only its own ARM libraries, and the
+    // universal one is for when the CPU isn't known
     splits {
         abi {
             enable true
             reset()
             include 'arm64-v8a', 'armeabi-v7a'
-            universalApk false
+            universalApk true
         }
     }
     // Without a keystore (as on CI without its secrets) the release APK is built unsigned
@@ -78,6 +79,8 @@ android {
             // messages (ErrNo falls back gracefully without it) and libusb-lib is never loaded
             // with the default Android USB API backend
             excludes += ['**/liberrno-lib.so', '**/libusb-lib.so']
+            // libVLC ships x86 builds too, and Android TVs are all ARM
+            excludes += ['lib/x86/**', 'lib/x86_64/**']
         }
     }
     lint {
