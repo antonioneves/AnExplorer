@@ -21,7 +21,7 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 ## Quality
 - Run a focus test on an Android TV emulator in CI, driving the D-pad and checking where focus lands.
 - Set the release secrets in GitHub (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) so the release workflow can sign builds.
-- Audit every move path to confirm the source is deleted only after the copy is confirmed complete.
+- Move across storages: check on a TV that a folder whose listing fails is kept, and that a move to or from a server keeps the source when the copy fails (fixed in code, only a local copy tested).
 - More unit tests: the sidebar grouping in `RootsExpandableAdapter.processRoots` needs a `Context` for its titles; passing the titles in would make it testable.
 - SMB: check the new messages for a refused login and a server that won't list its shares (built, not seen on a real server).
 - Translations: the strings added recently are English only.

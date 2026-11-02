@@ -302,62 +302,50 @@ public class FileUtils {
             Log.v(TAG, "copyDocument: file not exist or is directory, " + file);
             return false;
         }
-        BufferedOutputStream bos = null;
-        BufferedInputStream bis = null;
-        byte[] data = new byte[BUFFER];
-        int read = 0;
-        FileInputStream fi = null;
-        FileOutputStream fo = null;
-        try {
-            fi = new FileInputStream(file);
-            if (!dest.exists()) {
-                if (!dest.mkdirs())
-                    return false;
-            }
-
-            File destFile = new File(dest, !TextUtils.isEmpty(name)
-                    ? name + "." + getExtFromFilename(file.getName())
-                    : file.getName());
-
-            int n = 0;
-            while (destFile.exists() && n++ < 32) {
-                String destName =
-                        (!TextUtils.isEmpty(name)
-                                ? name : getNameFromFilename(file.getName())) + " (" + n + ")" + "."
-                                + getExtFromFilename(file.getName());
-                destFile = new File(dest, destName);
-            }
-
-            if (!destFile.createNewFile())
-                return false;
-            bos = new BufferedOutputStream(new FileOutputStream(destFile));
-            bis = new BufferedInputStream(new FileInputStream(file));
-            while ((read = bis.read(data, 0, BUFFER)) != -1)
-                bos.write(data, 0, read);
-
-            return true;
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "copyDocument: file not found, " + file);
-            e.printStackTrace();
-        } catch (IOException e) {
-            Log.e(TAG, "copyDocument: " + e.toString());
-        } finally {
-            try {
-                //FIXME
-                //flush and close
-                bos.flush();
-                bis.close();
-                bos.close();
-                if (fi != null)
-                    fi.close();
-                if (fo != null)
-                    fo.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (!dest.exists() && !dest.mkdirs()) {
+            return false;
         }
 
-        return false;
+        File destFile = new File(dest, !TextUtils.isEmpty(name)
+                ? name + "." + getExtFromFilename(file.getName())
+                : file.getName());
+
+        int n = 0;
+        while (destFile.exists() && n++ < 32) {
+            String destName =
+                    (!TextUtils.isEmpty(name)
+                            ? name : getNameFromFilename(file.getName())) + " (" + n + ")" + "."
+                            + getExtFromFilename(file.getName());
+            destFile = new File(dest, destName);
+        }
+
+        try {
+            if (!destFile.createNewFile()) {
+                return false;
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "copyDocument: " + e);
+            return false;
+        }
+        // Closed before the size is checked, so a move only deletes the original of a whole copy
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+             BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(destFile))) {
+            final byte[] data = new byte[BUFFER];
+            int read;
+            while ((read = bis.read(data, 0, BUFFER)) != -1) {
+                bos.write(data, 0, read);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "copyDocument: " + e);
+            destFile.delete();
+            return false;
+        }
+        if (destFile.length() != file.length()) {
+            Log.e(TAG, "copyDocument: size differs, " + file);
+            destFile.delete();
+            return false;
+        }
+        return true;
     }
 
     public static boolean deleteFile(File file) {

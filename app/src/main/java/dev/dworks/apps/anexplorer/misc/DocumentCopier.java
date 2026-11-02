@@ -57,8 +57,13 @@ public class DocumentCopier {
             return false;
         }
         if (doc.isDirectory()) {
+            final List<DocumentInfo> children = children(doc);
+            if (null == children) {
+                // An unlisted folder looks empty, and would then be taken away after a move
+                return false;
+            }
             boolean copied = true;
-            for (DocumentInfo child : children(doc)) {
+            for (DocumentInfo child : children) {
                 copied &= copy(child, made);
             }
             return copied;
@@ -99,15 +104,21 @@ public class DocumentCopier {
         target.checkError();
     }
 
+    /** @return the folder's children, or null when they couldn't be listed */
     private List<DocumentInfo> children(DocumentInfo folder) {
         final List<DocumentInfo> children = new ArrayList<>();
         final Uri uri = DocumentsContract.buildChildDocumentsUri(folder.authority, folder.documentId);
         try (Cursor cursor = resolver.query(uri, null, null, null, null)) {
-            while (null != cursor && cursor.moveToNext()) {
+            if (null == cursor || null != cursor.getExtras().getString(DocumentsContract.EXTRA_ERROR)) {
+                Log.w(TAG, "Couldn't list " + folder.displayName);
+                return null;
+            }
+            while (cursor.moveToNext()) {
                 children.add(DocumentInfo.fromCursor(cursor, folder.authority));
             }
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't list " + folder.displayName + ": " + e);
+            return null;
         }
         return children;
     }
