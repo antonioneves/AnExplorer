@@ -3,11 +3,16 @@ package dev.dworks.apps.anexplorer.fragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.res.Configuration;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.google.android.material.color.MaterialColors;
 
 import dev.dworks.apps.anexplorer.R;
 
@@ -29,6 +34,14 @@ public class AboutFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_about, container, false);
         ((TextView) view.findViewById(R.id.about_version)).setText(getString(R.string.app_ver));
+        // The logo is pale grey, which nearly disappears on the light background
+        final boolean night = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        if (!night) {
+            ((ImageView) view.findViewById(R.id.about_logo)).setColorFilter(
+                    MaterialColors.getColor(view, androidx.appcompat.R.attr.colorPrimary),
+                    PorterDuff.Mode.SRC_IN);
+        }
         return view;
     }
 }

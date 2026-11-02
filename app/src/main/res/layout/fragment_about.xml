@@ -9,6 +9,7 @@
     android:padding="24dp">
 
     <ImageView
+        android:id="@+id/about_logo"
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:contentDescription="@null"
