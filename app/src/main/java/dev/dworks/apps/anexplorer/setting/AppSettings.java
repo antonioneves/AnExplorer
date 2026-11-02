@@ -55,6 +55,7 @@ public class AppSettings {
     public static final String KEY_RECYCLE_BIN = "recycleBin";
     public static final String KEY_LOCKED_FOLDER = "lockedFolder";
     public static final String KEY_STARRED = "starred";
+    public static final String KEY_RESUME_PLAYBACK = "resumePlayback";
     public static final String KEY_VIEW_MODE = "viewMode";
     public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
     public static final String KEY_DROPBOX_CLIENT_ID = "dropboxClientId";
@@ -99,6 +100,11 @@ public class AppSettings {
     /** Whether files can be starred, and Starred is shown */
     public static boolean isStarredEnabled(Context context) {
         return prefs(context).getBoolean(KEY_STARRED, true);
+    }
+
+    /** Whether a video left unfinished starts again from where it stopped */
+    public static boolean isResumePlaybackEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_RESUME_PLAYBACK, true);
     }
 
     /** Whether the PIN-protected locked folder is shown */

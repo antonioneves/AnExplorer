@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView;
 
 import dev.dworks.apps.anexplorer.misc.VlcPlayer;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 /**
  * Plays video and audio inside the app so it doesn't depend on another player being installed.
@@ -230,7 +231,8 @@ public class PlayerActivity extends Activity {
     }
 
     private void start() {
-        if (mWatchKey != null && mHistory.getPosition(mWatchKey) > 0) {
+        if (mWatchKey != null && AppSettings.isResumePlaybackEnabled(this)
+                && mHistory.getPosition(mWatchKey) > 0) {
             mPlayer.seekTo(mHistory.getPosition(mWatchKey));
         }
         mPlayer.prepare();

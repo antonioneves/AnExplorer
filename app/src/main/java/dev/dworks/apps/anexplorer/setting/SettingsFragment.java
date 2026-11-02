@@ -52,6 +52,7 @@ import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_LOCKED_FOLDER;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_ENABLED;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_PIN_SET;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RECENT_MEDIA;
+import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_RESUME_PLAYBACK;
 import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_STARRED;
 
 /**
@@ -118,6 +119,8 @@ public class SettingsFragment extends Fragment {
                 R.string.settings_recycle_bin_summary, AppSettings.isRecycleBinEnabled(context));
         addSwitch(inflater, section, KEY_STARRED, R.drawable.ic_root_starred, R.string.pref_starred,
                 R.string.settings_starred_summary, AppSettings.isStarredEnabled(context));
+        addSwitch(inflater, section, KEY_RESUME_PLAYBACK, R.drawable.ic_root_video, R.string.pref_resume_playback,
+                R.string.settings_resume_playback_summary, AppSettings.isResumePlaybackEnabled(context));
 
         section = addSection(inflater, R.string.pref_header_theme);
         addThemeStyle(inflater, section);
