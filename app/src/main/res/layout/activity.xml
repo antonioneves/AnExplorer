@@ -118,12 +118,14 @@
                 android:layout_weight="1">
 
                 <include layout="@layout/directory_layout" />
-            </FrameLayout>
 
-            <FrameLayout
-                android:id="@+id/container_save"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                <!-- Floats over the bottom of the files while pasting or saving -->
+                <FrameLayout
+                    android:id="@+id/container_save"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom" />
+            </FrameLayout>
 
         </LinearLayout>
 

@@ -67,6 +67,7 @@
                 android:drawSelectorOnTop="true"
                 android:paddingLeft="4dp"
                 android:paddingRight="4dp"
+                android:paddingBottom="72dp"
                 android:horizontalSpacing="@dimen/grid_item_padding"
                 android:scrollbars="vertical"
                 app:columnWidth="@dimen/grid_item_width"
