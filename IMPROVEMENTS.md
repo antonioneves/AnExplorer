@@ -53,7 +53,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Unstarring one of two Starred items, and focus in the list afterwards.
 
 ## Known issues
-- In the connection dialog, Up from Host or Port doesn't reach the Name field.
 - Down from the breadcrumb skips the first header.
 - The "Remove bookmark?" dialog has odd focus, and a bookmark can show twice in the sidebar.
 - **APKs: Up from the app tabs goes to the view toggle in the toolbar.** Left as it is, because it's the only way to reach the toolbar from there. An explicit `nextFocusUp` could point it somewhere better.
