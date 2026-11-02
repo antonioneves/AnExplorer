@@ -57,8 +57,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - The "Remove bookmark?" dialog has odd focus, and a bookmark can show twice in the sidebar.
 - **APKs: Up from the app tabs goes to the view toggle in the toolbar.** Left as it is, because it's the only way to reach the toolbar from there. An explicit `nextFocusUp` could point it somewhere better.
 - **Empty sidebar after switching theme**: reported, but didn't reproduce. The Network & Cloud group was once seen briefly empty while the roots loaded.
-- After a theme switch recreates the screen, focus lands on the `settings_scroll` ScrollView.
-- After opening a storage from a Home card, focus goes to the sidebar instead of the list.
 - In the nested Home gallery, Down doesn't always move to the next row.
 - Focus goes back to the sidebar after tapping the toolbar with touch.
 - After a touch tap, the first D-pad key only leaves touch mode.

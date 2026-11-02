@@ -26,6 +26,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +62,7 @@ import static dev.dworks.apps.anexplorer.setting.AppSettings.KEY_STARRED;
  */
 public class SettingsFragment extends Fragment {
     public static final String TAG = "SettingsFragment";
+    private static final String STATE_FOCUSED_ROW = "focused_row";
 
     private ViewGroup mList;
     private TextView mTraktSummary;
@@ -97,6 +99,31 @@ public class SettingsFragment extends Fragment {
         // theme) they all get one switch's saved state; the preferences hold the real values
         for (Map.Entry<String, MaterialSwitch> entry : mSwitches.entrySet()) {
             entry.getValue().setChecked(prefs().getBoolean(entry.getKey(), mSwitchDefaults.get(entry.getKey())));
+        }
+        // The rebuilt rows start with no focus, so the D-pad would have nothing to move from
+        if (savedInstanceState != null && savedInstanceState.containsKey(STATE_FOCUSED_ROW)) {
+            final int index = savedInstanceState.getInt(STATE_FOCUSED_ROW);
+            mList.post(new Runnable() {
+                @Override
+                public void run() {
+                    final ArrayList<View> rows = mList.getFocusables(View.FOCUS_FORWARD);
+                    if (index < rows.size()) {
+                        rows.get(index).requestFocus();
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        final View focused = mList != null ? mList.findFocus() : null;
+        if (focused != null) {
+            final int index = mList.getFocusables(View.FOCUS_FORWARD).indexOf(focused);
+            if (index >= 0) {
+                outState.putInt(STATE_FOCUSED_ROW, index);
+            }
         }
     }
 
