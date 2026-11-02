@@ -182,13 +182,6 @@
         </activity>
 
         <activity
-            android:name=".VlcPlayerActivity"
-            android:enableOnBackInvokedCallback="false"
-            android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
-            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
-            android:exported="false" />
-
-        <activity
             android:name=".PreviewActivity"
             android:enableOnBackInvokedCallback="false"
             android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"

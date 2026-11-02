@@ -1,7 +1,7 @@
 package dev.dworks.apps.anexplorer;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,6 +19,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
+import dev.dworks.apps.anexplorer.misc.VlcPlayer;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
 
 /**
@@ -34,7 +35,7 @@ public class PlayerActivity extends Activity {
     private static final int CONTROLS_TIMEOUT_MS = 4000;
 
     private PlayerView mPlayerView;
-    private ExoPlayer mPlayer;
+    private Player mPlayer;
     private boolean mScrubbing;
     private boolean mEnded;
     private String mWatchKey;
@@ -82,37 +83,52 @@ public class PlayerActivity extends Activity {
                 new DefaultRenderersFactory(this)
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
                 .build();
-        mPlayer.addListener(new Player.Listener() {
-            @Override
-            public void onPlayerError(PlaybackException error) {
-                Log.w("PlayerActivity", "Playback failed, trying libVLC", error);
-                final Intent vlc = new Intent(PlayerActivity.this, VlcPlayerActivity.class)
-                        .setData(getIntent().getData())
-                        .putExtra(EXTRA_WATCH_KEY, getIntent().getStringExtra(EXTRA_WATCH_KEY));
-                try {
-                    startActivity(vlc);
-                } catch (Exception e) {
-                    Toast.makeText(PlayerActivity.this, R.string.toast_no_application, Toast.LENGTH_LONG).show();
-                }
-                finish();
-            }
-
-            @Override
-            public void onPlaybackStateChanged(int state) {
-                if (state == Player.STATE_ENDED) {
-                    mEnded = true;
-                    if (mWatchKey != null) {
-                        mHistory.markViewed(mWatchKey);
-                    }
-                    finish();
-                }
-            }
-        });
+        mPlayer.addListener(mListener);
         mPlayerView.setPlayer(mPlayer);
         mPlayer.setMediaItem(MediaItem.fromUri(uri));
         mEnded = false;
         mHistory = new WatchHistory(this);
         mWatchKey = getIntent().getStringExtra(EXTRA_WATCH_KEY);
+        start();
+    }
+
+    private final Player.Listener mListener = new Player.Listener() {
+        @Override
+        public void onPlayerError(PlaybackException error) {
+            if (mPlayer instanceof ExoPlayer) {
+                Log.w("PlayerActivity", "Playback failed, trying libVLC", error);
+                switchToVlc();
+                return;
+            }
+            Log.w("PlayerActivity", "Playback failed", error);
+            Toast.makeText(PlayerActivity.this, R.string.toast_no_application, Toast.LENGTH_LONG).show();
+            finish();
+        }
+
+        @Override
+        public void onPlaybackStateChanged(int state) {
+            if (state == Player.STATE_ENDED) {
+                mEnded = true;
+                if (mWatchKey != null) {
+                    mHistory.markViewed(mWatchKey);
+                }
+                finish();
+            }
+        }
+    };
+
+    /** The formats ExoPlayer can't read go to libVLC, which plays through the same controls */
+    private void switchToVlc() {
+        mPlayer.release();
+        mPlayer = new VlcPlayer(this, getIntent().getData());
+        mPlayer.addListener(mListener);
+        // libVLC reports no tracks, so the black shutter would otherwise cover its picture
+        mPlayerView.setShutterBackgroundColor(Color.TRANSPARENT);
+        mPlayerView.setPlayer(mPlayer);
+        start();
+    }
+
+    private void start() {
         if (mWatchKey != null && mHistory.getPosition(mWatchKey) > 0) {
             mPlayer.seekTo(mHistory.getPosition(mWatchKey));
         }
