@@ -12,6 +12,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,8 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.RootsCommonFragment;
 import dev.dworks.apps.anexplorer.misc.PinViewHelper;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
+import dev.dworks.apps.anexplorer.misc.Trakt;
+import dev.dworks.apps.anexplorer.misc.TraktSignInActivity;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 
@@ -58,6 +61,7 @@ public class SettingsFragment extends Fragment {
     public static final String TAG = "SettingsFragment";
 
     private ViewGroup mList;
+    private TextView mTraktSummary;
     private final Map<String, MaterialSwitch> mSwitches = new HashMap<>();
     private final Map<String, Boolean> mSwitchDefaults = new HashMap<>();
     private View mPinSetRow;
@@ -162,6 +166,11 @@ public class SettingsFragment extends Fragment {
                 R.string.pref_folder_animations, R.string.settings_folder_animations_summary,
                 AppSettings.getFolderAnimation(context));
 
+        section = addSection(inflater, R.string.pref_header_trakt);
+        addTraktRow(inflater, section);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_TRAKT_CLIENT_ID, R.string.pref_trakt_client_id, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_TRAKT_CLIENT_SECRET, R.string.pref_trakt_client_secret, true);
+
         section = addSection(inflater, R.string.pref_header_cloud);
         addCloudKeyRow(inflater, section, AppSettings.KEY_DROPBOX_CLIENT_ID, R.string.pref_cloud_dropbox, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_ONEDRIVE_CLIENT_ID, R.string.pref_cloud_onedrive, false);
@@ -182,6 +191,56 @@ public class SettingsFragment extends Fragment {
             }
         });
         stopFocus(section.getChildAt(section.getChildCount() - 1), View.FOCUS_DOWN);
+    }
+
+    /** Signs in with a code shown on the TV, or offers to sign out when already signed in */
+    private void addTraktRow(LayoutInflater inflater, ViewGroup section) {
+        final View row = addRow(inflater, section, R.drawable.ic_watch_viewed, R.string.pref_trakt_account, 0);
+        mTraktSummary = (TextView) row.findViewById(android.R.id.summary);
+        updateTraktSummary();
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Context context = getActivity();
+                if (Trakt.isSignedIn(context)) {
+                    new MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.pref_trakt_sign_out_title)
+                            .setMessage(R.string.pref_trakt_sign_out_message)
+                            .setPositiveButton(R.string.pref_trakt_sign_out, (dialog, which) -> {
+                                Trakt.signOut(context);
+                                updateTraktSummary();
+                            })
+                            .setNeutralButton(R.string.pref_trakt_sync_now, (dialog, which) -> Trakt.sync(context, true))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                } else if (Trakt.isConfigured(context)) {
+                    startActivity(TraktSignInActivity.createIntent(context));
+                } else {
+                    showSnackbar(R.string.pref_trakt_not_configured);
+                }
+            }
+        });
+    }
+
+    private void updateTraktSummary() {
+        final Context context = getActivity();
+        if (mTraktSummary == null || context == null) {
+            return;
+        }
+        final String user = Trakt.getUser(context);
+        if (!Trakt.isSignedIn(context)) {
+            mTraktSummary.setText(R.string.pref_trakt_signed_out);
+        } else if (TextUtils.isEmpty(user)) {
+            mTraktSummary.setText(R.string.pref_trakt_signed_in_unnamed);
+        } else {
+            mTraktSummary.setText(getString(R.string.pref_trakt_signed_in, user));
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateTraktSummary();
     }
 
     /** The key itself is never shown again once saved, only whether one is set. */

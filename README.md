@@ -49,6 +49,14 @@ App Links
 [<img alt="Get it on Samsung Galaxy Store" height="80" src="https://d3unf4s5rp9dfh.cloudfront.net/SDP/GalaxyStore_English.png">](https://www.samsungapps.com/appquery/appDetail.as?appId=dev.dworks.apps.anexplorer&referrer=github)
 [<img alt="Get it on Aptoide" height="80" src="https://cdn6.aptoide.com/includes/themes/2014/images/aptoide_badge.svg">](https://d-works-file-manager.en.aptoide.com/app&referrer=github)
 
+Trakt Setup
+===========
+Signing in to Trakt (Settings → Trakt) keeps the played status in step with your account. Create an
+app at [trakt.tv/oauth/applications](https://trakt.tv/oauth/applications) with the redirect URI
+`urn:ietf:wg:oauth:2.0:oob`, then put its client ID and secret in `keystore.properties` as
+`TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET`, or type them into Settings on the TV. Videos are matched
+by title and year, or show, season and episode, taken from the file name.
+
 Cloud Storage Setup
 ===================
 Each cloud service needs the app registered with it once. Keys go in `keystore.properties`

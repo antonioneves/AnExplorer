@@ -118,7 +118,8 @@ public class SortingCursorWrapper extends AbstractCursor {
     /** In progress first, then not played, then played; the long sort puts the highest first */
     private static long playedRank(WatchHistory history, Cursor cursor) {
         final String id = history == null ? null : getCursorString(cursor, Document.COLUMN_DOCUMENT_ID);
-        switch (id == null ? WatchHistory.NONE : history.getState(id)) {
+        final String name = getCursorString(cursor, Document.COLUMN_DISPLAY_NAME);
+        switch (id == null ? WatchHistory.NONE : history.getState(id, name)) {
             case WatchHistory.VIEWING:
                 return 2;
             case WatchHistory.VIEWED:

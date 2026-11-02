@@ -123,6 +123,7 @@ import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
+import dev.dworks.apps.anexplorer.misc.Trakt;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.DocumentCopier;
@@ -252,6 +253,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 				.build())x;
 */
         super.onCreate(icicle);
+        Trakt.sync(this, false);
         // Android 16 no longer calls onBackPressed() for apps targeting it
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override

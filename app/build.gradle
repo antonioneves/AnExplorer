@@ -34,6 +34,10 @@ android {
         buildConfigField "String", "BOX_CLIENT_KEY", "\"${propOrEmpty('BOX_CLIENT_KEY')}\""
         // TMDB API key for movie and show covers; empty means no cover lookup
         buildConfigField "String", "TMDB_API_KEY", "\"${propOrEmpty('TMDB_API_KEY')}\""
+        // Trakt app keys for signing in and syncing watched videos; empty means no Trakt unless
+        // the user enters them in Settings
+        buildConfigField "String", "TRAKT_CLIENT_ID", "\"${propOrEmpty('TRAKT_CLIENT_ID')}\""
+        buildConfigField "String", "TRAKT_CLIENT_SECRET", "\"${propOrEmpty('TRAKT_CLIENT_SECRET')}\""
     }
     // libVLC is large, so each Android TV gets an APK with only its own ARM libraries, and the
     // universal one is for when the CPU isn't known

@@ -20,10 +20,25 @@ public class WatchHistory {
     private static final long MIN_POSITION_MS = 10_000;
     private static final float DONE_FRACTION = 0.95f;
 
+    private final Context mContext;
     private final SharedPreferences mPrefs;
 
     public WatchHistory(Context context) {
-        mPrefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        mContext = context.getApplicationContext();
+        mPrefs = mContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    /**
+     * Like {@link #getState(String)}, but a video Trakt knows as watched also counts, and is then
+     * remembered here, so it keeps showing as played without the account.
+     */
+    public int getState(String key, String fileName) {
+        final int state = getState(key);
+        if (state != VIEWED && Trakt.isWatched(mContext, fileName)) {
+            markViewed(key);
+            return VIEWED;
+        }
+        return state;
     }
 
     public int getState(String key) {
@@ -38,9 +53,9 @@ public class WatchHistory {
         return mPrefs.getLong(POSITION + key, 0);
     }
 
-    public void savePosition(String key, long position, long duration) {
+    public void savePosition(String key, String fileName, long position, long duration) {
         if (duration > 0 && position >= duration * DONE_FRACTION) {
-            markViewed(key);
+            markViewed(key, fileName);
         } else if (position >= MIN_POSITION_MS) {
             mPrefs.edit().putLong(POSITION + key, position).apply();
         }
@@ -48,5 +63,11 @@ public class WatchHistory {
 
     public void markViewed(String key) {
         mPrefs.edit().putBoolean(VIEWED_KEY + key, true).remove(POSITION + key).apply();
+    }
+
+    /** For a video watched to the end here: also tells Trakt when signed in */
+    public void markViewed(String key, String fileName) {
+        markViewed(key);
+        Trakt.markWatched(mContext, fileName);
     }
 }

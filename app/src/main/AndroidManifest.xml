@@ -351,6 +351,12 @@
             android:exported="false"
             android:label="@string/app_name" />
 
+        <activity
+            android:name=".misc.TraktSignInActivity"
+            android:theme="@style/DocumentsTheme.Document"
+            android:exported="false"
+            android:label="@string/app_name" />
+
     </application>
 
 </manifest>

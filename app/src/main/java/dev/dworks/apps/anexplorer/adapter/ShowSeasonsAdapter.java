@@ -462,7 +462,7 @@ public class ShowSeasonsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             void bind(DocumentInfo episode) {
                 this.episode = episode;
-                final int state = mHistory.getState(episode.documentId);
+                final int state = mHistory.getState(episode.documentId, episode.displayName);
                 watchBadge.setVisibility(state == WatchHistory.NONE ? View.GONE : View.VISIBLE);
                 if (state != WatchHistory.NONE) {
                     final boolean viewed = state == WatchHistory.VIEWED;

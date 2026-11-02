@@ -149,7 +149,7 @@ public class PlayerActivity extends Activity {
             if (state == Player.STATE_ENDED) {
                 mEnded = true;
                 if (mWatchKey != null) {
-                    mHistory.markViewed(mWatchKey);
+                    mHistory.markViewed(mWatchKey, getIntent().getStringExtra(EXTRA_NAME));
                 }
                 finish();
             }
@@ -288,7 +288,8 @@ public class PlayerActivity extends Activity {
     protected void onPause() {
         super.onPause();
         if (mPlayer != null && mWatchKey != null && !mEnded) {
-            mHistory.savePosition(mWatchKey, mPlayer.getCurrentPosition(), mPlayer.getDuration());
+            mHistory.savePosition(mWatchKey, getIntent().getStringExtra(EXTRA_NAME),
+                    mPlayer.getCurrentPosition(), mPlayer.getDuration());
         }
     }
 

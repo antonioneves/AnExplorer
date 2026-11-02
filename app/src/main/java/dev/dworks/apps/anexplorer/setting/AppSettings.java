@@ -61,6 +61,8 @@ public class AppSettings {
     public static final String KEY_ONEDRIVE_CLIENT_ID = "oneDriveClientId";
     public static final String KEY_BOX_CLIENT_ID = "boxClientId";
     public static final String KEY_BOX_CLIENT_KEY = "boxClientKey";
+    public static final String KEY_TRAKT_CLIENT_ID = "traktClientId";
+    public static final String KEY_TRAKT_CLIENT_SECRET = "traktClientSecret";
 
     private AppSettings() {
     }
@@ -160,6 +162,8 @@ public class AppSettings {
             case KEY_ONEDRIVE_CLIENT_ID: return BuildConfig.ONEDRIVE_CLIENT_ID;
             case KEY_BOX_CLIENT_ID: return BuildConfig.BOX_CLIENT_ID;
             case KEY_BOX_CLIENT_KEY: return BuildConfig.BOX_CLIENT_KEY;
+            case KEY_TRAKT_CLIENT_ID: return BuildConfig.TRAKT_CLIENT_ID;
+            case KEY_TRAKT_CLIENT_SECRET: return BuildConfig.TRAKT_CLIENT_SECRET;
             default: return "";
         }
     }
