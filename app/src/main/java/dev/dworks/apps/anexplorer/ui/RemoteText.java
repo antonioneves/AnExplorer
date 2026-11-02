@@ -3,6 +3,7 @@ package dev.dworks.apps.anexplorer.ui;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -22,6 +23,17 @@ public final class RemoteText {
         // Keys sent by the keyboard itself still move the cursor: it repeats them until the cursor
         // moves, so swallowing them loops forever
         return (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                && (event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == 0 && !isKeyboardShown(field);
+    }
+
+    /**
+     * True for an up or down from the remote in a one-line field while the keyboard is closed.
+     * The field would first walk the cursor to the start or end and swallow the key, so focus
+     * could never leave it.
+     */
+    public static boolean isRemoteVertical(View field, int keyCode, KeyEvent event) {
+        return (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+                && field instanceof TextView && ((TextView) field).getMaxLines() == 1
                 && (event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == 0 && !isKeyboardShown(field);
     }
 

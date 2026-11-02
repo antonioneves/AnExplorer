@@ -28,11 +28,17 @@ public class RemoteTextInputEditText extends TextInputEditText {
             RemoteText.moveFocus(this, keyCode);
             return true;
         }
+        if (RemoteText.isRemoteVertical(this, keyCode, event)) {
+            return false;
+        }
         return super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (RemoteText.isRemoteVertical(this, keyCode, event)) {
+            return false;
+        }
         return RemoteText.isRemoteMove(this, keyCode, event) || super.onKeyUp(keyCode, event);
     }
 
