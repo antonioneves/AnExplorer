@@ -70,7 +70,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - The System root's icon and its place in the sort order.
 - The search box's close animation.
 - The Locked folder is opt-in (the `lockedFolder` setting, off by default).
-- `RootsCache` logs a NullPointerException for the recents provider (`Cursor.moveToNext()` on a null cursor).
 - The app's first load on the emulator is slow.
 
 ## Development notes
