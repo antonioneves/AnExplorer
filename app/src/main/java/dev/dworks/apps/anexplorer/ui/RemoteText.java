@@ -25,11 +25,25 @@ public final class RemoteText {
                 && (event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == 0 && !isKeyboardShown(field);
     }
 
-    /** Moves focus the way the key points, if there is somewhere to go */
+    /**
+     * Moves focus the way the key points, if there is somewhere to go. The search can hand back a
+     * view that isn't beside the field (it wraps to another row), so only a view on the same row
+     * and on that side is taken.
+     */
     public static void moveFocus(View field, int keyCode) {
-        final View next = field.focusSearch(keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                ? View.FOCUS_LEFT : View.FOCUS_RIGHT);
-        if (next != null) {
+        final boolean left = keyCode == KeyEvent.KEYCODE_DPAD_LEFT;
+        final View next = field.focusSearch(left ? View.FOCUS_LEFT : View.FOCUS_RIGHT);
+        if (next == null || next == field) {
+            return;
+        }
+        final int[] from = new int[2];
+        final int[] to = new int[2];
+        field.getLocationOnScreen(from);
+        next.getLocationOnScreen(to);
+        final int fromCenter = from[0] + field.getWidth() / 2;
+        final int toCenter = to[0] + next.getWidth() / 2;
+        final boolean sameRow = to[1] < from[1] + field.getHeight() && to[1] + next.getHeight() > from[1];
+        if (sameRow && (left ? toCenter < fromCenter : toCenter > fromCenter)) {
             next.requestFocus();
         }
     }
