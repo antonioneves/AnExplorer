@@ -38,6 +38,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.material.color.MaterialColors;
@@ -45,6 +46,12 @@ import com.google.android.material.shape.MaterialShapeDrawable;
 import com.google.android.material.shape.ShapeAppearanceModel;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.common.DialogFragment;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
@@ -56,6 +63,7 @@ import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.IconColorUtils;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
+import dev.dworks.apps.anexplorer.misc.TmdbDetails;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -87,6 +95,11 @@ public class DetailFragment extends DialogFragment {
 	private View contents_layout;
     private CircleImage iconMimeBackground;
     private View path_layout;
+    private LinearLayout tmdbLayout;
+    private LinearLayout tmdbRows;
+    private TextView tmdbOverviewLabel;
+    private TextView tmdbOverview;
+    private AsyncTask<Void, Void, TmdbDetails.Info> tmdbTask;
 
     public static void showAsDialog(FragmentManager fm, DocumentInfo doc) {
 		final Bundle args = new Bundle();
@@ -131,6 +144,10 @@ public class DetailFragment extends DialogFragment {
 		
 		contents_layout = view.findViewById(R.id.contents_layout);
 		path_layout = view.findViewById(R.id.path_layout);
+		tmdbLayout = (LinearLayout) view.findViewById(R.id.tmdb_layout);
+		tmdbRows = (LinearLayout) view.findViewById(R.id.tmdb_rows);
+		tmdbOverviewLabel = (TextView) view.findViewById(R.id.tmdb_overview_label);
+		tmdbOverview = (TextView) view.findViewById(R.id.tmdb_overview);
 
 		iconMime = (ImageView) view.findViewById(R.id.icon_mime);
 		iconThumb = (ImageView) view.findViewById(R.id.icon_thumb);
@@ -184,8 +201,187 @@ public class DetailFragment extends DialogFragment {
             iconMime.setImageDrawable(IconUtils.loadMimeIcon(getActivity(), doc.mimeType, doc.authority, doc.documentId, DocumentsActivity.State.MODE_GRID));
         }
 		new DetailTask().execute();
+		if (TmdbDetails.canLoad(doc)) {
+			tmdbTask = new TmdbTask().execute();
+		}
+		final View root = getView();
+		if (root != null) {
+			root.requestFocus();
+		}
 	}
-	
+
+	@Override
+	public void onDestroyView() {
+		if (tmdbTask != null) {
+			tmdbTask.cancel(true);
+			tmdbTask = null;
+		}
+		super.onDestroyView();
+	}
+
+	private class TmdbTask extends AsyncTask<Void, Void, TmdbDetails.Info> {
+		@Override
+		protected TmdbDetails.Info doInBackground(Void... params) {
+			final Context context = getContext();
+			if (context == null) {
+				return null;
+			}
+			return TmdbDetails.load(context.getApplicationContext(), doc);
+		}
+
+		@Override
+		protected void onPostExecute(TmdbDetails.Info info) {
+			if (info != null && isAdded() && getView() != null) {
+				showTmdb(info);
+			}
+		}
+	}
+
+	private void showTmdb(TmdbDetails.Info info) {
+		if (tmdbLayout == null || tmdbRows == null
+				|| info.kind < TmdbDetails.MOVIE || info.kind > TmdbDetails.EPISODE) {
+			return;
+		}
+		final LayoutInflater inflater = getLayoutInflater();
+		tmdbRows.removeAllViews();
+		boolean hasRow = false;
+
+		if (info.kind == TmdbDetails.MOVIE || info.kind == TmdbDetails.SHOW) {
+			if (!TextUtils.isEmpty(info.title) && !info.title.equalsIgnoreCase(doc.displayName)) {
+				hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_title, info.title);
+			}
+			if (!TextUtils.isEmpty(info.originalTitle)
+					&& !info.originalTitle.equalsIgnoreCase(info.title)) {
+				hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_original_title, info.originalTitle);
+			}
+		} else if (info.kind == TmdbDetails.SEASON || info.kind == TmdbDetails.EPISODE) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_show, info.title);
+		}
+
+		if (info.kind == TmdbDetails.SEASON) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_season,
+					getString(R.string.detail_tmdb_season_value, info.season));
+		} else if (info.kind == TmdbDetails.EPISODE) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_episode,
+					getString(R.string.detail_tmdb_season_episode, info.season, info.episode));
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_title, info.episodeTitle);
+		}
+
+		final String date = formatDate(info.date);
+		if (info.kind == TmdbDetails.MOVIE) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_released, date);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_rated, info.certification);
+			hasRow |= addRating(inflater, info);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_genres, info.genres);
+			hasRow |= addRuntime(inflater, info.runtime);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_director, info.director);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_writer, info.writers);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_cast, info.cast);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_tagline, info.tagline);
+		} else if (info.kind == TmdbDetails.SHOW) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_first_aired, date);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_rated, info.certification);
+			hasRow |= addRating(inflater, info);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_genres, info.genres);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_seasons, count(info.seasons));
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_episodes, count(info.episodes));
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_status, info.status);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_network, info.network);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_creator, info.creator);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_cast, info.cast);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_tagline, info.tagline);
+		} else if (info.kind == TmdbDetails.SEASON) {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_aired, date);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_episodes, count(info.episodes));
+			hasRow |= addRating(inflater, info);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_genres, info.genres);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_rated, info.certification);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_cast, info.cast);
+		} else {
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_aired, date);
+			hasRow |= addRating(inflater, info);
+			hasRow |= addRuntime(inflater, info.runtime);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_director, info.director);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_writer, info.writers);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_cast, info.cast);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_guest_stars, info.guestStars);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_genres, info.genres);
+			hasRow |= addTmdbRow(inflater, R.string.detail_tmdb_rated, info.certification);
+		}
+
+		final boolean hasOverview = !TextUtils.isEmpty(info.overview);
+		tmdbOverview.setText(hasOverview ? info.overview : null);
+		tmdbOverviewLabel.setVisibility(hasOverview ? View.VISIBLE : View.GONE);
+		tmdbOverview.setVisibility(hasOverview ? View.VISIBLE : View.GONE);
+		if (hasRow || hasOverview) {
+			tmdbLayout.setVisibility(View.VISIBLE);
+		}
+	}
+
+	private boolean addTmdbRow(LayoutInflater inflater, int label, String value) {
+		if (TextUtils.isEmpty(value)) {
+			return false;
+		}
+		final View row = inflater.inflate(R.layout.item_detail_row, tmdbRows, false);
+		((TextView) row.findViewById(R.id.label)).setText(label);
+		((TextView) row.findViewById(R.id.value)).setText(value);
+		tmdbRows.addView(row);
+		return true;
+	}
+
+	private boolean addRating(LayoutInflater inflater, TmdbDetails.Info info) {
+		if (info.rating <= 0) {
+			return false;
+		}
+		final String rating = String.format(Locale.getDefault(), "%.1f", info.rating);
+		if (info.votes > 0) {
+			final String votes = getResources().getQuantityString(R.plurals.detail_tmdb_vote_count,
+					info.votes, NumberFormat.getIntegerInstance().format(info.votes));
+			return addTmdbRow(inflater, R.string.detail_tmdb_rating,
+					getString(R.string.detail_tmdb_rating_votes, rating, votes));
+		}
+		return addTmdbRow(inflater, R.string.detail_tmdb_rating,
+				getString(R.string.detail_tmdb_rating_value, rating));
+	}
+
+	private boolean addRuntime(LayoutInflater inflater, int minutes) {
+		if (minutes <= 0) {
+			return false;
+		}
+		final int hours = minutes / 60;
+		final int rest = minutes % 60;
+		final String value;
+		if (hours > 0 && rest > 0) {
+			value = getString(R.string.detail_tmdb_runtime_hours, hours, rest);
+		} else if (hours > 0) {
+			value = getString(R.string.detail_tmdb_runtime_hours_only, hours);
+		} else {
+			value = getString(R.string.detail_tmdb_runtime_minutes, rest);
+		}
+		return addTmdbRow(inflater, R.string.detail_tmdb_runtime, value);
+	}
+
+	private String count(int value) {
+		return value <= 0 ? null : NumberFormat.getIntegerInstance().format(value);
+	}
+
+	private String formatDate(String value) {
+		if (TextUtils.isEmpty(value)) {
+			return null;
+		}
+		try {
+			final SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+			parser.setLenient(false);
+			final Date date = parser.parse(value);
+			if (date != null) {
+				return DateFormat.getDateInstance(DateFormat.MEDIUM).format(date);
+			}
+		} catch (ParseException e) {
+			// An empty or partial date is shown as it came
+		}
+		return value;
+	}
+
 	private class DetailTask extends AsyncTask<Void, Void, Void>{
 
 		private Bitmap result;

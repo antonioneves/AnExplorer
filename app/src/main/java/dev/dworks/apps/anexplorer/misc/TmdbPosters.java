@@ -15,9 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +30,6 @@ import dev.dworks.apps.anexplorer.BuildConfig;
  */
 public final class TmdbPosters {
 
-    private static final String API = "https://api.themoviedb.org/3/search/";
     private static final String IMAGES = "https://image.tmdb.org/t/p/w342";
     private static final int TIMEOUT = 8000;
     private static final int MAX_POSTER = 2 * 1024 * 1024;
@@ -88,8 +87,7 @@ public final class TmdbPosters {
             return null;
         }
         q.title = title;
-        q.key = (q.show ? "tv-" : "movie-") + title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
-                + (q.year == null ? "" : "-" + q.year);
+        q.key = key(q.show, title, q.year);
         return q;
     }
 
@@ -97,6 +95,19 @@ public final class TmdbPosters {
     public static String title(String fileName) {
         final Query q = parse(fileName);
         return q == null ? fileName : q.title;
+    }
+
+    /** The year in a movie file name, or null when it isn't clear */
+    public static String year(String fileName) {
+        final Query q = parse(fileName);
+        return q == null ? null : q.year;
+    }
+
+    /** The cache key for a title, also used for the metadata cache */
+    static String key(boolean show, String title, String year) {
+        return (show ? "tv-" : "movie-")
+                + title.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
+                + (year == null ? "" : "-" + year);
     }
 
     /** Reads the cache only, so it is safe to call while listing */
@@ -151,39 +162,21 @@ public final class TmdbPosters {
     }
 
     private static String findPosterPath(boolean show, String title, String year) throws Exception {
-        final StringBuilder url = new StringBuilder(API).append(show ? "tv" : "movie")
-                .append("?query=").append(URLEncoder.encode(title, "UTF-8"));
+        final Map<String, String> params = new LinkedHashMap<>();
+        params.put("query", title);
+        params.put("include_adult", "false");
         if (year != null) {
-            url.append("&year=").append(year);
+            params.put(show ? "first_air_date_year" : "year", year);
         }
-        final String key = BuildConfig.TMDB_API_KEY;
-        final boolean bearer = key.startsWith("eyJ");
-        if (!bearer) {
-            url.append("&api_key=").append(URLEncoder.encode(key, "UTF-8"));
-        }
-        final HttpURLConnection conn = (HttpURLConnection) new URL(url.toString()).openConnection();
-        conn.setConnectTimeout(TIMEOUT);
-        conn.setReadTimeout(TIMEOUT);
-        conn.setRequestProperty("Accept", "application/json");
-        if (bearer) {
-            conn.setRequestProperty("Authorization", "Bearer " + key);
-        }
-        try {
-            if (conn.getResponseCode() != 200) {
-                throw new IOException("TMDB search answered " + conn.getResponseCode());
+        final JSONObject answer = TmdbApi.get("/search/" + (show ? "tv" : "movie"), params);
+        final JSONArray results = answer == null ? null : answer.optJSONArray("results");
+        for (int i = 0; results != null && i < results.length(); i++) {
+            final String poster = results.getJSONObject(i).optString("poster_path", "");
+            if (poster.startsWith("/")) {
+                return poster;
             }
-            final byte[] body = read(conn.getInputStream(), 1024 * 1024);
-            final JSONArray results = new JSONObject(new String(body, StandardCharsets.UTF_8)).optJSONArray("results");
-            for (int i = 0; results != null && i < results.length(); i++) {
-                final String poster = results.getJSONObject(i).optString("poster_path", "");
-                if (poster.startsWith("/")) {
-                    return poster;
-                }
-            }
-            return null;
-        } finally {
-            conn.disconnect();
         }
+        return null;
     }
 
     private static byte[] download(String url) throws IOException {
