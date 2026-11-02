@@ -73,6 +73,9 @@ android {
     packaging {
         resources {
             excludes += ['META-INF/LICENSE', 'META-INF/DEPENDENCIES']
+            // Data tables of Bouncy Castle's Picnic signatures: JSch only uses its ed25519,
+            // ML-KEM and NTRU Prime
+            excludes += ['org/bouncycastle/pqc/legacy/picnic/**']
         }
         jniLibs {
             // libaums prebuilts, not 16 KB page aligned: errno-lib only decorates USB I/O error
