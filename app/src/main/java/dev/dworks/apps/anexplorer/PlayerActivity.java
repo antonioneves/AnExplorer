@@ -41,6 +41,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
+import androidx.media3.session.MediaSession;
 import androidx.media3.ui.CaptionStyleCompat;
 import androidx.media3.ui.SubtitleView;
 
@@ -82,6 +83,8 @@ public class PlayerActivity extends Activity {
     private PlayerView mPlayerView;
     private Player mPlayer;
     private boolean mAudio;
+    private MediaSession mSession;
+    private int mSleepMinutes;
     private boolean mScrubbing;
     private boolean mEnded;
     private String mWatchKey;
@@ -149,8 +152,70 @@ public class PlayerActivity extends Activity {
         mPlayer.setMediaItem(mediaItem(uri));
         styleSubtitles();
         setUpSubtitleSearch();
+        setUpSleepTimer();
+        attachSession();
         start();
     }
+
+    /** Lets the remote's media keys, Assistant and the system's now playing card control the player */
+    private void attachSession() {
+        releaseSession();
+        // A second player can start before the first one's activity has stopped, and ids must differ
+        mSession = new MediaSession.Builder(this, mPlayer).setId(Long.toHexString(System.nanoTime())).build();
+    }
+
+    private void releaseSession() {
+        if (mSession != null) {
+            mSession.release();
+            mSession = null;
+        }
+    }
+
+    private void setUpSleepTimer() {
+        final View button = mPlayerView.findViewById(R.id.player_sleep);
+        if (button != null) {
+            button.setOnClickListener(v -> showSleepMenu());
+        }
+    }
+
+    /** Pauses the video after the chosen time, for falling asleep in front of it */
+    private void showSleepMenu() {
+        final int[] minutes = {0, 15, 30, 45, 60, 90};
+        final String[] labels = new String[minutes.length];
+        int checked = 0;
+        for (int i = 0; i < minutes.length; i++) {
+            labels[i] = minutes[i] == 0 ? getString(R.string.player_sleep_off)
+                    : getString(R.string.player_sleep_minutes, minutes[i]);
+            if (minutes[i] == mSleepMinutes) {
+                checked = i;
+            }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.player_sleep_timer)
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    dialog.dismiss();
+                    mPlayerView.removeCallbacks(mSleep);
+                    mSleepMinutes = minutes[which];
+                    if (mSleepMinutes > 0) {
+                        mPlayerView.postDelayed(mSleep, mSleepMinutes * 60_000L);
+                        Toast.makeText(this, getString(R.string.player_sleep_set, mSleepMinutes),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private final Runnable mSleep = new Runnable() {
+        @Override
+        public void run() {
+            mSleepMinutes = 0;
+            if (mPlayer != null) {
+                mPlayer.pause();
+                Toast.makeText(PlayerActivity.this, R.string.player_sleep_paused, Toast.LENGTH_LONG).show();
+            }
+        }
+    };
 
     /** The size, color and background chosen in Settings */
     private void styleSubtitles() {
@@ -175,7 +240,11 @@ public class PlayerActivity extends Activity {
     /** The video, with the subtitle downloaded for it earlier, if any */
     private MediaItem mediaItem(Uri uri) {
         final File saved = mWatchKey == null ? null : SubtitleFinder.saved(this, mWatchKey);
-        final MediaItem.Builder builder = new MediaItem.Builder().setUri(uri);
+        final String name = fileName();
+        final String title = TmdbPosters.title(name);
+        final MediaItem.Builder builder = new MediaItem.Builder().setUri(uri)
+                .setMediaMetadata(new MediaMetadata.Builder()
+                        .setTitle(TextUtils.isEmpty(title) ? name : title).build());
         if (saved != null) {
             builder.setSubtitleConfigurations(Collections.singletonList(subtitle(saved)));
         }
@@ -194,7 +263,7 @@ public class PlayerActivity extends Activity {
                 .build();
     }
 
-    /** The subtitle button shows for ExoPlayer videos that TMDB knows as a movie or show; VLC has its own menu */
+    /** The subtitle button shows for ExoPlayer videos that TMDB knows as a movie or show */
     private void setUpSubtitleSearch() {
         final View button = mPlayerView.findViewById(R.id.player_subtitles);
         if (button == null) {
@@ -202,7 +271,7 @@ public class PlayerActivity extends Activity {
         }
         button.setVisibility(View.GONE);
         button.setOnClickListener(v -> showSubtitleMenu());
-        if (mAudio || !(mPlayer instanceof ExoPlayer)) {
+        if (mAudio) {
             return;
         }
         final String name = fileName();
@@ -243,7 +312,8 @@ public class PlayerActivity extends Activity {
             labels.add(label);
             groups.add(group);
         }
-        final boolean canSearch = mWatchKey != null && SubtitleFinder.isConfigured(this);
+        final boolean canSearch = mWatchKey != null && mPlayer instanceof ExoPlayer
+                && SubtitleFinder.isConfigured(this);
         if (canSearch) {
             labels.add(getString(R.string.player_subtitle_search));
         }
@@ -428,6 +498,7 @@ public class PlayerActivity extends Activity {
 
     /** The formats ExoPlayer can't read go to libVLC, which plays through the same controls */
     private void switchToVlc() {
+        releaseSession();
         mPlayer.release();
         startVlc();
     }
@@ -438,6 +509,10 @@ public class PlayerActivity extends Activity {
         // libVLC reports no tracks, so the black shutter would otherwise cover its picture
         mPlayerView.setShutterBackgroundColor(Color.TRANSPARENT);
         mPlayerView.setPlayer(mPlayer);
+        styleSubtitles();
+        setUpSubtitleSearch();
+        setUpSleepTimer();
+        attachSession();
         start();
     }
 
@@ -527,6 +602,9 @@ public class PlayerActivity extends Activity {
     protected void onStop() {
         super.onStop();
         mPlayerView.removeCallbacks(mHideControls);
+        mSleepMinutes = 0;
+        mPlayerView.removeCallbacks(mSleep);
+        releaseSession();
         if (mPlayer != null) {
             mPlayerView.setPlayer(null);
             mPlayer.release();

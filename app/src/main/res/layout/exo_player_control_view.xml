@@ -87,6 +87,12 @@
             android:textSize="14sp" />
 
         <ImageButton
+            android:id="@+id/player_sleep"
+            style="@style/PlayerButton"
+            android:contentDescription="@string/player_sleep_timer"
+            android:src="@drawable/ic_player_sleep" />
+
+        <ImageButton
             android:id="@+id/player_subtitles"
             style="@style/PlayerButton"
             android:contentDescription="@string/player_subtitles"

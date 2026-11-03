@@ -11,11 +11,18 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
+import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
 import androidx.media3.common.SimpleBasePlayer;
+import androidx.media3.common.TrackGroup;
+import androidx.media3.common.TrackSelectionOverride;
+import androidx.media3.common.TrackSelectionParameters;
+import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 
 import com.google.common.util.concurrent.Futures;
@@ -29,6 +36,7 @@ import org.videolan.libvlc.interfaces.IVLCVout;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * libVLC behind the media3 {@link Player} interface, so the same player screen and controls work
@@ -43,7 +51,10 @@ public final class VlcPlayer extends SimpleBasePlayer {
             Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM, Player.COMMAND_SEEK_BACK,
             Player.COMMAND_SEEK_FORWARD, Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
             Player.COMMAND_GET_TIMELINE, Player.COMMAND_SET_VIDEO_SURFACE,
-            Player.COMMAND_RELEASE).build();
+            Player.COMMAND_RELEASE, Player.COMMAND_SET_SPEED_AND_PITCH, Player.COMMAND_GET_TRACKS,
+            Player.COMMAND_SET_TRACK_SELECTION_PARAMETERS, Player.COMMAND_GET_METADATA).build();
+    private static final String AUDIO_PREFIX = "a";
+    private static final String TEXT_PREFIX = "s";
 
     private final Context mContext;
     private final Uri mUri;
@@ -65,6 +76,8 @@ public final class VlcPlayer extends SimpleBasePlayer {
     private int mPlaybackState = Player.STATE_IDLE;
     private long mPendingSeek = C.TIME_UNSET;
     private PlaybackException mError;
+    private float mRate = 1f;
+    private TrackSelectionParameters mTrackParameters = TrackSelectionParameters.DEFAULT_WITHOUT_CONTEXT;
     @Nullable
     private MediaMetadata mMetadata;
 
@@ -114,6 +127,8 @@ public final class VlcPlayer extends SimpleBasePlayer {
                 state = Player.STATE_IDLE;
                 break;
             case MediaPlayer.Event.LengthChanged:
+            case MediaPlayer.Event.ESAdded:
+            case MediaPlayer.Event.ESSelected:
                 invalidateState();
                 return;
             default:
@@ -150,6 +165,7 @@ public final class VlcPlayer extends SimpleBasePlayer {
         final MediaItemData item = new MediaItemData.Builder(mUri)
                 .setMediaItem(mMediaItem)
                 .setMediaMetadata(mMetadata)
+                .setTracks(mReleased ? Tracks.EMPTY : tracks())
                 .setDurationUs(mLength != C.TIME_UNSET ? mLength * 1000 : C.TIME_UNSET)
                 .setIsSeekable(true)
                 .build();
@@ -158,6 +174,8 @@ public final class VlcPlayer extends SimpleBasePlayer {
                 .setPlayWhenReady(mPlayWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
                 .setPlaybackState(mPlaybackState)
                 .setPlayerError(mError)
+                .setPlaybackParameters(new PlaybackParameters(mRate))
+                .setTrackSelectionParameters(mTrackParameters)
                 .setPlaylist(Collections.singletonList(item))
                 .setCurrentMediaItemIndex(0)
                 .setContentPositionMs(() -> mPendingSeek != C.TIME_UNSET ? mPendingSeek
@@ -165,6 +183,61 @@ public final class VlcPlayer extends SimpleBasePlayer {
                 .setSeekBackIncrementMs(5000)
                 .setSeekForwardIncrementMs(15000)
                 .build();
+    }
+
+    /** The audio and subtitle tracks libVLC found in the file; it has them once it is playing */
+    private Tracks tracks() {
+        final List<Tracks.Group> groups = new ArrayList<>();
+        addGroups(groups, mPlayer.getAudioTracks(), mPlayer.getAudioTrack(), AUDIO_PREFIX,
+                MimeTypes.AUDIO_UNKNOWN);
+        addGroups(groups, mPlayer.getSpuTracks(), mPlayer.getSpuTrack(), TEXT_PREFIX,
+                MimeTypes.TEXT_UNKNOWN);
+        return new Tracks(groups);
+    }
+
+    private static void addGroups(List<Tracks.Group> groups, @Nullable MediaPlayer.TrackDescription[] found,
+                                  int current, String prefix, String mimeType) {
+        if (found == null) {
+            return;
+        }
+        for (MediaPlayer.TrackDescription track : found) {
+            // libVLC lists "Disable" as track -1; off is a choice the menu makes itself
+            if (track.id < 0) {
+                continue;
+            }
+            final Format format = new Format.Builder().setSampleMimeType(mimeType)
+                    .setLabel(track.name).build();
+            groups.add(new Tracks.Group(new TrackGroup(prefix + track.id, format), false,
+                    new int[]{C.FORMAT_HANDLED}, new boolean[]{track.id == current}));
+        }
+    }
+
+    @Override
+    protected ListenableFuture<?> handleSetPlaybackParameters(PlaybackParameters parameters) {
+        mRate = parameters.speed;
+        mPlayer.setRate(mRate);
+        return Futures.immediateVoidFuture();
+    }
+
+    @Override
+    protected ListenableFuture<?> handleSetTrackSelectionParameters(TrackSelectionParameters parameters) {
+        mTrackParameters = parameters;
+        if (parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)) {
+            mPlayer.setSpuTrack(-1);
+        }
+        for (TrackSelectionOverride override : parameters.overrides.values()) {
+            final String id = override.mediaTrackGroup.id;
+            if (id.length() < 2) {
+                continue;
+            }
+            final int track = Integer.parseInt(id.substring(1));
+            if (id.startsWith(AUDIO_PREFIX)) {
+                mPlayer.setAudioTrack(track);
+            } else if (id.startsWith(TEXT_PREFIX)) {
+                mPlayer.setSpuTrack(track);
+            }
+        }
+        return Futures.immediateVoidFuture();
     }
 
     @Override
