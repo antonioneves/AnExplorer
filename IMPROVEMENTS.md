@@ -38,5 +38,5 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 ## Untested
 - FTPS on port 990 (implicit TLS) and TLS session reuse.
 - An SFTP server whose host key changed.
-- The ADB storage dialog.
-- A custom Quick Share download folder, and receiving text over Quick Share.
+- The ADB storage dialog (the emulator has the Settings screen, so it only shows on a TV that lacks it).
+- Receiving files into a custom Quick Share folder, and receiving text over Quick Share (choosing the folder works, tested on the emulator; it needs a phone to send).
