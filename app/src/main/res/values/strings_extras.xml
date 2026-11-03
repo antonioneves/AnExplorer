@@ -122,6 +122,17 @@
     <!-- Size unit, displayed in a button next to an attachment  [CHAR LIMIT=5] -->
     <string name="gigabytes"><xliff:g id="count">%s</xliff:g> GB</string>
     <string name="save">Save</string>
+    <string name="pref_header_about">About</string>
+    <string name="pref_check_update">Check for updates</string>
+    <string name="pref_version">Version %1$s</string>
+    <string name="pref_update_checking">Checking…</string>
+    <string name="pref_update_latest">You have the latest version</string>
+    <string name="pref_update_failed">Couldn\'t reach GitHub to check for updates</string>
+    <string name="pref_update_available">Version %1$s is available</string>
+    <string name="pref_update_message">Download it into Downloads, then open the file there to install it.</string>
+    <string name="pref_update_no_apk">This release has no APK to download.</string>
+    <string name="pref_update_download">Download</string>
+    <string name="pref_update_downloading">Downloading into Downloads</string>
     <string name="pref_header_cloud">Cloud services</string>
     <string name="pref_cloud_dropbox">Dropbox app key</string>
     <string name="pref_cloud_onedrive">OneDrive client ID</string>
