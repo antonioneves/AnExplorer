@@ -4,10 +4,8 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 
 ## Features
 - Stream video from network storage (SMB, FTP, WebDAV) without copying it first.
-- A storage analyzer showing which folders take the most space.
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
-- A history of Quick Share transfers.
 - Continue Watching in the Android TV launcher's Watch Next row, built on the watch history.
 - A media session in the players, so the remote's media keys, Assistant and the system "now playing" card work, plus playback speed and a sleep timer.
 - Download subtitles for a video, using the title, season and episode already matched with TMDB.
