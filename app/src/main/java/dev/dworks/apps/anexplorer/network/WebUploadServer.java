@@ -13,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import javax.net.ssl.SSLContext;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -37,7 +39,7 @@ import dev.dworks.apps.anexplorer.misc.LogUtils;
 /**
  * A small web server beside the FTP server, so a phone can browse the FTP server's folder, send
  * files into it (or one of its subfolders) and download files from it. It asks for the FTP
- * server's login. Like the FTP server it speaks plain HTTP, so it is meant for a home network.
+ * server's login. It is served over HTTPS with a self-signed certificate, so a browser warns once.
  */
 public class WebUploadServer {
 
@@ -71,10 +73,16 @@ public class WebUploadServer {
     /** Starts listening on the first free port from 8080 and returns it */
     public int start() throws IOException {
         folder.mkdirs();
+        final SSLContext ssl;
+        try {
+            ssl = WebCertificate.sslContext(context);
+        } catch (Exception e) {
+            throw new IOException("No certificate for the web page", e);
+        }
         IOException failure = new IOException("No free port for the web page");
         for (int port = FIRST_PORT; port <= LAST_PORT; port++) {
             try {
-                socket = new ServerSocket(port);
+                socket = ssl.getServerSocketFactory().createServerSocket(port);
                 break;
             } catch (IOException e) {
                 failure = e;
@@ -347,7 +355,6 @@ public class WebUploadServer {
                 .replace("{{done}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_done)))
                 .replace("{{root}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_root)))
                 .replace("{{empty}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_empty)))
-                .replace("{{plain}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_plain)))
                 .replace("{{failed}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_failed)));
     }
 

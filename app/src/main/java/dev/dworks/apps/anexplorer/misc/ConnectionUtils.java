@@ -205,7 +205,7 @@ public class ConnectionUtils {
             int scope = host.indexOf('%');
             host = "[" + (scope >= 0 ? host.substring(0, scope) : host) + "]";
         }
-        return "http://" + host + ":" + webPort;
+        return "https://" + host + ":" + webPort;
     }
 
     public static int getAvailablePortForFTP(){
