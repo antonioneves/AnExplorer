@@ -13,7 +13,7 @@ None left.
 - SMB: check the new messages for a refused login and a server that won't list its shares (built, not seen on a real server).
 - Translations: the strings added recently are English only.
 - Trakt: real sign-in, the code screen, matching and both-way sync are untested, and Trakt's current terms and limits haven't been checked.
-- Split `DocumentsActivity` and `DirectoryFragment` (each over 2,000 lines), starting with the search and toolbar code.
+- `DocumentsActivity` (2,446 lines) and `DirectoryFragment` (2,100) are still big. The background tasks, voice search and episode selection were moved out; what's left (`styleTvSearchView`, the toolbar action mode, the show-folder adapter wiring, the long menu handlers) is tied to the activity's and fragment's state and needs a wider rewrite. Episode selection in a show folder was only built, not run: the emulator has no show folder.
 - Measure startup on the weakest TV (the Grundig) before optimizing it.
 
 ## Retest on the real TVs

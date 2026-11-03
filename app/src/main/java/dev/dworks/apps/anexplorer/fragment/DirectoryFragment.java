@@ -160,9 +160,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private int mRefocusPosition = -1;
 	private boolean mReloadAppsOnResume;
 	private int mLastCheckedPosition = -1;
-	// Episodes checked in a show folder's carousels; the file list keeps its own selection
-	private final ArrayList<DocumentInfo> mSelectedEpisodes = new ArrayList<>();
-	private boolean mSelectingEpisodes;
+	private final EpisodeSelection mEpisodes = new EpisodeSelection();
 	private ActionMode mEpisodeActionMode;
 
 	private int mLastMode = MODE_UNKNOWN;
@@ -886,11 +884,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					@Override
 					public void onEpisodeSelected(DocumentInfo episode, boolean selected) {
 						if (selected) {
-							if (!hasEpisode(episode)) {
-								mSelectedEpisodes.add(episode);
-							}
+							mEpisodes.add(episode);
 						} else {
-							removeEpisode(episode);
+							mEpisodes.remove(episode);
 						}
 						updateEpisodeSelection();
 					}
@@ -1013,9 +1009,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			final boolean manageMode = state.action == ACTION_BROWSE;
 			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
-			final boolean canDelete = mSelectingEpisodes ? allDeletable(checked)
+			final boolean canDelete = mEpisodes.isActive() ? allDeletable(checked)
 					: doc != null && doc.isDeleteSupported();
-			final boolean canRename = mSelectingEpisodes ? count == 1 && !checked.isEmpty()
+			final boolean canRename = mEpisodes.isActive() ? count == 1 && !checked.isEmpty()
 					&& checked.get(0).isRenameSupported() : doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
 			openWith.setVisible(manageMode && canOpenWith(checked));
@@ -1060,7 +1056,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 			updateStarItems(menu, checked);
 			// Select all belongs to the file list, which has its own positions
-			menu.findItem(R.id.menu_select_all).setVisible(!mSelectingEpisodes);
+			menu.findItem(R.id.menu_select_all).setVisible(!mEpisodes.isActive());
 
 			if (null != root && root.isApp()) {
 				for (int i = 0; i < menu.size(); i++) {
@@ -1081,12 +1077,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		@Override
 		public void onDestroyActionMode(ActionMode mode) {
             selectAll = true;
-			if (mSelectingEpisodes) {
-				mSelectingEpisodes = false;
+			if (mEpisodes.isActive()) {
 				mEpisodeActionMode = null;
-				mSelectedEpisodes.clear();
+				mEpisodes.end();
 				if (mShowAdapter != null) {
-					mShowAdapter.setSelection(false, mSelectedEpisodes);
+					mShowAdapter.setSelection(false, mEpisodes.list());
 				}
 			}
 			final Context context = getActivity();
@@ -1488,7 +1483,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				onUserSortOrderChanged();
 			} else if (isShowFolder()) {
 				// The carousels are rebuilt from the loader, so a deleted episode drops out
-				if (mSelectingEpisodes && id == R.id.menu_delete) {
+				if (mEpisodes.isActive() && id == R.id.menu_delete) {
 					clearSelection();
 				}
 				getLoaderManager().restartLoader(mLoaderId, null, mCallbacks);
@@ -1795,7 +1790,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** Unselects everything; false when nothing was selected */
 	public boolean clearSelection() {
-		if (mSelectingEpisodes) {
+		if (mEpisodes.isActive()) {
 			if (mEpisodeActionMode != null) {
 				mEpisodeActionMode.finish();
 			}
@@ -1809,8 +1804,8 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	private ArrayList<DocumentInfo> getCheckedDocuments() {
-		if (mSelectingEpisodes) {
-			return new ArrayList<>(mSelectedEpisodes);
+		if (mEpisodes.isActive()) {
+			return mEpisodes.copy();
 		}
 		final SparseBooleanArray checked = mAdapter.getCheckedItemPositions();
 		final ArrayList<DocumentInfo> docs = new ArrayList<>();
@@ -1828,50 +1823,31 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	private int selectionCount() {
-		return mSelectingEpisodes ? mSelectedEpisodes.size() : mAdapter.getCheckedItemCount();
-	}
-
-	private boolean hasEpisode(DocumentInfo episode) {
-		for (DocumentInfo selected : mSelectedEpisodes) {
-			if (selected.documentId.equals(episode.documentId)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private void removeEpisode(DocumentInfo episode) {
-		for (int i = mSelectedEpisodes.size() - 1; i >= 0; i--) {
-			if (mSelectedEpisodes.get(i).documentId.equals(episode.documentId)) {
-				mSelectedEpisodes.remove(i);
-			}
-		}
+		return mEpisodes.isActive() ? mEpisodes.size() : mAdapter.getCheckedItemCount();
 	}
 
 	/** Starts selecting episodes in the show folder's carousels, from the one long-pressed */
 	private void startEpisodeSelection(DocumentInfo episode) {
-		mSelectingEpisodes = true;
-		mSelectedEpisodes.clear();
-		mSelectedEpisodes.add(episode);
+		mEpisodes.start(episode);
 		if (mShowAdapter != null) {
-			mShowAdapter.setSelection(true, mSelectedEpisodes);
+			mShowAdapter.setSelection(true, mEpisodes.list());
 		}
 		mEpisodeActionMode = ((BaseActivity) getActivity()).startSupportActionMode(mMultiListener);
 		if (mEpisodeActionMode != null) {
 			mEpisodeActionMode.setTitle(getResources().getString(
-					R.string.mode_selected_count, mSelectedEpisodes.size()));
+					R.string.mode_selected_count, mEpisodes.size()));
 		}
 	}
 
 	/** Keeps the selection bar's count and actions in step with the episode cards */
 	private void updateEpisodeSelection() {
-		if (mSelectedEpisodes.isEmpty()) {
+		if (mEpisodes.isEmpty()) {
 			if (mEpisodeActionMode != null) {
 				mEpisodeActionMode.finish();
 			}
 		} else if (mEpisodeActionMode != null) {
 			mEpisodeActionMode.setTitle(getResources().getString(
-					R.string.mode_selected_count, mSelectedEpisodes.size()));
+					R.string.mode_selected_count, mEpisodes.size()));
 			mEpisodeActionMode.invalidate();
 		}
 	}
