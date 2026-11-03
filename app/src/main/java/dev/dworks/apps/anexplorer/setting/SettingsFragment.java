@@ -1,11 +1,15 @@
 package dev.dworks.apps.anexplorer.setting;
 
 import android.app.Dialog;
+import android.app.DownloadManager;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -13,6 +17,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.text.TextUtils;
+import androidx.core.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -286,11 +291,37 @@ public class SettingsFragment extends Fragment {
             dialog.setMessage(TextUtils.isEmpty(release.notes) ? getString(R.string.pref_update_message)
                     : release.notes)
                     .setPositiveButton(R.string.pref_update_download, (d, which) -> {
-                        UpdateChecker.download(context, release);
+                        final long id = UpdateChecker.download(context, release);
                         showSnackbar(R.string.pref_update_downloading);
+                        offerInstall(context, release, id);
                     });
         }
         dialog.show();
+    }
+
+    /** Once the APK is downloaded, asks whether to install it, so nobody has to find it in Downloads */
+    private void offerInstall(Context context, UpdateChecker.Release release, long id) {
+        final Context app = context.getApplicationContext();
+        final BroadcastReceiver done = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != id) {
+                    return;
+                }
+                app.unregisterReceiver(this);
+                if (!isAdded()) {
+                    return;
+                }
+                new MaterialAlertDialogBuilder(getActivity())
+                        .setTitle(getString(R.string.pref_update_downloaded, release.version))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.pref_update_install,
+                                (d, which) -> UpdateChecker.install(app, id))
+                        .show();
+            }
+        };
+        ContextCompat.registerReceiver(app, done,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED);
     }
 
     /** Signs in with a code shown on the TV, or offers to sign out when already signed in */

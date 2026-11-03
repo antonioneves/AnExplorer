@@ -2,6 +2,7 @@ package dev.dworks.apps.anexplorer.misc;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -127,12 +128,24 @@ public class UpdateChecker {
         return result;
     }
 
-    /** Into Downloads, where the system shows the progress; opening the APK there installs it */
-    public static void download(Context context, Release release) {
+    /** Into Downloads, where the system shows the progress; @return the download's id */
+    public static long download(Context context, Release release) {
         final DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-        manager.enqueue(new DownloadManager.Request(Uri.parse(release.apkUrl))
+        return manager.enqueue(new DownloadManager.Request(Uri.parse(release.apkUrl))
                 .setTitle(release.apkName)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, release.apkName));
+    }
+
+    /** Opens the finished download in the system installer, which asks the user before it installs */
+    public static void install(Context context, long downloadId) {
+        final DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+        final Uri apk = manager.getUriForDownloadedFile(downloadId);
+        if (apk == null) {
+            return;
+        }
+        context.startActivity(new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(apk, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 }

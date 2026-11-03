@@ -18,6 +18,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +27,7 @@ import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.DocumentCopier;
+import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.TransferControl;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
@@ -52,6 +54,8 @@ public class TransferService extends Service {
     public static final String ACTION_TRANSFER_PROGRESS = "dev.dworks.apps.anexplorer.action.TRANSFER_PROGRESS";
     public static final String EXTRA_DONE = "done";
     public static final String EXTRA_TOTAL = "total";
+    /** How many more transfers are waiting for this one to end */
+    public static final String EXTRA_QUEUED = "queued";
 
     private static final String EXTRA_DOCS = "docs";
     private static final String EXTRA_TARGET = "target";
@@ -65,6 +69,8 @@ public class TransferService extends Service {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final AtomicInteger waiting = new AtomicInteger();
+    /** What each transfer in line is, as shown in the notification; the one running has left it */
+    private final CopyOnWriteArrayList<String> queue = new CopyOnWriteArrayList<>();
     private volatile TransferControl running;
     private volatile int total;
     private boolean moving;
@@ -123,7 +129,11 @@ public class TransferService extends Service {
             createChannel();
             show(buildNotification(getString(R.string.transfer_starting), null, false, 0, 0, 0));
             waiting.incrementAndGet();
-            executor.execute(() -> run(docs, target, move));
+            final String label = getString(R.string.transfer_queue_item,
+                    docs.size() == 1 ? docs.get(0).displayName : FileUtils.formatFileCount(docs.size()),
+                    target.displayName);
+            queue.add(label);
+            executor.execute(() -> run(docs, target, move, label));
         } else {
             stopIfIdle();
         }
@@ -138,7 +148,8 @@ public class TransferService extends Service {
         }
     }
 
-    private void run(ArrayList<DocumentInfo> docs, DocumentInfo target, boolean move) {
+    private void run(ArrayList<DocumentInfo> docs, DocumentInfo target, boolean move, String label) {
+        queue.remove(label);
         final TransferControl control = new TransferControl();
         running = control;
         moving = move;
@@ -218,11 +229,19 @@ public class TransferService extends Service {
         final String bytes = android.text.format.Formatter.formatShortFileSize(this, control.getDone());
         // Folders are listed as they are copied, so the total can grow; never show more than whole
         final long all = Math.max(control.getTotal(), control.getDone());
-        final Notification notification = buildNotification(text,
-                getString(R.string.transfer_progress, done, total, bytes), control.isPaused(), 1,
+        final StringBuilder detail = new StringBuilder(
+                getString(R.string.transfer_progress, done, total, bytes));
+        if (!queue.isEmpty()) {
+            detail.append("\n").append(getString(R.string.transfer_waiting));
+            for (String waitingLabel : queue) {
+                detail.append("\n").append(waitingLabel);
+            }
+        }
+        final Notification notification = buildNotification(text, detail.toString(), control.isPaused(), 1,
                 control.getDone(), all);
         sendBroadcast(new Intent(ACTION_TRANSFER_PROGRESS).setPackage(getPackageName())
-                .putExtra(EXTRA_DONE, control.getDone()).putExtra(EXTRA_TOTAL, all));
+                .putExtra(EXTRA_DONE, control.getDone()).putExtra(EXTRA_TOTAL, all)
+                .putExtra(EXTRA_QUEUED, queue.size()));
         ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(NOTIFICATION_ID,
                 notification);
     }
@@ -236,7 +255,8 @@ public class TransferService extends Service {
         final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_server)
                 .setContentTitle(title)
-                .setContentText(detail)
+                .setContentText(detail == null ? null : detail.split("\n", 2)[0])
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(detail))
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

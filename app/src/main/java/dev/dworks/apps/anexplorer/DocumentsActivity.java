@@ -2151,7 +2151,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             final MoveFragment move = MoveFragment.get(getFragmentManager());
             if (move != null) {
                 move.setProgress(intent.getLongExtra(TransferService.EXTRA_DONE, 0),
-                        intent.getLongExtra(TransferService.EXTRA_TOTAL, 0));
+                        intent.getLongExtra(TransferService.EXTRA_TOTAL, 0),
+                        intent.getIntExtra(TransferService.EXTRA_QUEUED, 0));
             }
         }
     };

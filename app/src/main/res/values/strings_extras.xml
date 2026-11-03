@@ -129,9 +129,11 @@
     <string name="pref_update_latest">You have the latest version</string>
     <string name="pref_update_failed">Couldn\'t reach GitHub to check for updates</string>
     <string name="pref_update_available">Version %1$s is available</string>
-    <string name="pref_update_message">Download it into Downloads, then open the file there to install it.</string>
+    <string name="pref_update_message">Download it, then install it from here.</string>
     <string name="pref_update_no_apk">This release has no APK to download.</string>
     <string name="pref_update_download">Download</string>
+    <string name="pref_update_downloaded">Version %1$s is downloaded. Install it now?</string>
+    <string name="pref_update_install">Install</string>
     <string name="pref_update_downloading">Downloading into Downloads</string>
     <string name="pref_header_cloud">Cloud services</string>
     <string name="pref_cloud_dropbox">Dropbox app key</string>
@@ -467,5 +469,8 @@
     <string name="transfer_moved">Moved</string>
     <string name="transfer_cancelled">Transfer cancelled</string>
     <string name="transfer_failed">Transfer failed</string>
+    <string name="transfer_waiting">Waiting:</string>
+    <string name="transfer_waiting_count">  ·  %1$d waiting</string>
+    <string name="transfer_queue_item">%1$s to %2$s</string>
     <string name="transfer_percent">  ·  %1$d%% done</string>
 </resources>

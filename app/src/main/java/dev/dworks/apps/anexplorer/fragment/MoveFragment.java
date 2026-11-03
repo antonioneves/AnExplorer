@@ -191,10 +191,13 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		mRootInfo.setText(text);
 	}
 
-	/** Shows how far the transfer is, when its size is known */
-	public void setProgress(long done, long total) {
-		if (mPending && total > 0) {
-			showRoot(mRootName, getString(R.string.transfer_percent, (int) (done * 100 / total)));
+	/** Shows how far the transfer is, when its size is known, and how many more wait behind it */
+	public void setProgress(long done, long total, int queued) {
+		if (mPending && (total > 0 || queued > 0)) {
+			final String percent = total > 0
+					? getString(R.string.transfer_percent, (int) (done * 100 / total)) : "";
+			final String waiting = queued > 0 ? getString(R.string.transfer_waiting_count, queued) : "";
+			showRoot(mRootName, percent + waiting);
 		}
 	}
 
