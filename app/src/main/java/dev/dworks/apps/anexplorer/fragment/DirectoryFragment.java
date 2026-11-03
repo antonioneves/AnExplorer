@@ -87,6 +87,7 @@ import dev.dworks.apps.anexplorer.misc.MimeTypes;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.misc.Utils;
+import dev.dworks.apps.anexplorer.cursor.RootCursorWrapper;
 import dev.dworks.apps.anexplorer.model.DirectoryResult;
 import dev.dworks.apps.anexplorer.adapter.ShowSeasonsAdapter;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
@@ -106,6 +107,7 @@ import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
+import dev.dworks.apps.anexplorer.PreviewActivity;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;
@@ -521,6 +523,35 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	}
 
 	/**
+	 * Hands the preview the folder's images in the order the list shows them, so the remote can
+	 * step through them with left and right. Recents and search mix folders, so they get none.
+	 */
+	private void setImageSlideshow(String documentId) {
+		if (mType != TYPE_NORMAL) {
+			return;
+		}
+		final List<Uri> images = new ArrayList<>();
+		int index = -1;
+		for (int i = 0; i < mAdapter.getItemCount(); i++) {
+			final Cursor cursor = mAdapter.getItem(i);
+			if (null == cursor || !PreviewActivity.isImage(
+					getCursorString(cursor, Document.COLUMN_MIME_TYPE),
+					getCursorString(cursor, Document.COLUMN_DISPLAY_NAME))) {
+				continue;
+			}
+			final String id = getCursorString(cursor, Document.COLUMN_DOCUMENT_ID);
+			if (documentId.equals(id)) {
+				index = images.size();
+			}
+			images.add(DocumentsContract.buildDocumentUri(
+					getCursorString(cursor, RootCursorWrapper.COLUMN_AUTHORITY), id));
+		}
+		if (index >= 0 && images.size() > 1) {
+			PreviewActivity.setSlideshow(documentId, images, index);
+		}
+	}
+
+	/**
 	 * Focuses the row at mRefocusPosition, or the last one when fewer are left, once the list
 	 * has laid out what it holds now; before that the rows on screen may be ones just deleted
 	 */
@@ -872,6 +903,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				final int docFlags = getCursorInt(cursor, Document.COLUMN_FLAGS);
 				if (isDocumentEnabled(docMimeType, docFlags)) {
 					final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
+					if (PreviewActivity.isImage(docMimeType, doc.displayName)) {
+						setImageSlideshow(docId);
+					}
 					((BaseActivity) getActivity()).onDocumentPicked(doc);
 					Bundle params = new Bundle();
 					String type = IconUtils.getTypeNameFromMimeType(doc.mimeType);

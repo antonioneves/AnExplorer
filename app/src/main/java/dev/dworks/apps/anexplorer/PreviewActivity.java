@@ -31,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.misc.OfficeHtml;
@@ -40,11 +41,13 @@ import dev.dworks.apps.anexplorer.ui.ZoomImageView;
 
 /**
  * Previews images, PDFs, SVGs and plain-text style files inside the app, built for a remote:
- * arrows scroll or pan, OK zooms, BACK leaves. Loading runs off the main thread.
+ * arrows scroll or pan, OK zooms, BACK leaves. Opening a photo from a folder makes left and
+ * right step through the folder's other photos. Loading runs off the main thread.
  */
 public class PreviewActivity extends Activity {
 
     public static final String EXTRA_NAME = "preview_name";
+    public static final String EXTRA_DOCUMENT_ID = "preview_document_id";
 
     private static final int KIND_NONE = 0;
     private static final int KIND_IMAGE = 1;
@@ -67,6 +70,11 @@ public class PreviewActivity extends Activity {
 
     private FrameLayout mRoot;
     private ZoomImageView mImage;
+    /** The folder's images and where the one on screen sits, or null when this isn't a slideshow */
+    private List<Uri> mImages;
+    private int mImageIndex;
+    /** The counter on screen, replaced rather than queued when the remote is pressed quickly */
+    private Toast mImagePosition;
     private WebView mWeb;
     private String mSlideshow;
     private int mSlides, mSlide, mStep;
@@ -80,9 +88,49 @@ public class PreviewActivity extends Activity {
     private String mName;
     private volatile boolean mDestroyed;
 
+    /** Images waiting for the preview that was opened for them, handed over in memory */
+    private static Slideshow sPending;
+
+    /** The images of the folder an image was opened from, so the remote can step through them */
+    private static final class Slideshow {
+        /** The image that was clicked; a preview opened any other way doesn't take these */
+        final String documentId;
+        final List<Uri> images;
+        final int index;
+
+        Slideshow(String documentId, List<Uri> images, int index) {
+            this.documentId = documentId;
+            this.images = images;
+            this.index = index;
+        }
+    }
+
     /** @return whether this preview can show the file, judged by mime type and then the name */
     public static boolean supports(String mimeType, String name) {
         return kindOf(mimeType, name) != KIND_NONE;
+    }
+
+    /** @return whether the file can be one step of an image slideshow, so SVG and TIFF can't */
+    public static boolean isImage(String mimeType, String name) {
+        return kindOf(mimeType, name) == KIND_IMAGE;
+    }
+
+    /**
+     * Hands the preview the folder's images in the order the list shows them, so the remote can
+     * step through them. They travel in memory, as a folder of photos doesn't fit in an Intent.
+     */
+    public static void setSlideshow(String documentId, List<Uri> images, int index) {
+        sPending = new Slideshow(documentId, images, index);
+    }
+
+    /**
+     * Takes the images waiting for this document, if any. Whatever was waiting is dropped, so a
+     * preview opened later from somewhere else never inherits another folder's images.
+     */
+    private static Slideshow takeSlideshow(String documentId) {
+        final Slideshow slideshow = sPending;
+        sPending = null;
+        return slideshow != null && slideshow.documentId.equals(documentId) ? slideshow : null;
     }
 
     /**
@@ -144,6 +192,11 @@ public class PreviewActivity extends Activity {
         if (uri == null || mKind == KIND_NONE) {
             finish();
             return;
+        }
+        final Slideshow slideshow = takeSlideshow(getIntent().getStringExtra(EXTRA_DOCUMENT_ID));
+        if (slideshow != null && mKind == KIND_IMAGE) {
+            mImages = slideshow.images;
+            mImageIndex = slideshow.index;
         }
         final TextView loading = label(getString(R.string.preview_loading));
         mRoot.addView(loading);
@@ -307,15 +360,29 @@ public class PreviewActivity extends Activity {
             return;
         }
         mRoot.removeView(loading);
-        mImage = new ZoomImageView(this);
-        mImage.setFocusable(true);
-        mRoot.addView(mImage, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        if (mImage == null) {
+            mImage = new ZoomImageView(this);
+            mImage.setFocusable(true);
+            mRoot.addView(mImage, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
         mImage.setBitmap(bitmap, page, false);
         mImage.requestFocus();
         if (page) {
             showPageNumber();
+        } else if (mImages != null && mImages.size() > 1) {
+            // Say there are more, so the remote's right key gets a try
+            showImagePosition();
         }
+    }
+
+    private void showImagePosition() {
+        if (mImagePosition != null) {
+            mImagePosition.cancel();
+        }
+        mImagePosition = Toast.makeText(this,
+                getString(R.string.preview_image_position, mImageIndex + 1, mImages.size()), Toast.LENGTH_SHORT);
+        mImagePosition.show();
     }
 
     private void showPageNumber() {
@@ -399,6 +466,39 @@ public class PreviewActivity extends Activity {
         }, "preview-page").start();
     }
 
+    /** Moves to another photo of the folder off the main thread; the old one stays up until the new one is ready */
+    private void turnImage(int delta) {
+        final int target = mImageIndex + delta;
+        if (mImages == null || target < 0 || target >= mImages.size()) {
+            return;
+        }
+        mImageIndex = target;
+        final Uri uri = mImages.get(target);
+        new Thread(() -> {
+            try {
+                final Bitmap bitmap = decodeImage(uri);
+                runOnUiThread(() -> {
+                    if (!mDestroyed && target == mImageIndex) {
+                        mImage.setBitmap(bitmap, false, false);
+                        showImagePosition();
+                    }
+                });
+            } catch (Throwable e) {
+                // The next press moves on, so one unreadable photo can't strand the slideshow
+                Log.w("PreviewActivity", "Image failed", e);
+            }
+        }, "preview-image").start();
+    }
+
+    /** Turns to another item of what is open: a page, or another photo of the folder */
+    private void turn(int delta) {
+        if (mImages != null) {
+            turnImage(delta);
+        } else {
+            turnPage(delta);
+        }
+    }
+
     private String slideHtml() {
         final android.util.DisplayMetrics m = getResources().getDisplayMetrics();
         return OfficeHtml.showSlide(mSlideshow, mSlide, mStep, m.widthPixels / m.density, m.heightPixels / m.density,
@@ -475,22 +575,22 @@ public class PreviewActivity extends Activity {
                     }
                     return true;
                 case KeyEvent.KEYCODE_DPAD_LEFT:
-                    if (!mImage.pan(step, 0) && mPdf != null) {
-                        turnPage(-1);
+                    if (!mImage.pan(step, 0)) {
+                        turn(-1);
                     }
                     return true;
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
-                    if (!mImage.pan(-step, 0) && mPdf != null) {
-                        turnPage(1);
+                    if (!mImage.pan(-step, 0)) {
+                        turn(1);
                     }
                     return true;
                 case KeyEvent.KEYCODE_PAGE_DOWN:
                 case KeyEvent.KEYCODE_MEDIA_NEXT:
-                    turnPage(1);
+                    turn(1);
                     return true;
                 case KeyEvent.KEYCODE_PAGE_UP:
                 case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
-                    turnPage(-1);
+                    turn(-1);
                     return true;
                 default:
                     break;
