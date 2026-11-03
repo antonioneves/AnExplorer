@@ -434,8 +434,7 @@ public class PreviewActivity extends Activity {
             final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            // Above the counter, which shows in the same place
-            params.bottomMargin = dp(96);
+            params.bottomMargin = dp(36);
             mRoot.addView(mCounter, params);
         }
         mCounter.setText(text);
@@ -449,6 +448,11 @@ public class PreviewActivity extends Activity {
             mCounter.setVisibility(View.GONE);
         }
     };
+
+    /** The app's colours, so the bar sits on either theme like the counter */
+    private int themeColor(int attr, int fallback) {
+        return MaterialColors.getColor(new ContextThemeWrapper(this, R.style.DocumentsTheme), attr, fallback);
+    }
 
     private int dp(int value) {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value,
@@ -618,8 +622,7 @@ public class PreviewActivity extends Activity {
             mBar.setPadding(dp(8), dp(8), dp(8), dp(8));
             final GradientDrawable background = new GradientDrawable();
             background.setCornerRadius(dp(32));
-            // The preview is black in either theme, so the bar is a dark scrim
-            background.setColor(0xCC202124);
+            background.setColor(themeColor(R.attr.colorSurfaceContainerHigh, Color.DKGRAY));
             mBar.setBackground(background);
             mPlayButton = barButton(mPlaying ? R.string.slideshow_pause : R.string.slideshow_play,
                     v -> {
@@ -688,15 +691,15 @@ public class PreviewActivity extends Activity {
         if (text != 0) {
             button.setText(text);
         }
-        button.setTextColor(Color.WHITE);
+        button.setTextColor(themeColor(R.attr.colorOnSurface, Color.WHITE));
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         button.setGravity(Gravity.CENTER);
         button.setMinWidth(dp(96));
         button.setPadding(dp(20), dp(10), dp(20), dp(10));
         final GradientDrawable focused = new GradientDrawable();
         focused.setCornerRadius(dp(24));
-        focused.setColor(0x33FFFFFF);
-        focused.setStroke(dp(2), Color.WHITE);
+        focused.setColor(themeColor(R.attr.colorSecondaryContainer, Color.GRAY));
+        focused.setStroke(dp(2), themeColor(R.attr.colorPrimary, Color.WHITE));
         final android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
         background.addState(new int[]{android.R.attr.state_focused}, focused);
         button.setBackground(background);
