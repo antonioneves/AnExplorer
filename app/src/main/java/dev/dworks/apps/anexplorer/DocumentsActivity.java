@@ -128,6 +128,8 @@ import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 import dev.dworks.apps.anexplorer.fragment.ServerFragment;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
+import dev.dworks.apps.anexplorer.ui.SearchPillDrawable;
+import dev.dworks.apps.anexplorer.ui.VoiceSearch;
 import dev.dworks.apps.anexplorer.service.TransferService;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
@@ -202,12 +204,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private SearchPillDrawable mSearchPill;
     private int mToolbarInsetStart = -1;
     /** The recognizer behind the search field's microphone, kept for the next search */
-    private SpeechRecognizer mSpeechRecognizer;
-    private Dialog mVoiceDialog;
-    private ImageView mVoiceMic;
-    private TextView mVoiceStatus;
-    private TextView mVoiceWords;
-    private boolean mVoiceListening;
+    private final VoiceSearch mVoice = new VoiceSearch(this, this::searchByVoice);
 
     private Toolbar mToolbar;
     private PopupSpinner mToolbarStack;
@@ -523,11 +520,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         super.onStop();
         mStoppedAt = SystemClock.elapsedRealtime();
         // Leaving the app closes the microphone; the next search opens it again
-        cancelVoiceSearch();
-        if (mSpeechRecognizer != null) {
-            mSpeechRecognizer.destroy();
-            mSpeechRecognizer = null;
-        }
+        mVoice.release();
     }
 
     private static final long LOCKED_FOLDER_TIMEOUT = 60 * 1000;
@@ -1217,56 +1210,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         grow.start();
     }
 
-    /**
-     * Rounded pill background that can shrink to a circle at its end. Changing it only redraws,
-     * unlike swapping inset drawables, which relayouts the toolbar on every frame.
-     */
-    private static class SearchPillDrawable extends Drawable {
-        private final MaterialShapeDrawable mShape;
-        private final int mHeight;
-        private final int mEndInset;
-        private float mCollapsed;
-
-        SearchPillDrawable(MaterialShapeDrawable shape, int height, int endInset) {
-            mShape = shape;
-            mHeight = height;
-            mEndInset = endInset;
-        }
-
-        void setCollapsed(float collapsed) {
-            mCollapsed = collapsed;
-            invalidateSelf();
-        }
-
-        @Override
-        public void draw(Canvas canvas) {
-            final Rect bounds = getBounds();
-            final int top = bounds.centerY() - mHeight / 2;
-            final int bottom = top + mHeight;
-            final int right = bounds.right - mEndInset;
-            // Fully collapsed it is a circle as wide as it is tall
-            final int collapsedLeft = right - (bottom - top);
-            final int left = (int) (bounds.left + (collapsedLeft - bounds.left) * mCollapsed);
-            mShape.setBounds(left, top, right, bottom);
-            mShape.draw(canvas);
-        }
-
-        @Override
-        public void setAlpha(int alpha) {
-            mShape.setAlpha(alpha);
-        }
-
-        @Override
-        public void setColorFilter(ColorFilter colorFilter) {
-            mShape.setColorFilter(colorFilter);
-        }
-
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSLUCENT;
-        }
-    }
-
     private void showSearchKeyboard(View field) {
         field.requestFocus();
         final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -1444,66 +1387,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
      * microphone key belongs to the system's assistant, so this is the app's way in.
      */
     private void startVoiceSearch() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (!mVoice.isAvailable()) {
             Toast.makeText(this, R.string.voice_search_unavailable, Toast.LENGTH_LONG).show();
             return;
         }
-        runWithRecordAudio(this::listenForVoiceSearch);
-    }
-
-    private void listenForVoiceSearch() {
-        if (mSearchView == null) {
-            return;
-        }
-        if (mSpeechRecognizer == null) {
-            mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-            mSpeechRecognizer.setRecognitionListener(mVoiceListener);
-        }
-        mVoiceListening = true;
-        showVoiceDialog();
-        final Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-        mSpeechRecognizer.startListening(intent);
-    }
-
-    private void showVoiceDialog() {
-        if (mVoiceDialog == null) {
-            final Dialog dialog = new Dialog(this);
-            dialog.setContentView(R.layout.dialog_voice_search);
-            dialog.setCanceledOnTouchOutside(false);
-            dialog.setOnCancelListener(d -> cancelVoiceSearch());
-            final Window window = dialog.getWindow();
-            if (window != null) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-                window.setDimAmount(0.4f);
-            }
-            mVoiceMic = dialog.findViewById(R.id.voice_mic);
-            mVoiceStatus = dialog.findViewById(R.id.voice_status);
-            mVoiceWords = dialog.findViewById(R.id.voice_words);
-            mVoiceDialog = dialog;
-        }
-        mVoiceStatus.setText(R.string.voice_search_speak_now);
-        mVoiceWords.setVisibility(View.GONE);
-        mVoiceMic.setScaleX(1f);
-        mVoiceMic.setScaleY(1f);
-        mVoiceDialog.show();
-    }
-
-    private void dismissVoiceDialog() {
-        if (mVoiceDialog != null && mVoiceDialog.isShowing()) {
-            mVoiceDialog.dismiss();
-        }
-    }
-
-    /** Stops listening because the user backed out, without treating it as an error. */
-    private void cancelVoiceSearch() {
-        mVoiceListening = false;
-        if (mSpeechRecognizer != null) {
-            mSpeechRecognizer.cancel();
-        }
-        dismissVoiceDialog();
+        runWithRecordAudio(mVoice::listen);
     }
 
     /** Puts the recognized words in the search field, which runs the search. */
@@ -1532,104 +1420,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
-    private int voiceErrorText(int error) {
-        switch (error) {
-            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                return R.string.voice_search_permission_needed;
-            case SpeechRecognizer.ERROR_NETWORK:
-            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-            case SpeechRecognizer.ERROR_SERVER:
-            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
-                return R.string.voice_search_offline;
-            case SpeechRecognizer.ERROR_NO_MATCH:
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                return R.string.voice_search_no_match;
-            default:
-                return R.string.voice_search_failed;
-        }
-    }
-
-    private final RecognitionListener mVoiceListener = new RecognitionListener() {
-        @Override
-        public void onReadyForSpeech(Bundle params) {
-            mVoiceStatus.setText(R.string.voice_search_speak_now);
-        }
-
-        @Override
-        public void onBeginningOfSpeech() {
-            mVoiceStatus.setText(R.string.voice_search_listening);
-        }
-
-        @Override
-        public void onRmsChanged(float rmsdB) {
-            if (!mVoiceListening || mVoiceMic == null) {
-                return;
-            }
-            // The mic grows with the voice, so the remote is clearly being heard
-            final float level = Math.max(0f, Math.min(1f, (rmsdB + 2f) / 12f));
-            final float scale = 1f + level * 0.3f;
-            mVoiceMic.setScaleX(scale);
-            mVoiceMic.setScaleY(scale);
-        }
-
-        @Override
-        public void onBufferReceived(byte[] buffer) {
-        }
-
-        @Override
-        public void onEndOfSpeech() {
-        }
-
-        @Override
-        public void onError(int error) {
-            if (!mVoiceListening) {
-                return;
-            }
-            mVoiceListening = false;
-            dismissVoiceDialog();
-            if (Utils.isActivityAlive(DocumentsActivity.this)) {
-                Toast.makeText(DocumentsActivity.this, voiceErrorText(error), Toast.LENGTH_LONG).show();
-            }
-        }
-
-        @Override
-        public void onResults(Bundle results) {
-            if (!mVoiceListening) {
-                return;
-            }
-            mVoiceListening = false;
-            dismissVoiceDialog();
-            final ArrayList<String> matches = results == null ? null
-                    : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-            if (matches == null || matches.isEmpty()) {
-                Toast.makeText(DocumentsActivity.this, R.string.voice_search_no_match, Toast.LENGTH_LONG).show();
-                return;
-            }
-            searchByVoice(matches.get(0));
-        }
-
-        @Override
-        public void onPartialResults(Bundle partialResults) {
-            if (!mVoiceListening || mVoiceWords == null) {
-                return;
-            }
-            final ArrayList<String> matches = partialResults == null ? null
-                    : partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-            if (matches != null && !matches.isEmpty()) {
-                mVoiceWords.setText(matches.get(0));
-                mVoiceWords.setVisibility(View.VISIBLE);
-            }
-        }
-
-        @Override
-        public void onEvent(int eventType, Bundle params) {
-        }
-    };
-
     /** Steps back inside the app; false when Back should leave it */
     private boolean handleBack() {
-        if (mVoiceDialog != null && mVoiceDialog.isShowing()) {
-            cancelVoiceSearch();
+        if (mVoice.isShowing()) {
+            mVoice.cancel();
             return true;
         }
         if (null != mToolbarActionMode) {
