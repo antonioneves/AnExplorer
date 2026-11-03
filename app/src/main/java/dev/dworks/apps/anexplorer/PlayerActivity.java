@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView;
 
 import dev.dworks.apps.anexplorer.misc.VlcPlayer;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
+import dev.dworks.apps.anexplorer.misc.WatchNext;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 
 /**
@@ -151,6 +152,7 @@ public class PlayerActivity extends Activity {
                 mEnded = true;
                 if (mWatchKey != null) {
                     mHistory.markViewed(mWatchKey, getIntent().getStringExtra(EXTRA_NAME));
+                    WatchNext.remove(PlayerActivity.this, mWatchKey);
                 }
                 finish();
             }
@@ -292,6 +294,23 @@ public class PlayerActivity extends Activity {
         if (mPlayer != null && mWatchKey != null && !mEnded) {
             mHistory.savePosition(mWatchKey, getIntent().getStringExtra(EXTRA_NAME),
                     mPlayer.getCurrentPosition(), mPlayer.getDuration());
+            updateWatchNext();
+        }
+    }
+
+    /** An unfinished video goes to the launcher's Watch Next row, a finished one leaves it */
+    private void updateWatchNext() {
+        if (mAudio) {
+            return;
+        }
+        final long position = mPlayer.getCurrentPosition();
+        final long duration = mPlayer.getDuration();
+        final String name = fileName();
+        if (mHistory.getState(mWatchKey) == WatchHistory.VIEWED) {
+            WatchNext.remove(this, mWatchKey);
+        } else if (mHistory.getPosition(mWatchKey) > 0 && duration > 0) {
+            WatchNext.update(this, getIntent().getData(), getIntent().getType(), mWatchKey, name,
+                    position, duration);
         }
     }
 

@@ -6,7 +6,6 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Stream video from network storage (SMB, FTP, WebDAV) without copying it first.
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
-- Continue Watching in the Android TV launcher's Watch Next row, built on the watch history.
 - A media session in the players, so the remote's media keys, Assistant and the system "now playing" card work, plus playback speed and a sleep timer.
 - Download subtitles for a video, using the title, season and episode already matched with TMDB.
 - Find SMB and FTP servers on the network (`NsdManager`) instead of typing an address with the remote.
@@ -33,6 +32,7 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - The Menu key opening an item's menu.
 - The empty state of the Recycle Bin.
 - The interface text moved into string resources.
+- Continue Watching in the launcher's Watch Next row: check the poster and that a video from a network storage resumes (only a local video was tested, on the emulator).
 - Right from the sidebar moving into the file list.
 
 ## Untested

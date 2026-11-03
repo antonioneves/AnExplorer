@@ -35,6 +35,7 @@ public final class TmdbPosters {
     private static final int MAX_POSTER = 2 * 1024 * 1024;
     private static final String FOLDER = "tmdb";
     private static final String MISS = ".miss";
+    private static final String URL_EXT = ".url";
 
     private static final Pattern YEAR = Pattern.compile("[ ._\\-\\[(]+((?:19|20)\\d{2})(?![0-9])");
     private static final Pattern TAGS = Pattern.compile(
@@ -154,9 +155,46 @@ public final class TmdbPosters {
             try (FileOutputStream out = new FileOutputStream(file)) {
                 out.write(bytes);
             }
+            try (FileOutputStream out = new FileOutputStream(new File(folder, q.key + URL_EXT))) {
+                out.write((IMAGES + path).getBytes("UTF-8"));
+            }
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
         } catch (Exception e) {
             // A network error is not remembered, the next listing tries again
+            return null;
+        }
+    }
+
+    /**
+     * The TMDB address of the poster, for the launcher, which can't read this app's cache.
+     * Blocks on the network when only the image was cached, so call it off the main thread.
+     * @return null when there is no poster
+     */
+    public static String posterUrl(Context context, String fileName) {
+        final Query q = isEnabled() ? parse(fileName) : null;
+        if (q == null) {
+            return null;
+        }
+        final File folder = new File(context.getCacheDir(), FOLDER);
+        final File sidecar = new File(folder, q.key + URL_EXT);
+        try {
+            if (!sidecar.isFile()) {
+                if (new File(folder, q.key + MISS).isFile()) {
+                    return null;
+                }
+                final String path = findPosterPath(q.show, q.title, q.year);
+                if (path == null || !(folder.isDirectory() || folder.mkdirs())) {
+                    return null;
+                }
+                try (FileOutputStream out = new FileOutputStream(sidecar)) {
+                    out.write((IMAGES + path).getBytes("UTF-8"));
+                }
+            }
+            final byte[] bytes = new byte[(int) sidecar.length()];
+            try (java.io.FileInputStream in = new java.io.FileInputStream(sidecar)) {
+                return in.read(bytes) == bytes.length ? new String(bytes, "UTF-8") : null;
+            }
+        } catch (Exception e) {
             return null;
         }
     }
