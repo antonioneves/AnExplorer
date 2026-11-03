@@ -49,6 +49,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	private DocumentInfo mReplaceTarget;
 	private TextView mMoveInfo;
 	private TextView mRootInfo;
+	private CharSequence mRootName;
 	private View mSave;
 	private MaterialProgressBar mProgress;
 
@@ -165,6 +166,11 @@ public class MoveFragment extends Fragment implements OnClickListener{
 
 	/** While a transfer runs the buttons pause, resume and cancel it, as the TV can't reach its notification */
 	public void setPending(boolean pending) {
+		if (pending && !mPending) {
+			mRootName = mRootInfo.getText();
+		} else if (!pending && mRootName != null) {
+			mRootInfo.setText(mRootName);
+		}
 		mPending = pending;
 		mPaused = false;
 		mProgress.setVisibility(View.GONE);
@@ -177,7 +183,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	/** Shows how far the transfer is, when its size is known */
 	public void setProgress(long done, long total) {
 		if (mPending && total > 0) {
-			mMoveInfo.setText(getString(R.string.transfer_percent, (int) (done * 100 / total)));
+			mRootInfo.setText(getString(R.string.transfer_percent, mRootName, (int) (done * 100 / total)));
 		}
 	}
 
