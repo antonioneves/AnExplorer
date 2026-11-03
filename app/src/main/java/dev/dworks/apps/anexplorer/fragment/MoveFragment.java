@@ -60,6 +60,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	private View mCancel;
 	private boolean mPending;
 	private boolean mPaused;
+	private boolean mFlashing;
 	private ArrayList<DocumentInfo> docs;
 
 	private static final String EXTRA_DELETE_AFTER = "delete_after";
@@ -177,6 +178,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		}
 		mPending = pending;
 		mPaused = false;
+		mFlashing = false;
 		mProgress.setVisibility(View.GONE);
 		((TextView) mSave).setText(pending ? R.string.transfer_pause : R.string.menu_paste);
 		((TextView) mCancel).setText(android.R.string.cancel);
@@ -191,9 +193,34 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		mRootInfo.setText(text);
 	}
 
+	/** Says a short message in place of the bar's text, so a snackbar doesn't stack on top of the bar */
+	public boolean flash(CharSequence message) {
+		final View view = getView();
+		if (view == null || view.getVisibility() != View.VISIBLE) {
+			return false;
+		}
+		final CharSequence title = mMoveInfo.getText();
+		final CharSequence detail = mRootInfo.getText();
+		mFlashing = true;
+		mMoveInfo.setText(message);
+		mRootInfo.setText("");
+		view.postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				if (!mFlashing || getView() == null) {
+					return;
+				}
+				mFlashing = false;
+				mMoveInfo.setText(title);
+				mRootInfo.setText(detail);
+			}
+		}, 2500);
+		return true;
+	}
+
 	/** Shows how far the transfer is, when its size is known, and how many more wait behind it */
 	public void setProgress(long done, long total, int queued) {
-		if (mPending && (total > 0 || queued > 0)) {
+		if (mPending && !mFlashing && (total > 0 || queued > 0)) {
 			final String percent = total > 0
 					? getString(R.string.transfer_percent, (int) (done * 100 / total)) : "";
 			final String waiting = queued > 0 ? getString(R.string.transfer_waiting_count, queued) : "";
