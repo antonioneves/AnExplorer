@@ -96,6 +96,11 @@
         support:showAsAction="ifRoom"
         android:title="@string/menu_open_with"/>
     <item
+        android:id="@+id/menu_slideshow"
+        android:icon="@drawable/ic_menu_slideshow"
+        support:showAsAction="ifRoom"
+        android:title="@string/slideshow"/>
+    <item
         android:id="@+id/menu_quickshare"
         android:icon="@drawable/ic_root_quickshare"
         support:showAsAction="ifRoom"

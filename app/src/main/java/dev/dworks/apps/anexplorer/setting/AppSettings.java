@@ -58,6 +58,7 @@ public class AppSettings {
     public static final String KEY_RESUME_PLAYBACK = "resumePlayback";
     public static final String KEY_VIEW_MODE = "viewMode";
     public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
+    public static final String KEY_SLIDESHOW_SECONDS = "slideshowSeconds";
     public static final String KEY_DROPBOX_CLIENT_ID = "dropboxClientId";
     public static final String KEY_ONEDRIVE_CLIENT_ID = "oneDriveClientId";
     public static final String KEY_BOX_CLIENT_ID = "boxClientId";
@@ -135,6 +136,15 @@ public class AppSettings {
     public static File getDefaultQuickShareFolder() {
         return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "Quick Share");
+    }
+
+    /** How long a photo stays up in a slideshow */
+    public static int getSlideshowSeconds(Context context) {
+        return prefs(context).getInt(KEY_SLIDESHOW_SECONDS, 5);
+    }
+
+    public static void setSlideshowSeconds(Context context, int seconds) {
+        prefs(context).edit().putInt(KEY_SLIDESHOW_SECONDS, seconds).apply();
     }
 
     public static boolean isDefaultQuickShareFolder(Context context) {

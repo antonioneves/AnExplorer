@@ -522,13 +522,26 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return -1;
 	}
 
+	private int countImages() {
+		int count = 0;
+		for (int i = 0; i < mAdapter.getItemCount(); i++) {
+			final Cursor cursor = mAdapter.getItem(i);
+			if (null != cursor && PreviewActivity.isImage(
+					getCursorString(cursor, Document.COLUMN_MIME_TYPE),
+					getCursorString(cursor, Document.COLUMN_DISPLAY_NAME))) {
+				count++;
+			}
+		}
+		return count;
+	}
+
 	/**
 	 * Hands the preview the folder's images in the order the list shows them, so the remote can
 	 * step through them with left and right. Recents and search mix folders, so they get none.
 	 */
-	private void setImageSlideshow(String documentId) {
+	private boolean setImageSlideshow(String documentId, boolean play) {
 		if (mType != TYPE_NORMAL) {
-			return;
+			return false;
 		}
 		final List<Uri> images = new ArrayList<>();
 		int index = -1;
@@ -547,8 +560,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					getCursorString(cursor, RootCursorWrapper.COLUMN_AUTHORITY), id));
 		}
 		if (index >= 0 && images.size() > 1) {
-			PreviewActivity.setSlideshow(documentId, images, index);
+			PreviewActivity.setSlideshow(documentId, images, index, play);
+			return true;
 		}
+		return false;
 	}
 
 	/**
@@ -904,7 +919,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				if (isDocumentEnabled(docMimeType, docFlags)) {
 					final DocumentInfo doc = DocumentInfo.fromDirectoryCursor(cursor);
 					if (PreviewActivity.isImage(docMimeType, doc.displayName)) {
-						setImageSlideshow(docId);
+						setImageSlideshow(docId, false);
 					}
 					((BaseActivity) getActivity()).onDocumentPicked(doc);
 					Bundle params = new Bundle();
@@ -1691,6 +1706,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			if (quickShare != null) {
 				quickShare.setVisible(manageMode && !Utils.isDir(doc.mimeType) && !isRecycleBin());
 			}
+			final MenuItem slideshow = menu.findItem(R.id.menu_slideshow);
+			if (slideshow != null) {
+				slideshow.setVisible(manageMode && mType == TYPE_NORMAL
+						&& PreviewActivity.isImage(doc.mimeType, doc.displayName) && countImages() > 1);
+			}
 			menu.findItem(R.id.menu_restore).setVisible(manageMode && isRecycleBinTop());
 			menu.findItem(R.id.menu_lock).setVisible(manageMode && canLock(single));
 			if (manageMode) {
@@ -1869,6 +1889,12 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		Bundle params = new Bundle();
 		if (id == R.id.menu_open_with) {
 			onOpenWith(docs.get(0));
+			return true;
+		} else if (id == R.id.menu_slideshow) {
+			final DocumentInfo first = docs.get(0);
+			if (setImageSlideshow(first.documentId, true)) {
+				((BaseActivity) getActivity()).onDocumentPicked(first);
+			}
 			return true;
 		} else if (id == R.id.menu_quickshare) {
 			onQuickShareDocuments(docs);

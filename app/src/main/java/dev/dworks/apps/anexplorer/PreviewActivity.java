@@ -23,8 +23,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import dev.dworks.apps.anexplorer.setting.AppSettings;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -67,6 +70,10 @@ public class PreviewActivity extends Activity {
     private static final int MAX_IMAGE_SIDE = 2560;
     /** How long the photo or page counter stays up, as long as a short toast */
     private static final int COUNTER_MILLIS = 2000;
+    /** How long the slideshow bar stays up without a key press */
+    private static final int BAR_MILLIS = 6000;
+    private static final int FADE_MILLIS = 300;
+    private static final int[] SLIDESHOW_SECONDS = {3, 5, 10, 30};
     private static final String IMAGE_EXTENSIONS = "|png|jpg|jpeg|gif|webp|bmp|avif|heic|heif|";
     private static final String PLAIN_EXTENSIONS = "|txt|text|log|";
     private static final String TEXT_EXTENSIONS = "|txt|text|log|json|xml|yml|yaml|ini|md|markdown|csv|tsv"
@@ -81,6 +88,11 @@ public class PreviewActivity extends Activity {
     private int mImageIndex;
     /** The photo or page counter, drawn over the preview and replaced rather than queued */
     private TextView mCounter;
+    /** Whether the photos advance by themselves, and the bar that controls it */
+    private boolean mPlaying;
+    private boolean mAutoplay;
+    private LinearLayout mBar;
+    private TextView mPlayButton, mIntervalButton;
     private WebView mWeb;
     private String mSlideshow;
     private int mSlides, mSlide, mStep;
@@ -103,11 +115,14 @@ public class PreviewActivity extends Activity {
         final String documentId;
         final List<Uri> images;
         final int index;
+        /** Whether it starts playing, as when it is started from the file's menu */
+        final boolean play;
 
-        Slideshow(String documentId, List<Uri> images, int index) {
+        Slideshow(String documentId, List<Uri> images, int index, boolean play) {
             this.documentId = documentId;
             this.images = images;
             this.index = index;
+            this.play = play;
         }
     }
 
@@ -125,8 +140,8 @@ public class PreviewActivity extends Activity {
      * Hands the preview the folder's images in the order the list shows them, so the remote can
      * step through them. They travel in memory, as a folder of photos doesn't fit in an Intent.
      */
-    public static void setSlideshow(String documentId, List<Uri> images, int index) {
-        sPending = new Slideshow(documentId, images, index);
+    public static void setSlideshow(String documentId, List<Uri> images, int index, boolean play) {
+        sPending = new Slideshow(documentId, images, index, play);
     }
 
     /**
@@ -203,6 +218,7 @@ public class PreviewActivity extends Activity {
         if (slideshow != null && mKind == KIND_IMAGE) {
             mImages = slideshow.images;
             mImageIndex = slideshow.index;
+            mAutoplay = slideshow.play;
         }
         final TextView loading = label(getString(R.string.preview_loading));
         mRoot.addView(loading);
@@ -377,6 +393,10 @@ public class PreviewActivity extends Activity {
         if (page) {
             showPageNumber();
         } else if (mImages != null && mImages.size() > 1) {
+            if (mAutoplay) {
+                mAutoplay = false;
+                setPlaying(true);
+            }
             // Say there are more, so the remote's right key gets a try
             showImagePosition();
         }
@@ -414,7 +434,8 @@ public class PreviewActivity extends Activity {
             final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            params.bottomMargin = dp(36);
+            // Above the counter, which shows in the same place
+            params.bottomMargin = dp(96);
             mRoot.addView(mCounter, params);
         }
         mCounter.setText(text);
@@ -510,10 +531,17 @@ public class PreviewActivity extends Activity {
         }, "preview-page").start();
     }
 
-    /** Moves to another photo of the folder off the main thread; the old one stays up until the new one is ready */
-    private void turnImage(int delta) {
-        final int target = mImageIndex + delta;
-        if (mImages == null || target < 0 || target >= mImages.size()) {
+    /**
+     * Moves to another photo of the folder off the main thread; the old one stays up until the new
+     * one is ready. The slideshow wraps round at the ends, the remote's keys stop there.
+     */
+    private void turnImage(int delta, boolean wrap) {
+        if (mImages == null) {
+            return;
+        }
+        final int count = mImages.size();
+        final int target = wrap ? Math.floorMod(mImageIndex + delta, count) : mImageIndex + delta;
+        if (target < 0 || target >= count) {
             return;
         }
         mImageIndex = target;
@@ -524,20 +552,166 @@ public class PreviewActivity extends Activity {
                 runOnUiThread(() -> {
                     if (!mDestroyed && target == mImageIndex) {
                         mImage.setBitmap(bitmap, false, false);
+                        if (mPlaying) {
+                            mImage.setAlpha(0f);
+                            mImage.animate().alpha(1f).setDuration(FADE_MILLIS).start();
+                        }
                         showImagePosition();
+                        scheduleAdvance();
                     }
                 });
             } catch (Throwable e) {
-                // The next press moves on, so one unreadable photo can't strand the slideshow
+                // The next press or tick moves on, so one unreadable photo can't strand the slideshow
                 Log.w("PreviewActivity", "Image failed", e);
+                runOnUiThread(() -> {
+                    if (!mDestroyed && target == mImageIndex) {
+                        scheduleAdvance();
+                    }
+                });
             }
         }, "preview-image").start();
+    }
+
+    private final Runnable mAdvance = () -> turnImage(1, true);
+
+    private void scheduleAdvance() {
+        mRoot.removeCallbacks(mAdvance);
+        if (mPlaying) {
+            mRoot.postDelayed(mAdvance, AppSettings.getSlideshowSeconds(this) * 1000L);
+        }
+    }
+
+    private void setPlaying(boolean playing) {
+        if (mImages == null || mPlaying == playing) {
+            return;
+        }
+        mPlaying = playing;
+        // A slideshow on a TV is left running, so the screen must not turn off under it
+        mRoot.setKeepScreenOn(playing);
+        if (mPlayButton != null) {
+            mPlayButton.setText(playing ? R.string.slideshow_pause : R.string.slideshow_play);
+        }
+        showCounter(getString(playing ? R.string.slideshow_playing : R.string.slideshow_paused));
+        scheduleAdvance();
+    }
+
+    /** Back first closes the slideshow bar, then leaves */
+    @Override
+    public void onBackPressed() {
+        if (isBarShown()) {
+            hideBar();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    private boolean isBarShown() {
+        return mBar != null && mBar.getVisibility() == View.VISIBLE;
+    }
+
+    /** The bar takes the remote's focus, so left, right and OK work its buttons */
+    private void showBar() {
+        if (mBar == null) {
+            mBar = new LinearLayout(this);
+            mBar.setOrientation(LinearLayout.HORIZONTAL);
+            mBar.setGravity(Gravity.CENTER_VERTICAL);
+            mBar.setPadding(dp(8), dp(8), dp(8), dp(8));
+            final GradientDrawable background = new GradientDrawable();
+            background.setCornerRadius(dp(32));
+            // The preview is black in either theme, so the bar is a dark scrim
+            background.setColor(0xCC202124);
+            mBar.setBackground(background);
+            mPlayButton = barButton(mPlaying ? R.string.slideshow_pause : R.string.slideshow_play,
+                    v -> {
+                        setPlaying(!mPlaying);
+                        scheduleBarHide();
+                    });
+            mIntervalButton = barButton(0, v -> {
+                AppSettings.setSlideshowSeconds(this, nextSlideshowSeconds());
+                updateIntervalButton();
+                scheduleAdvance();
+                scheduleBarHide();
+            });
+            final TextView zoom = barButton(R.string.slideshow_zoom, v -> {
+                mImage.toggleZoom();
+                scheduleBarHide();
+            });
+            mBar.addView(mPlayButton);
+            mBar.addView(mIntervalButton);
+            mBar.addView(zoom);
+            final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            // Above the counter, which shows in the same place
+            params.bottomMargin = dp(96);
+            mRoot.addView(mBar, params);
+        }
+        updateIntervalButton();
+        mPlayButton.setText(mPlaying ? R.string.slideshow_pause : R.string.slideshow_play);
+        mBar.setVisibility(View.VISIBLE);
+        mPlayButton.requestFocus();
+        scheduleBarHide();
+    }
+
+    private void hideBar() {
+        if (mBar != null) {
+            mBar.removeCallbacks(mHideBar);
+            mBar.setVisibility(View.GONE);
+        }
+        mImage.requestFocus();
+    }
+
+    private final Runnable mHideBar = this::hideBar;
+
+    private void scheduleBarHide() {
+        mBar.removeCallbacks(mHideBar);
+        mBar.postDelayed(mHideBar, BAR_MILLIS);
+    }
+
+    private int nextSlideshowSeconds() {
+        final int current = AppSettings.getSlideshowSeconds(this);
+        for (int seconds : SLIDESHOW_SECONDS) {
+            if (seconds > current) {
+                return seconds;
+            }
+        }
+        return SLIDESHOW_SECONDS[0];
+    }
+
+    private void updateIntervalButton() {
+        mIntervalButton.setText(getString(R.string.slideshow_interval, AppSettings.getSlideshowSeconds(this)));
+    }
+
+    /** A pill that lights up while the remote is on it */
+    private TextView barButton(int text, View.OnClickListener onClick) {
+        final TextView button = new TextView(this);
+        if (text != 0) {
+            button.setText(text);
+        }
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        button.setGravity(Gravity.CENTER);
+        button.setMinWidth(dp(96));
+        button.setPadding(dp(20), dp(10), dp(20), dp(10));
+        final GradientDrawable focused = new GradientDrawable();
+        focused.setCornerRadius(dp(24));
+        focused.setColor(0x33FFFFFF);
+        focused.setStroke(dp(2), Color.WHITE);
+        final android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
+        background.addState(new int[]{android.R.attr.state_focused}, focused);
+        button.setBackground(background);
+        button.setFocusable(true);
+        // A mouse or touch on the TV must not leave the bar without focus
+        button.setFocusableInTouchMode(true);
+        button.setClickable(true);
+        button.setOnClickListener(onClick);
+        return button;
     }
 
     /** Turns to another item of what is open: a page, or another photo of the folder */
     private void turn(int delta) {
         if (mImages != null) {
-            turnImage(delta);
+            turnImage(delta, false);
         } else {
             turnPage(delta);
         }
@@ -601,6 +775,37 @@ public class PreviewActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (mImage != null && mImages != null && mImages.size() > 1) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                    setPlaying(!mPlaying);
+                    return true;
+                case KeyEvent.KEYCODE_MEDIA_PLAY:
+                    setPlaying(true);
+                    return true;
+                case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                    setPlaying(false);
+                    return true;
+                default:
+                    break;
+            }
+            if (mBar != null && mBar.hasFocus()) {
+                scheduleBarHide();
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    hideBar();
+                    return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                        || keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                    // The buttons move focus and click themselves
+                    return super.onKeyDown(keyCode, event);
+                }
+            } else if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+                    && event.getRepeatCount() == 0) {
+                showBar();
+                return true;
+            }
+        }
         if (mImage != null) {
             final float step = mImage.panStep();
             switch (keyCode) {
@@ -649,6 +854,10 @@ public class PreviewActivity extends Activity {
         super.onDestroy();
         if (mCounter != null) {
             mCounter.removeCallbacks(mHideCounter);
+        }
+        mRoot.removeCallbacks(mAdvance);
+        if (mBar != null) {
+            mBar.removeCallbacks(mHideBar);
         }
         synchronized (this) {
             if (mPdf != null) {
