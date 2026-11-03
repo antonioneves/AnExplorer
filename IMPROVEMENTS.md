@@ -32,7 +32,6 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Signing in to the cloud services with the build's keys.
 - The Menu key opening an item's menu.
 - The empty state of the Recycle Bin.
-- The Starred folder showing up with the first star and going with the last (focus lands on the sidebar afterwards).
 - The interface text moved into string resources.
 - Right from the sidebar moving into the file list.
 
