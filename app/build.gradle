@@ -38,6 +38,10 @@ android {
         // the user enters them in Settings
         buildConfigField "String", "TRAKT_CLIENT_ID", "\"${propOrEmpty('TRAKT_CLIENT_ID')}\""
         buildConfigField "String", "TRAKT_CLIENT_SECRET", "\"${propOrEmpty('TRAKT_CLIENT_SECRET')}\""
+        // Subtitle services: SubDL first, OpenSubtitles when SubDL has nothing. Empty means the
+        // user enters them in Settings
+        buildConfigField "String", "SUBDL_API_KEY", "\"${propOrEmpty('SUBDL_API_KEY')}\""
+        buildConfigField "String", "OPENSUBTITLES_API_KEY", "\"${propOrEmpty('OPENSUBTITLES_API_KEY')}\""
     }
     // libVLC is large, so each Android TV gets an APK with only its own ARM libraries, and the
     // universal one is for when the CPU isn't known

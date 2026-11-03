@@ -202,6 +202,13 @@ public class SettingsFragment extends Fragment {
         addCloudKeyRow(inflater, section, AppSettings.KEY_TRAKT_CLIENT_ID, R.string.pref_trakt_client_id, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_TRAKT_CLIENT_SECRET, R.string.pref_trakt_client_secret, true);
 
+        section = addSection(inflater, R.string.pref_header_subtitles);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_SUBTITLE_LANGUAGE, R.string.pref_subtitle_language, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_SUBDL_API_KEY, R.string.pref_subdl_key, true);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_API_KEY, R.string.pref_opensubtitles_key, true);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_USER, R.string.pref_opensubtitles_user, false);
+        addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_PASSWORD, R.string.pref_opensubtitles_password, true);
+
         section = addSection(inflater, R.string.pref_header_cloud);
         addCloudKeyRow(inflater, section, AppSettings.KEY_DROPBOX_CLIENT_ID, R.string.pref_cloud_dropbox, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_ONEDRIVE_CLIENT_ID, R.string.pref_cloud_onedrive, false);
@@ -286,7 +293,7 @@ public class SettingsFragment extends Fragment {
                 final Context context = getActivity();
                 final EditText input = new RemoteEditText(context);
                 input.setSingleLine(true);
-                input.setHint(R.string.pref_cloud_key_hint);
+                input.setHint(AppSettings.KEY_SUBTITLE_LANGUAGE.equals(key) ? R.string.pref_subtitle_hint_value : R.string.pref_cloud_key_hint);
                 input.setInputType(InputType.TYPE_CLASS_TEXT | (secret
                         ? InputType.TYPE_TEXT_VARIATION_PASSWORD : InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS));
                 input.setTypeface(Typeface.DEFAULT);

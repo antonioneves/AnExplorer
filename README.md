@@ -57,6 +57,13 @@ app at [trakt.tv/oauth/applications](https://trakt.tv/oauth/applications) with t
 `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET`, or type them into Settings on the TV. Videos are matched
 by title and year, or show, season and episode, taken from the file name.
 
+Subtitle Setup
+==============
+The player's download button finds subtitles by the video's TMDB match. It asks SubDL first and
+falls back to OpenSubtitles. Put `SUBDL_API_KEY` and/or `OPENSUBTITLES_API_KEY` in
+`keystore.properties`, or type them into Settings → Subtitles on the TV. OpenSubtitles also needs
+its user name and password there to download. The chosen subtitle is saved and loads next time.
+
 Cloud Storage Setup
 ===================
 Each cloud service needs the app registered with it once. Keys go in `keystore.properties`

@@ -7,7 +7,6 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
 - A media session in the players, so the remote's media keys, Assistant and the system "now playing" card work, plus playback speed and a sleep timer.
-- Download subtitles for a video, using the title, season and episode already matched with TMDB.
 - Find SMB and FTP servers on the network (`NsdManager`) instead of typing an address with the remote.
 - Browse DLNA/UPnP media servers.
 - Check for a new release on GitHub (the old update check was removed).
@@ -35,6 +34,7 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Right from the sidebar moving into the file list.
 
 ## Untested
+- Subtitle download (SubDL, then OpenSubtitles): built and the button hides without keys, but no service was called; it needs real keys. Also not available in the VLC player.
 - FTPS on port 990 (implicit TLS) and TLS session reuse.
 - An SFTP server whose host key changed.
 - The ADB storage dialog (the emulator has the Settings screen, so it only shows on a TV that lacks it).

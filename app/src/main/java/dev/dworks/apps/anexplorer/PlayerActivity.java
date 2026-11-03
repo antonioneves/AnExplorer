@@ -1,6 +1,7 @@
 package dev.dworks.apps.anexplorer;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -15,14 +16,20 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.Set;
 
 import androidx.annotation.OptIn;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
@@ -30,6 +37,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
 import dev.dworks.apps.anexplorer.misc.VlcPlayer;
+import dev.dworks.apps.anexplorer.misc.SubtitleFinder;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
 import dev.dworks.apps.anexplorer.misc.WatchNext;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
@@ -129,8 +137,113 @@ public class PlayerActivity extends Activity {
                 .build();
         mPlayer.addListener(mListener);
         mPlayerView.setPlayer(mPlayer);
-        mPlayer.setMediaItem(MediaItem.fromUri(uri));
+        mPlayer.setMediaItem(mediaItem(uri));
+        setUpSubtitleSearch();
         start();
+    }
+
+    /** The video, with the subtitle downloaded for it earlier, if any */
+    private MediaItem mediaItem(Uri uri) {
+        final File saved = mWatchKey == null ? null : SubtitleFinder.saved(this, mWatchKey);
+        final MediaItem.Builder builder = new MediaItem.Builder().setUri(uri);
+        if (saved != null) {
+            builder.setSubtitleConfigurations(Collections.singletonList(subtitle(saved)));
+        }
+        return builder.build();
+    }
+
+    private MediaItem.SubtitleConfiguration subtitle(File file) {
+        final String name = file.getName();
+        final String mime = name.endsWith(".vtt") ? MimeTypes.TEXT_VTT
+                : name.endsWith(".ass") || name.endsWith(".ssa") ? MimeTypes.TEXT_SSA
+                : MimeTypes.APPLICATION_SUBRIP;
+        return new MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file))
+                .setMimeType(mime)
+                .setLanguage(AppSettings.getSubtitleLanguage(this))
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build();
+    }
+
+    /** The download button shows only where it can work: ExoPlayer, a keyed video, a service set up */
+    private void setUpSubtitleSearch() {
+        final View button = mPlayerView.findViewById(R.id.player_subtitle_download);
+        if (button == null) {
+            return;
+        }
+        final boolean available = !mAudio && mWatchKey != null && mPlayer instanceof ExoPlayer
+                && SubtitleFinder.isConfigured(this);
+        button.setVisibility(available ? View.VISIBLE : View.GONE);
+        button.setOnClickListener(v -> searchSubtitles());
+    }
+
+    private void searchSubtitles() {
+        Toast.makeText(this, R.string.player_subtitle_searching, Toast.LENGTH_SHORT).show();
+        final String name = fileName();
+        new Thread(() -> {
+            try {
+                final List<SubtitleFinder.Subtitle> found = SubtitleFinder.search(this, name);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    if (found.isEmpty()) {
+                        Toast.makeText(this, R.string.player_subtitle_none, Toast.LENGTH_LONG).show();
+                    } else {
+                        chooseSubtitle(found, name);
+                    }
+                });
+            } catch (Exception e) {
+                Log.w("PlayerActivity", "Subtitle search failed", e);
+                runOnUiThread(() -> Toast.makeText(this, R.string.player_subtitle_failed,
+                        Toast.LENGTH_LONG).show());
+            }
+        }, "SubtitleSearch").start();
+    }
+
+    private void chooseSubtitle(List<SubtitleFinder.Subtitle> found, String name) {
+        final String[] labels = new String[found.size()];
+        for (int i = 0; i < labels.length; i++) {
+            final SubtitleFinder.Subtitle item = found.get(i);
+            labels[i] = (item.release.isEmpty() ? name : item.release)
+                    + " · " + item.language.toUpperCase(Locale.ROOT) + (item.hearingImpaired ? " · HI" : "");
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.player_subtitle_choose)
+                .setItems(labels, (dialog, which) -> downloadSubtitle(found.get(which), name))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void downloadSubtitle(SubtitleFinder.Subtitle subtitle, String name) {
+        Toast.makeText(this, R.string.player_subtitle_downloading, Toast.LENGTH_SHORT).show();
+        final String key = mWatchKey;
+        new Thread(() -> {
+            try {
+                final File file = SubtitleFinder.download(this, subtitle, key, name);
+                runOnUiThread(() -> showSubtitle(file));
+            } catch (Exception e) {
+                Log.w("PlayerActivity", "Subtitle download failed", e);
+                runOnUiThread(() -> Toast.makeText(this, R.string.player_subtitle_failed,
+                        Toast.LENGTH_LONG).show());
+            }
+        }, "SubtitleDownload").start();
+    }
+
+    /** Puts the subtitle on the playing video, keeping the position and play state */
+    private void showSubtitle(File file) {
+        if (isFinishing() || isDestroyed() || !(mPlayer instanceof ExoPlayer)) {
+            return;
+        }
+        final MediaItem current = mPlayer.getCurrentMediaItem();
+        if (current == null) {
+            return;
+        }
+        final long position = mPlayer.getCurrentPosition();
+        final boolean playing = mPlayer.getPlayWhenReady();
+        mPlayer.setMediaItem(current.buildUpon()
+                .setSubtitleConfigurations(Collections.singletonList(subtitle(file))).build(), position);
+        mPlayer.prepare();
+        mPlayer.setPlayWhenReady(playing);
     }
 
     private final Player.Listener mListener = new Player.Listener() {

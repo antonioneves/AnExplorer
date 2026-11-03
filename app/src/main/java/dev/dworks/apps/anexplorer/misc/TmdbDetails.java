@@ -116,6 +116,18 @@ public final class TmdbDetails {
         return null;
     }
 
+    /**
+     * The TMDB id of the movie, or of the show for an episode, that a video file stands for, so
+     * subtitle services can be searched by it. Blocks on the network: call it off the main thread.
+     * @return 0 when TMDB doesn't know it
+     */
+    public static int findId(Context context, String fileName) {
+        final EpisodeName episode = EpisodeName.parse(fileName);
+        final Info info = episode != null ? loadShow(context, episode.show)
+                : loadMovie(context, TmdbPosters.title(fileName), TmdbPosters.year(fileName));
+        return info == null ? 0 : info.id;
+    }
+
     private static Info loadMovie(Context context, String title, String year) {
         if (TextUtils.isEmpty(title)) {
             return null;

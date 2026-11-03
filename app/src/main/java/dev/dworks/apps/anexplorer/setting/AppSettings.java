@@ -65,6 +65,11 @@ public class AppSettings {
     public static final String KEY_BOX_CLIENT_KEY = "boxClientKey";
     public static final String KEY_TRAKT_CLIENT_ID = "traktClientId";
     public static final String KEY_TRAKT_CLIENT_SECRET = "traktClientSecret";
+    public static final String KEY_SUBDL_API_KEY = "subdlApiKey";
+    public static final String KEY_OPENSUBTITLES_API_KEY = "openSubtitlesApiKey";
+    public static final String KEY_OPENSUBTITLES_USER = "openSubtitlesUser";
+    public static final String KEY_OPENSUBTITLES_PASSWORD = "openSubtitlesPassword";
+    public static final String KEY_SUBTITLE_LANGUAGE = "subtitleLanguage";
 
     private AppSettings() {
     }
@@ -180,8 +185,17 @@ public class AppSettings {
             case KEY_BOX_CLIENT_KEY: return BuildConfig.BOX_CLIENT_KEY;
             case KEY_TRAKT_CLIENT_ID: return BuildConfig.TRAKT_CLIENT_ID;
             case KEY_TRAKT_CLIENT_SECRET: return BuildConfig.TRAKT_CLIENT_SECRET;
+            case KEY_SUBDL_API_KEY: return BuildConfig.SUBDL_API_KEY;
+            case KEY_OPENSUBTITLES_API_KEY: return BuildConfig.OPENSUBTITLES_API_KEY;
             default: return "";
         }
+    }
+
+    /** The two-letter language code subtitles are searched in, the TV's own language unless set */
+    public static String getSubtitleLanguage(Context context) {
+        final String value = prefs(context).getString(KEY_SUBTITLE_LANGUAGE, "");
+        return TextUtils.isEmpty(value.trim())
+                ? java.util.Locale.getDefault().getLanguage() : value.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     /** Empty goes back to the built-in key */
