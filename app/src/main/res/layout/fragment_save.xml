@@ -15,58 +15,52 @@
 -->
 
 <dev.dworks.apps.anexplorer.ui.CommonFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:paddingStart="8dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
         android:id="@+id/background"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
-        android:background="#323232"
+        android:layout_gravity="bottom"
+        android:background="@drawable/move_bar_background"
         android:baselineAligned="false"
-        app:boxedEdges="all"
-        android:minHeight="?android:attr/listPreferredItemHeightSmall"
-        android:orientation="horizontal">
-
-        <ImageButton
-            android:id="@android:id/button2"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="@android:string/cancel"
-            android:padding="16dp"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            app:srcCompat="@drawable/ic_action_close" />
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="12dp">
 
         <dev.dworks.apps.anexplorer.ui.RemoteEditText
             android:id="@android:id/title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="start"
             android:layout_weight="1"
             android:singleLine="true"
             android:textAlignment="viewStart"
             android:textColor="@android:color/white"
-            android:textSize="16sp" />
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@android:id/button2"
+            style="@style/MoveBarButton"
+            android:layout_marginStart="8dp"
+            android:text="@android:string/cancel" />
 
         <FrameLayout
             android:layout_width="wrap_content"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp">
 
-            <ImageButton
+            <TextView
                 android:id="@android:id/button1"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:background="?android:attr/selectableItemBackground"
-                android:contentDescription="@string/menu_save"
-                android:padding="16dp"
+                style="@style/MoveBarButton"
                 android:text="@string/menu_save"
-                android:textAllCaps="true"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                app:srcCompat="@drawable/ic_action_done" />
+                android:textStyle="bold" />
 
             <dev.dworks.apps.anexplorer.ui.MaterialProgressBar
                 android:id="@android:id/progress"

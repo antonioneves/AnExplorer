@@ -20,6 +20,7 @@ package dev.dworks.apps.anexplorer.fragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -29,8 +30,8 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.R;
@@ -47,11 +48,11 @@ public class SaveFragment extends Fragment implements OnClickListener{
 
 	private DocumentInfo mReplaceTarget;
 	private EditText mDisplayName;
-	private ImageButton mSave;
+	private TextView mSave;
 	private ProgressBar mProgress;
 	private boolean mIgnoreNextEdit;
 
-	private ImageButton mCancel;
+	private TextView mCancel;
 
 	private static final String EXTRA_MIME_TYPE = "mime_type";
 	private static final String EXTRA_DISPLAY_NAME = "display_name";
@@ -83,18 +84,18 @@ public class SaveFragment extends Fragment implements OnClickListener{
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		final View view = inflater.inflate(R.layout.fragment_save, container, false);
 
-		view.findViewById(R.id.background).setBackgroundColor(ThemeColors.getPrimaryColor(view.getContext()));
+		view.findViewById(R.id.background).setBackgroundTintList(ColorStateList.valueOf(ThemeColors.getPrimaryColor(view.getContext())));
 
-		mCancel = (ImageButton) view.findViewById(android.R.id.button2);
+		mCancel = (TextView) view.findViewById(android.R.id.button2);
 		mCancel.setOnClickListener(this);
 
 		mDisplayName = (EditText) view.findViewById(android.R.id.title);
 		mDisplayName.addTextChangedListener(mDisplayNameWatcher);
 		mDisplayName.setText(getArguments().getString(EXTRA_DISPLAY_NAME));
 
-		mSave = (ImageButton) view.findViewById(android.R.id.button1);
+		mSave = (TextView) view.findViewById(android.R.id.button1);
 		mSave.setOnClickListener(this);
-		mSave.setEnabled(false);
+		setSaveEnabled(false);
 
 		mProgress = (ProgressBar) view.findViewById(android.R.id.progress);
 
@@ -139,6 +140,7 @@ public class SaveFragment extends Fragment implements OnClickListener{
 
 	public void setSaveEnabled(boolean enabled) {
 		mSave.setEnabled(enabled);
+		mSave.setAlpha(enabled ? 1f : 0.5f);
 	}
 
 	public void setPending(boolean pending) {
