@@ -47,8 +47,3 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - The APKs sidebar entry.
 - Right and Left from the sidebar in a right-to-left language.
 - Unstarring one of two Starred items, and focus in the list afterwards.
-
-## Known issues
-- Home shortcut cards have no long-press or Menu action; decide what such an action would do.
-- The System root's icon and its place in the sort order.
-- The search box's close animation.
