@@ -21,9 +21,11 @@ import dev.dworks.apps.anexplorer.misc.Utils;
 public abstract class ActionBarActivity extends BaseCommonActivity {
 
     public static final int REQUEST_LOCAL_NETWORK = 48;
+    public static final int REQUEST_RECORD_AUDIO = 49;
 
     private Runnable mPendingLocalNetworkAction;
     private Runnable mPendingLocalNetworkDenied;
+    private Runnable mPendingRecordAudioAction;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -72,9 +74,40 @@ public abstract class ActionBarActivity extends BaseCommonActivity {
         }
     }
 
+    /** Runs the action once the microphone may be used, asking for it if needed. */
+    public void runWithRecordAudio(Runnable action) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+            action.run();
+            return;
+        }
+        final boolean requestPending = null != mPendingRecordAudioAction;
+        mPendingRecordAudioAction = action;
+        if (!requestPending) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_RECORD_AUDIO) {
+            final Runnable action = mPendingRecordAudioAction;
+            mPendingRecordAudioAction = null;
+            if (grantResults.length == 0) {
+                // The request was interrupted, not answered
+                return;
+            }
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (null != action) {
+                    action.run();
+                }
+            } else {
+                Toast.makeText(this, R.string.voice_search_permission_needed, Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
         if (requestCode != REQUEST_LOCAL_NETWORK) {
             return;
         }

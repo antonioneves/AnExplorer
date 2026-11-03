@@ -51,7 +51,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.Handler;
-
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.view.MenuItemCompat;
@@ -75,6 +77,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
@@ -93,6 +96,7 @@ import android.util.TypedValue;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -194,6 +198,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     private MenuItem mSearchMenuItem;
     private SearchPillDrawable mSearchPill;
     private int mToolbarInsetStart = -1;
+    /** The recognizer behind the search field's microphone, kept for the next search */
+    private SpeechRecognizer mSpeechRecognizer;
+    private Dialog mVoiceDialog;
+    private ImageView mVoiceMic;
+    private TextView mVoiceStatus;
+    private TextView mVoiceWords;
+    private boolean mVoiceListening;
 
     private Toolbar mToolbar;
     private PopupSpinner mToolbarStack;
@@ -598,6 +609,12 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     protected void onStop() {
         super.onStop();
         mStoppedAt = SystemClock.elapsedRealtime();
+        // Leaving the app closes the microphone; the next search opens it again
+        cancelVoiceSearch();
+        if (mSpeechRecognizer != null) {
+            mSpeechRecognizer.destroy();
+            mSpeechRecognizer = null;
+        }
     }
 
     private static final long LOCKED_FOLDER_TIMEOUT = 60 * 1000;
@@ -1425,14 +1442,11 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mSearchView.setQuery("", false);
             mSearchView.requestFocus();
         });
-        final ImageButton go = newSearchPillButton(R.drawable.abc_ic_search_api_material, iconSize, iconTint);
-        go.setContentDescription(getString(R.string.menu_search));
+        // Search runs as the user types, so the button where the search icon sat speaks instead
+        final ImageButton go = newSearchPillButton(R.drawable.ic_mic, iconSize, iconTint);
+        go.setContentDescription(getString(R.string.voice_search));
         go.setTag("search_go");
-        // Search runs as the user types, so this is only a marker, not a stop for the remote
-        go.setBackground(null);
-        go.setFocusable(false);
-        go.setClickable(false);
-        go.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        go.setOnClickListener(v -> startVoiceSearch());
 
         mSearchView.setBackground(null);
         mSearchView.setQueryHint(getString(androidx.appcompat.R.string.abc_search_hint));
@@ -1512,8 +1526,199 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         });
     }
 
+    /**
+     * Opens the microphone and puts what it hears into the search field. The remote's own
+     * microphone key belongs to the system's assistant, so this is the app's way in.
+     */
+    private void startVoiceSearch() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, R.string.voice_search_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+        runWithRecordAudio(this::listenForVoiceSearch);
+    }
+
+    private void listenForVoiceSearch() {
+        if (mSearchView == null) {
+            return;
+        }
+        if (mSpeechRecognizer == null) {
+            mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            mSpeechRecognizer.setRecognitionListener(mVoiceListener);
+        }
+        mVoiceListening = true;
+        showVoiceDialog();
+        final Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        mSpeechRecognizer.startListening(intent);
+    }
+
+    private void showVoiceDialog() {
+        if (mVoiceDialog == null) {
+            final Dialog dialog = new Dialog(this);
+            dialog.setContentView(R.layout.dialog_voice_search);
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.setOnCancelListener(d -> cancelVoiceSearch());
+            final Window window = dialog.getWindow();
+            if (window != null) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+                window.setDimAmount(0.4f);
+            }
+            mVoiceMic = dialog.findViewById(R.id.voice_mic);
+            mVoiceStatus = dialog.findViewById(R.id.voice_status);
+            mVoiceWords = dialog.findViewById(R.id.voice_words);
+            mVoiceDialog = dialog;
+        }
+        mVoiceStatus.setText(R.string.voice_search_speak_now);
+        mVoiceWords.setVisibility(View.GONE);
+        mVoiceMic.setScaleX(1f);
+        mVoiceMic.setScaleY(1f);
+        mVoiceDialog.show();
+    }
+
+    private void dismissVoiceDialog() {
+        if (mVoiceDialog != null && mVoiceDialog.isShowing()) {
+            mVoiceDialog.dismiss();
+        }
+    }
+
+    /** Stops listening because the user backed out, without treating it as an error. */
+    private void cancelVoiceSearch() {
+        mVoiceListening = false;
+        if (mSpeechRecognizer != null) {
+            mSpeechRecognizer.cancel();
+        }
+        dismissVoiceDialog();
+    }
+
+    /** Puts the recognized words in the search field, which runs the search. */
+    private void searchByVoice(String words) {
+        final String query = null == words ? "" : words.trim();
+        if (query.isEmpty()) {
+            Toast.makeText(this, R.string.voice_search_no_match, Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (mSearchView == null || mSearchMenuItem == null) {
+            return;
+        }
+        if (!mSearchExpanded && !mSearchMenuItem.expandActionView()) {
+            return;
+        }
+        mSearchView.setQuery(query, true);
+        // The words are already in, so the keyboard isn't needed
+        mSearchView.postDelayed(this::hideSearchKeyboard, 400);
+    }
+
+    private void hideSearchKeyboard() {
+        final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        final View focused = getCurrentFocus();
+        if (imm != null && focused != null) {
+            imm.hideSoftInputFromWindow(focused.getWindowToken(), 0);
+        }
+    }
+
+    private int voiceErrorText(int error) {
+        switch (error) {
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                return R.string.voice_search_permission_needed;
+            case SpeechRecognizer.ERROR_NETWORK:
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+            case SpeechRecognizer.ERROR_SERVER:
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
+                return R.string.voice_search_offline;
+            case SpeechRecognizer.ERROR_NO_MATCH:
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                return R.string.voice_search_no_match;
+            default:
+                return R.string.voice_search_failed;
+        }
+    }
+
+    private final RecognitionListener mVoiceListener = new RecognitionListener() {
+        @Override
+        public void onReadyForSpeech(Bundle params) {
+            mVoiceStatus.setText(R.string.voice_search_speak_now);
+        }
+
+        @Override
+        public void onBeginningOfSpeech() {
+            mVoiceStatus.setText(R.string.voice_search_listening);
+        }
+
+        @Override
+        public void onRmsChanged(float rmsdB) {
+            if (!mVoiceListening || mVoiceMic == null) {
+                return;
+            }
+            // The mic grows with the voice, so the remote is clearly being heard
+            final float level = Math.max(0f, Math.min(1f, (rmsdB + 2f) / 12f));
+            final float scale = 1f + level * 0.3f;
+            mVoiceMic.setScaleX(scale);
+            mVoiceMic.setScaleY(scale);
+        }
+
+        @Override
+        public void onBufferReceived(byte[] buffer) {
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+        }
+
+        @Override
+        public void onError(int error) {
+            if (!mVoiceListening) {
+                return;
+            }
+            mVoiceListening = false;
+            dismissVoiceDialog();
+            if (Utils.isActivityAlive(DocumentsActivity.this)) {
+                Toast.makeText(DocumentsActivity.this, voiceErrorText(error), Toast.LENGTH_LONG).show();
+            }
+        }
+
+        @Override
+        public void onResults(Bundle results) {
+            if (!mVoiceListening) {
+                return;
+            }
+            mVoiceListening = false;
+            dismissVoiceDialog();
+            final ArrayList<String> matches = results == null ? null
+                    : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            if (matches == null || matches.isEmpty()) {
+                Toast.makeText(DocumentsActivity.this, R.string.voice_search_no_match, Toast.LENGTH_LONG).show();
+                return;
+            }
+            searchByVoice(matches.get(0));
+        }
+
+        @Override
+        public void onPartialResults(Bundle partialResults) {
+            if (!mVoiceListening || mVoiceWords == null) {
+                return;
+            }
+            final ArrayList<String> matches = partialResults == null ? null
+                    : partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            if (matches != null && !matches.isEmpty()) {
+                mVoiceWords.setText(matches.get(0));
+                mVoiceWords.setVisibility(View.VISIBLE);
+            }
+        }
+
+        @Override
+        public void onEvent(int eventType, Bundle params) {
+        }
+    };
+
     /** Steps back inside the app; false when Back should leave it */
     private boolean handleBack() {
+        if (mVoiceDialog != null && mVoiceDialog.isShowing()) {
+            cancelVoiceSearch();
+            return true;
+        }
         if (null != mToolbarActionMode) {
             mToolbarActionMode.finish();
             return true;

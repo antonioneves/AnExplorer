@@ -4,7 +4,6 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 
 ## Features
 - Stream video from network storage (SMB, FTP, WebDAV) without copying it first.
-- Voice search with the remote's microphone button.
 - A storage analyzer showing which folders take the most space.
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.

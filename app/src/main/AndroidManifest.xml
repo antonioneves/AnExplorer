@@ -37,12 +37,18 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Voice search listens through the system's recognizer -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- To offer Open with only when some app opens the file -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="*/*" />
+        </intent>
+        <!-- To bind to the system's speech recognizer, needed to target Android 11+ -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 
