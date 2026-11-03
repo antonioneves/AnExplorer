@@ -187,6 +187,13 @@
     <string name="storage_usb_drive" msgid="6261899683292244209">"USB drive"</string>
     <string name="storage_usb_drive_label" msgid="4501418548927759953">"<xliff:g id="MANUFACTURER">%s</xliff:g> USB drive"</string>
 
+    <string name="ftp_web_address">Or send files from a browser: %s</string>
+    <string name="web_upload_title">Send files to the TV</string>
+    <string name="web_upload_choose">Choose files</string>
+    <string name="web_upload_drop">or drop them here</string>
+    <string name="web_upload_sending">Sending…</string>
+    <string name="web_upload_done">Sent</string>
+    <string name="web_upload_failed">Failed</string>
     <string name="start_ftp">Start</string>
     <string name="stop_ftp">Stop</string>
     <string name="ftp_status_running">Running</string>

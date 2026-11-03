@@ -105,6 +105,17 @@
                 tools:visibility="visible" />
 
             <TextView
+                android:id="@+id/web_address"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="Or send files from a browser: http://192.168.1.101:8080"
+                tools:visibility="visible" />
+
+            <TextView
                 android:id="@+id/warning"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

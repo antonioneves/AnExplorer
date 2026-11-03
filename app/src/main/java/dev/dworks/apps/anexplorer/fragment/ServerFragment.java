@@ -59,6 +59,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private boolean passwordShown;
     private TextView path;
     private TextView address;
+    private TextView webAddress;
     private Button action;
     private TextView warning;
     private View iconGroup;
@@ -102,6 +103,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
         path = (TextView) view.findViewById(R.id.path);
         address = (TextView) view.findViewById(R.id.address);
+        webAddress = (TextView) view.findViewById(R.id.web_address);
         warning = (TextView) view.findViewById(R.id.warning);
         iconGroup = view.findViewById(R.id.icon_group);
         qrGroup = view.findViewById(R.id.qr_group);
@@ -259,10 +261,13 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
         if(running){
             setAddress(ConnectionUtils.getFTPAddress(getActivity()));
+            final String web = ConnectionUtils.getWebAddress(getActivity());
+            setText(webAddress, TextUtils.isEmpty(web) ? "" : getString(R.string.ftp_web_address, web));
             status.setText(getString(R.string.ftp_status_running));
             action.setText(R.string.stop_ftp);
         } else {
             setAddress("");
+            setText(webAddress, "");
             setText(warning, "");
             status.setText(getString(R.string.ftp_status_not_running));
             action.setText(R.string.start_ftp);

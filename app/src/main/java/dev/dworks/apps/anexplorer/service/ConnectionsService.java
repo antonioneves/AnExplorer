@@ -13,17 +13,20 @@ import org.apache.ftpserver.usermanager.impl.ConcurrentLoginPermission;
 import org.apache.ftpserver.usermanager.impl.TransferRatePermission;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.network.NetworkServiceHandler;
+import dev.dworks.apps.anexplorer.network.WebUploadServer;
 
 
 public class ConnectionsService extends NetworkServerService {
 
     private FtpServer ftpServer;
+    private WebUploadServer webServer;
 
     @Override
     protected NetworkServiceHandler createServiceHandler(Looper serviceLooper, NetworkServerService service) {
@@ -70,6 +73,7 @@ public class ConnectionsService extends NetworkServerService {
         try{
             ftpServer = serverFactory.createServer();
             ftpServer.start();
+            startWebServer();
             return true;
         }catch(Exception e){
             ftpServer = null;
@@ -78,8 +82,27 @@ public class ConnectionsService extends NetworkServerService {
         return false;
     }
 
+    /** The web page is a bonus, so the FTP server runs even when it can't start */
+    private void startWebServer() {
+        try {
+            webServer = new WebUploadServer(getApplicationContext(),
+                    new File(getNetworkConnection().getPath()), getNetworkConnection().getUserName(),
+                    getNetworkConnection().getPassword(), getNetworkConnection().isAnonymousLogin());
+            ConnectionUtils.webPort = webServer.start();
+        } catch (Exception e) {
+            webServer = null;
+            ConnectionUtils.webPort = 0;
+            CrashReportingManager.logException(e);
+        }
+    }
+
     @Override
     public void stopServer() {
+        if (null != webServer) {
+            webServer.stop();
+            webServer = null;
+        }
+        ConnectionUtils.webPort = 0;
         ftpServer.stop();
         ftpServer = null;
     }

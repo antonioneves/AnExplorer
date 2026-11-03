@@ -42,6 +42,8 @@ public class ConnectionUtils {
     static public final String ACTION_STOP_FTPSERVER = BuildConfig.APPLICATION_ID + ".action.STOP_FTPSERVER";
 
     public static int FTP_SERVER_PORT = 2211;
+    /** The port of the upload web page while the server runs, 0 when it doesn't */
+    public static volatile int webPort = 0;
 
     public static boolean isConnectedToLocalNetwork(Context context) {
         boolean connected = false;
@@ -190,6 +192,20 @@ public class ConnectionUtils {
             return "ftp://" + host + ":" + FTP_SERVER_PORT;
         }
         return "";
+    }
+
+    /** Where a browser sends files while the server runs, or empty */
+    public static String getWebAddress(Context context) {
+        final InetAddress inetAddress = getLocalInetAddress(context);
+        if (null == inetAddress || webPort == 0) {
+            return "";
+        }
+        String host = inetAddress.getHostAddress();
+        if (inetAddress instanceof Inet6Address) {
+            int scope = host.indexOf('%');
+            host = "[" + (scope >= 0 ? host.substring(0, scope) : host) + "]";
+        }
+        return "http://" + host + ":" + webPort;
     }
 
     public static int getAvailablePortForFTP(){

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{title}}</title>
+<style>
+:root{color-scheme:light dark;--bg:#f7f9ff;--fg:#181c20;--card:#ebeef3;--accent:#00639b;--muted:#42474e}
+@media(prefers-color-scheme:dark){:root{--bg:#111318;--fg:#e2e2e9;--card:#1d2024;--accent:#9dcaff;--muted:#c2c7ce}}
+body{margin:0;padding:24px 16px;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,sans-serif}
+main{max-width:560px;margin:0 auto}
+h1{font-size:1.4rem;margin:0 0 16px}
+#drop{border:2px dashed var(--accent);border-radius:16px;padding:32px 16px;text-align:center;background:var(--card)}
+#drop.over{background:var(--bg)}
+label{display:inline-block;padding:12px 24px;border-radius:24px;background:var(--accent);color:var(--bg);font-weight:600;cursor:pointer}
+input{display:none}
+p{color:var(--muted);margin:12px 0 0}
+.row{margin-top:12px;padding:12px 16px;border-radius:12px;background:var(--card)}
+.row .n{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row progress{width:100%;margin-top:6px}
+.row .s{color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body data-sending="{{sending}}" data-done="{{done}}" data-failed="{{failed}}">
+<main>
+<h1>{{title}}</h1>
+<div id="drop">
+<label for="files">{{choose}}</label>
+<input id="files" type="file" multiple>
+<p>{{drop}}</p>
+</div>
+<div id="list"></div>
+</main>
+<script>
+var d=document.body.dataset,list=document.getElementById('list'),input=document.getElementById('files'),drop=document.getElementById('drop'),queue=Promise.resolve();
+function send(file){
+  return new Promise(function(resolve){
+    var row=document.createElement('div');row.className='row';
+    row.innerHTML='<span class="n"></span><progress max="100" value="0"></progress> <span class="s"></span>';
+    row.querySelector('.n').textContent=file.name;
+    var bar=row.querySelector('progress'),st=row.querySelector('.s');
+    st.textContent=d.sending;list.insertBefore(row,list.firstChild);
+    var x=new XMLHttpRequest(),f=new FormData();
+    f.append('file',file,file.name);
+    x.upload.onprogress=function(e){if(e.lengthComputable)bar.value=e.loaded*100/e.total};
+    x.onload=function(){var ok=x.status==200;st.textContent=ok?d.done:d.failed;if(ok)bar.value=100;resolve()};
+    x.onerror=function(){st.textContent=d.failed;resolve()};
+    x.open('POST','/upload');x.send(f);
+  });
+}
+function add(files){Array.prototype.forEach.call(files,function(f){queue=queue.then(function(){return send(f)})})}
+input.onchange=function(){add(input.files);input.value=''};
+drop.ondragover=function(e){e.preventDefault();drop.className='over'};
+drop.ondragleave=function(){drop.className=''};
+drop.ondrop=function(e){e.preventDefault();drop.className='';add(e.dataTransfer.files)};
+</script>
+</body>
+</html>
