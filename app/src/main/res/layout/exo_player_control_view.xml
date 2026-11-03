@@ -87,17 +87,11 @@
             android:textSize="14sp" />
 
         <ImageButton
-            android:id="@+id/player_subtitle_download"
+            android:id="@+id/player_subtitles"
             style="@style/PlayerButton"
-            android:contentDescription="@string/player_subtitle_search"
-            android:src="@drawable/ic_player_subtitle_download"
+            android:contentDescription="@string/player_subtitles"
+            android:src="@drawable/exo_styled_controls_subtitle_on"
             android:visibility="gone" />
-
-        <ImageButton
-            android:id="@id/exo_subtitle"
-            style="@style/PlayerButton"
-            android:contentDescription="@string/exo_controls_cc_enabled_description"
-            android:src="@drawable/exo_styled_controls_subtitle_on" />
 
         <ImageButton
             android:id="@id/exo_settings"

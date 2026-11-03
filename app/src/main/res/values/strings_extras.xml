@@ -363,6 +363,9 @@
     <string name="bookmark_removed">Bookmark removed</string>
     <string name="bookmark_remove">Remove bookmark?</string>
 
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_subtitle_off">Off</string>
+    <string name="player_subtitle_track">Track %1$d</string>
     <string name="player_subtitle_search">Download subtitles</string>
     <string name="player_subtitle_searching">Looking for subtitles…</string>
     <string name="player_subtitle_none">No subtitles found</string>

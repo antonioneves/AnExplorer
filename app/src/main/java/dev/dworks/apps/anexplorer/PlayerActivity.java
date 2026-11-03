@@ -17,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -26,10 +27,14 @@ import java.util.Set;
 
 import androidx.annotation.OptIn;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.MimeTypes;
+import androidx.media3.common.TrackSelectionParameters;
+import androidx.media3.common.TrackSelectionOverride;
+import androidx.media3.common.Tracks;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
@@ -38,6 +43,7 @@ import androidx.media3.ui.PlayerView;
 
 import dev.dworks.apps.anexplorer.misc.VlcPlayer;
 import dev.dworks.apps.anexplorer.misc.SubtitleFinder;
+import dev.dworks.apps.anexplorer.misc.TmdbPosters;
 import dev.dworks.apps.anexplorer.misc.WatchHistory;
 import dev.dworks.apps.anexplorer.misc.WatchNext;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
@@ -164,16 +170,80 @@ public class PlayerActivity extends Activity {
                 .build();
     }
 
-    /** The download button shows only where it can work: ExoPlayer, a keyed video, a service set up */
+    /** The subtitle button shows for ExoPlayer videos that TMDB knows as a movie or show; VLC has its own menu */
     private void setUpSubtitleSearch() {
-        final View button = mPlayerView.findViewById(R.id.player_subtitle_download);
+        final View button = mPlayerView.findViewById(R.id.player_subtitles);
         if (button == null) {
             return;
         }
-        final boolean available = !mAudio && mWatchKey != null && mPlayer instanceof ExoPlayer
-                && SubtitleFinder.isConfigured(this);
-        button.setVisibility(available ? View.VISIBLE : View.GONE);
-        button.setOnClickListener(v -> searchSubtitles());
+        button.setVisibility(View.GONE);
+        button.setOnClickListener(v -> showSubtitleMenu());
+        if (mAudio || !(mPlayer instanceof ExoPlayer)) {
+            return;
+        }
+        final String name = fileName();
+        final int known = TmdbPosters.status(this, name);
+        if (known == TmdbPosters.RECOGNIZED) {
+            button.setVisibility(View.VISIBLE);
+        } else if (known == TmdbPosters.UNKNOWN) {
+            new Thread(() -> {
+                if (TmdbPosters.resolve(this, name) == TmdbPosters.RECOGNIZED) {
+                    runOnUiThread(() -> button.setVisibility(View.VISIBLE));
+                }
+            }, "SubtitleMatch").start();
+        }
+    }
+
+    /** Subtitles off, each track in the video by language, and the download search when set up */
+    private void showSubtitleMenu() {
+        final List<String> labels = new ArrayList<>();
+        final List<Tracks.Group> groups = new ArrayList<>();
+        int checked = 0;
+        labels.add(getString(R.string.player_subtitle_off));
+        groups.add(null);
+        final boolean textOff = mPlayer.getTrackSelectionParameters().disabledTrackTypes.contains(C.TRACK_TYPE_TEXT);
+        for (Tracks.Group group : mPlayer.getCurrentTracks().getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_TEXT || !group.isSupported()) {
+                continue;
+            }
+            final Format format = group.getTrackFormat(0);
+            String label = format.label;
+            if (label == null || label.isEmpty()) {
+                label = format.language == null || "und".equals(format.language)
+                        ? getString(R.string.player_subtitle_track, groups.size())
+                        : new Locale(format.language).getDisplayLanguage();
+            }
+            if (!textOff && group.isSelected()) {
+                checked = labels.size();
+            }
+            labels.add(label);
+            groups.add(group);
+        }
+        final boolean canSearch = mWatchKey != null && SubtitleFinder.isConfigured(this);
+        if (canSearch) {
+            labels.add(getString(R.string.player_subtitle_search));
+        }
+        final int searchIndex = labels.size() - 1;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.player_subtitles)
+                .setSingleChoiceItems(labels.toArray(new String[0]), checked, (dialog, which) -> {
+                    dialog.dismiss();
+                    if (canSearch && which == searchIndex) {
+                        searchSubtitles();
+                        return;
+                    }
+                    final Tracks.Group group = groups.get(which);
+                    final TrackSelectionParameters.Builder params = mPlayer.getTrackSelectionParameters().buildUpon();
+                    if (group == null) {
+                        params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true);
+                    } else {
+                        params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                .setOverrideForType(new TrackSelectionOverride(group.getMediaTrackGroup(), 0));
+                    }
+                    mPlayer.setTrackSelectionParameters(params.build());
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void searchSubtitles() {
@@ -240,6 +310,8 @@ public class PlayerActivity extends Activity {
         }
         final long position = mPlayer.getCurrentPosition();
         final boolean playing = mPlayer.getPlayWhenReady();
+        mPlayer.setTrackSelectionParameters(mPlayer.getTrackSelectionParameters().buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT).build());
         mPlayer.setMediaItem(current.buildUpon()
                 .setSubtitleConfigurations(Collections.singletonList(subtitle(file))).build(), position);
         mPlayer.prepare();
