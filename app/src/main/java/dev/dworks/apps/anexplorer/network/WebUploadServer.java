@@ -1,12 +1,14 @@
 package dev.dworks.apps.anexplorer.network;
 
 import android.content.Context;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Base64;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +18,8 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -23,12 +27,17 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.LogUtils;
 
 /**
- * A small web server beside the FTP server, so a phone can send files to the TV from its browser.
- * It asks for the FTP server's login and saves into the FTP server's folder.
+ * A small web server beside the FTP server, so a phone can browse the FTP server's folder, send
+ * files into it (or one of its subfolders) and download files from it. It asks for the FTP
+ * server's login. Like the FTP server it speaks plain HTTP, so it is meant for a home network.
  */
 public class WebUploadServer {
 
@@ -132,11 +141,17 @@ public class WebUploadServer {
                 respond(out, 401, "text/plain", "Login needed",
                         "WWW-Authenticate: Basic realm=\"AnExplorer\"\r\n");
             } else {
-                final String path = parts[1].split("\\?")[0];
+                final String[] target = parts[1].split("\\?", 2);
+                final String path = target[0];
+                final String folderParam = queryParam(target.length > 1 ? target[1] : "", "path");
                 if ("GET".equals(parts[0]) && ("/".equals(path) || "/index.html".equals(path))) {
                     respond(out, 200, "text/html", page(), null);
+                } else if ("GET".equals(parts[0]) && "/list".equals(path)) {
+                    list(out, folderParam);
+                } else if ("GET".equals(parts[0]) && "/download".equals(path)) {
+                    download(out, folderParam);
                 } else if ("POST".equals(parts[0]) && "/upload".equals(path)) {
-                    upload(in, out, headers);
+                    upload(in, out, headers, folderParam);
                 } else {
                     respond(out, 404, "text/plain", "Not found", null);
                 }
@@ -161,8 +176,93 @@ public class WebUploadServer {
         }
     }
 
-    private void upload(BufferedInputStream in, OutputStream out, Map<String, String> headers)
-            throws IOException {
+    private static String queryParam(String query, String key) {
+        for (String pair : query.split("&")) {
+            final int eq = pair.indexOf('=');
+            if (eq > 0 && pair.substring(0, eq).equals(key)) {
+                return Uri.decode(pair.substring(eq + 1));
+            }
+        }
+        return "";
+    }
+
+    /**
+     * The file or folder a browser path like "Movies/Sintel" points at, or null when it leaves the
+     * shared folder. Dot segments are refused outright and links are followed before the check.
+     */
+    private File resolve(String relative) throws IOException {
+        File target = folder;
+        for (String segment : relative.split("/")) {
+            if (segment.isEmpty()) {
+                continue;
+            }
+            if (segment.equals(".") || segment.equals("..") || segment.indexOf('\\') >= 0
+                    || segment.indexOf('\0') >= 0) {
+                return null;
+            }
+            target = new File(target, segment);
+        }
+        final String root = folder.getCanonicalPath();
+        final String real = target.getCanonicalPath();
+        return real.equals(root) || real.startsWith(root + File.separator) ? target : null;
+    }
+
+    private void list(OutputStream out, String relative) throws IOException {
+        final File dir = resolve(relative);
+        if (null == dir || !dir.isDirectory()) {
+            respond(out, 404, "text/plain", "Not found", null);
+            return;
+        }
+        final File[] children = dir.listFiles();
+        final File[] sorted = null == children ? new File[0] : children;
+        // Folders first, then by name
+        Arrays.sort(sorted, Comparator.comparing((File f) -> !f.isDirectory())
+                .thenComparing(f -> f.getName().toLowerCase(Locale.ROOT)));
+        final JSONArray entries = new JSONArray();
+        try {
+            for (File child : sorted) {
+                if (child.getName().startsWith(".")) {
+                    continue;
+                }
+                entries.put(new JSONObject().put("name", child.getName())
+                        .put("dir", child.isDirectory()).put("size", child.length()));
+            }
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+        respond(out, 200, "application/json", entries.toString(), null);
+    }
+
+    private void download(OutputStream out, String relative) throws IOException {
+        final File file = resolve(relative);
+        if (null == file || !file.isFile() || file.getName().startsWith(".")) {
+            respond(out, 404, "text/plain", "Not found", null);
+            return;
+        }
+        final String head = "HTTP/1.1 200 OK\r\n"
+                + "Content-Type: application/octet-stream\r\n"
+                + "Content-Length: " + file.length() + "\r\n"
+                + "Content-Disposition: attachment; filename*=UTF-8''" + Uri.encode(file.getName()) + "\r\n"
+                + "Cache-Control: no-store\r\n"
+                + "Connection: close\r\n\r\n";
+        out.write(head.getBytes(StandardCharsets.US_ASCII));
+        try (InputStream in = new FileInputStream(file)) {
+            final byte[] buffer = new byte[65536];
+            int read;
+            while ((read = in.read(buffer)) > 0) {
+                out.write(buffer, 0, read);
+            }
+        }
+        out.flush();
+    }
+
+    private void upload(BufferedInputStream in, OutputStream out, Map<String, String> headers,
+            String relative) throws IOException {
+        final File into = resolve(relative);
+        if (null == into || !into.isDirectory()) {
+            respond(out, 404, "text/plain", "Not found", null);
+            return;
+        }
         final Matcher boundary = BOUNDARY.matcher(headers.getOrDefault("content-type", ""));
         long length = -1;
         try {
@@ -187,7 +287,7 @@ public class WebUploadServer {
                 reader.copyPart(null);
                 continue;
             }
-            final File target = reserve(clean);
+            final File target = reserve(into, clean);
             boolean whole = false;
             try (OutputStream file = new FileOutputStream(target)) {
                 whole = reader.copyPart(file);
@@ -216,16 +316,16 @@ public class WebUploadServer {
     }
 
     /** Creates the empty file under a name that's free, "name (1).ext" and so on, so nothing is overwritten */
-    private File reserve(String name) throws IOException {
+    private static File reserve(File into, String name) throws IOException {
         final int dot = name.lastIndexOf('.');
         final String base = dot > 0 ? name.substring(0, dot) : name;
         final String extension = dot > 0 ? name.substring(dot) : "";
-        File target = new File(folder, name);
+        File target = new File(into, name);
         for (int i = 1; !target.createNewFile(); i++) {
             if (i > 1000) {
                 throw new IOException("No free name for " + name);
             }
-            target = new File(folder, base + " (" + i + ")" + extension);
+            target = new File(into, base + " (" + i + ")" + extension);
         }
         return target;
     }
@@ -245,6 +345,9 @@ public class WebUploadServer {
                 .replace("{{drop}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_drop)))
                 .replace("{{sending}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_sending)))
                 .replace("{{done}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_done)))
+                .replace("{{root}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_root)))
+                .replace("{{empty}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_empty)))
+                .replace("{{plain}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_plain)))
                 .replace("{{failed}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_failed)));
     }
 

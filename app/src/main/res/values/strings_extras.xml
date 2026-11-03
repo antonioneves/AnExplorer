@@ -195,6 +195,9 @@
     <string name="web_upload_sending">Sending…</string>
     <string name="web_upload_done">Sent</string>
     <string name="web_upload_failed">Failed</string>
+    <string name="web_upload_root">Shared folder</string>
+    <string name="web_upload_empty">This folder is empty</string>
+    <string name="web_upload_plain">This page is not encrypted, so only use it on a network you trust.</string>
     <string name="start_ftp">Start</string>
     <string name="stop_ftp">Stop</string>
     <string name="ftp_status_running">Running</string>

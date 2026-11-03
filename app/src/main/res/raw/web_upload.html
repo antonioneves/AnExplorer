@@ -15,25 +15,37 @@ h1{font-size:1.4rem;margin:0 0 16px}
 label{display:inline-block;padding:12px 24px;border-radius:24px;background:var(--accent);color:var(--bg);font-weight:600;cursor:pointer}
 input{display:none}
 p{color:var(--muted);margin:12px 0 0}
+.crumbs{margin:0 0 12px;color:var(--muted)}
+.crumbs a{color:var(--accent);cursor:pointer;text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+#files-list{margin:16px 0 0;padding:0;list-style:none}
+#files-list li{display:flex;align-items:center;gap:12px;padding:10px 16px;margin-top:6px;border-radius:12px;background:var(--card);cursor:pointer}
+#files-list li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#files-list li .z{color:var(--muted);font-size:.85rem}
+#files-list li.empty{cursor:default;color:var(--muted);justify-content:center}
+.note{font-size:.85rem}
 .row{margin-top:12px;padding:12px 16px;border-radius:12px;background:var(--card)}
 .row .n{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row progress{width:100%;margin-top:6px}
 .row .s{color:var(--muted);font-size:.9rem}
 </style>
 </head>
-<body data-sending="{{sending}}" data-done="{{done}}" data-failed="{{failed}}">
+<body data-sending="{{sending}}" data-done="{{done}}" data-failed="{{failed}}" data-root="{{root}}" data-empty="{{empty}}">
 <main>
 <h1>{{title}}</h1>
+<div class="crumbs" id="crumbs"></div>
 <div id="drop">
 <label for="files">{{choose}}</label>
 <input id="files" type="file" multiple>
 <p>{{drop}}</p>
 </div>
 <div id="list"></div>
+<ul id="files-list"></ul>
+<p class="note">{{plain}}</p>
 </main>
 <script>
-var d=document.body.dataset,list=document.getElementById('list'),input=document.getElementById('files'),drop=document.getElementById('drop'),queue=Promise.resolve();
-function send(file){
+var cur=[],d=document.body.dataset,list=document.getElementById('list'),input=document.getElementById('files'),drop=document.getElementById('drop'),queue=Promise.resolve();
+function send(file,dest){
   return new Promise(function(resolve){
     var row=document.createElement('div');row.className='row';
     row.innerHTML='<span class="n"></span><progress max="100" value="0"></progress> <span class="s"></span>';
@@ -43,16 +55,36 @@ function send(file){
     var x=new XMLHttpRequest(),f=new FormData();
     f.append('file',file,file.name);
     x.upload.onprogress=function(e){if(e.lengthComputable)bar.value=e.loaded*100/e.total};
-    x.onload=function(){var ok=x.status==200;st.textContent=ok?d.done:d.failed;if(ok)bar.value=100;resolve()};
+    var here=dest.join('/');x.onload=function(){var ok=x.status==200;st.textContent=ok?d.done:d.failed;if(ok)bar.value=100;if(here==cur.join('/'))show();resolve()};
     x.onerror=function(){st.textContent=d.failed;resolve()};
-    x.open('POST','/upload');x.send(f);
+    x.open('POST','/upload?path='+enc(dest));x.send(f);
   });
 }
-function add(files){Array.prototype.forEach.call(files,function(f){queue=queue.then(function(){return send(f)})})}
+function enc(p){return encodeURIComponent(p.join('/'))}
+function size(n){return n<1024?n+' B':n<1048576?(n/1024).toFixed(0)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(1)+' GB'}
+function go(p){cur=p;show()}
+function crumbs(){var c=document.getElementById('crumbs');c.textContent='';
+  [d.root].concat(cur).forEach(function(n,i){
+    if(i)c.appendChild(document.createTextNode(' / '));
+    var a=document.createElement('a');a.textContent=n;a.onclick=function(){go(cur.slice(0,i))};c.appendChild(a)})}
+function show(){var at=cur.slice();crumbs();
+  var x=new XMLHttpRequest();x.open('GET','/list?path='+enc(cur));
+  x.onload=function(){if(at.join('/')!=cur.join('/'))return;
+    var ul=document.getElementById('files-list');ul.textContent='';
+    var items=x.status==200?JSON.parse(x.responseText):[];
+    if(!items.length){var e=document.createElement('li');e.className='empty';e.textContent=d.empty;ul.appendChild(e)}
+    items.forEach(function(it){var li=document.createElement('li'),n=document.createElement('span'),z=document.createElement('span');
+      n.className='n';n.textContent=(it.dir?'\uD83D\uDCC1 ':'')+it.name;z.className='z';z.textContent=it.dir?'':size(it.size);
+      li.appendChild(n);li.appendChild(z);
+      li.onclick=function(){if(it.dir)go(cur.concat([it.name]));else location.href='/download?path='+enc(cur.concat([it.name]))};
+      ul.appendChild(li)})};
+  x.send()}
+function add(files){var dest=cur.slice();Array.prototype.forEach.call(files,function(f){queue=queue.then(function(){return send(f,dest)})})}
 input.onchange=function(){add(input.files);input.value=''};
 drop.ondragover=function(e){e.preventDefault();drop.className='over'};
 drop.ondragleave=function(){drop.className=''};
 drop.ondrop=function(e){e.preventDefault();drop.className='';add(e.dataTransfer.files)};
+show();
 </script>
 </body>
 </html>
