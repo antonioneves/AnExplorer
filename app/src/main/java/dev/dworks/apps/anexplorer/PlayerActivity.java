@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -40,6 +41,8 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
+import androidx.media3.ui.CaptionStyleCompat;
+import androidx.media3.ui.SubtitleView;
 
 import dev.dworks.apps.anexplorer.misc.VlcPlayer;
 import dev.dworks.apps.anexplorer.misc.SubtitleFinder;
@@ -144,8 +147,29 @@ public class PlayerActivity extends Activity {
         mPlayer.addListener(mListener);
         mPlayerView.setPlayer(mPlayer);
         mPlayer.setMediaItem(mediaItem(uri));
+        styleSubtitles();
         setUpSubtitleSearch();
         start();
+    }
+
+    /** The size, color and background chosen in Settings */
+    private void styleSubtitles() {
+        final SubtitleView view = mPlayerView.getSubtitleView();
+        if (view == null) {
+            return;
+        }
+        final Resources res = getResources();
+        final String size = AppSettings.getChoice(this, AppSettings.KEY_SUBTITLE_SIZE,
+                res.getStringArray(R.array.subtitle_size_values)[1]);
+        final String color = AppSettings.getChoice(this, AppSettings.KEY_SUBTITLE_COLOR,
+                res.getStringArray(R.array.subtitle_color_values)[0]);
+        final String background = AppSettings.getChoice(this, AppSettings.KEY_SUBTITLE_BACKGROUND,
+                res.getStringArray(R.array.subtitle_background_values)[0]);
+        final int back = Color.parseColor(background);
+        view.setFractionalTextSize(Float.parseFloat(size));
+        view.setStyle(new CaptionStyleCompat(Color.parseColor(color), back, Color.TRANSPARENT,
+                Color.alpha(back) == 0 ? CaptionStyleCompat.EDGE_TYPE_OUTLINE : CaptionStyleCompat.EDGE_TYPE_NONE,
+                Color.BLACK, null));
     }
 
     /** The video, with the subtitle downloaded for it earlier, if any */

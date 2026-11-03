@@ -203,6 +203,12 @@ public class SettingsFragment extends Fragment {
         addCloudKeyRow(inflater, section, AppSettings.KEY_TRAKT_CLIENT_SECRET, R.string.pref_trakt_client_secret, true);
 
         section = addSection(inflater, R.string.pref_header_subtitles);
+        addChoice(inflater, section, AppSettings.KEY_SUBTITLE_SIZE, R.string.pref_subtitle_size,
+                R.array.subtitle_size_names, R.array.subtitle_size_values, 1);
+        addChoice(inflater, section, AppSettings.KEY_SUBTITLE_COLOR, R.string.pref_subtitle_color,
+                R.array.subtitle_color_names, R.array.subtitle_color_values, 0);
+        addChoice(inflater, section, AppSettings.KEY_SUBTITLE_BACKGROUND, R.string.pref_subtitle_background,
+                R.array.subtitle_background_names, R.array.subtitle_background_values, 0);
         addCloudKeyRow(inflater, section, AppSettings.KEY_SUBTITLE_LANGUAGE, R.string.pref_subtitle_language, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_SUBDL_API_KEY, R.string.pref_subdl_key, true);
         addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_API_KEY, R.string.pref_opensubtitles_key, true);
@@ -395,6 +401,27 @@ public class SettingsFragment extends Fragment {
                 ColorPickerDialog.show(getFragmentManager(), colorType);
             }
         });
+    }
+
+    /** A row that picks one of a list of values, stored as text; the default is an index into it */
+    private void addChoice(LayoutInflater inflater, ViewGroup section, final String key, int titleId,
+                           int namesId, int valuesId, int defaultIndex) {
+        final View row = addRow(inflater, section, R.drawable.ic_settings_palette, titleId, 0);
+        final String[] names = getResources().getStringArray(namesId);
+        final String[] values = getResources().getStringArray(valuesId);
+        final TextView summary = (TextView) row.findViewById(android.R.id.summary);
+        final int[] current = {Math.max(0, Arrays.asList(values).indexOf(
+                AppSettings.getChoice(getActivity(), key, values[defaultIndex])))};
+        summary.setText(names[current[0]]);
+        row.setOnClickListener(v -> new MaterialAlertDialogBuilder(getActivity())
+                .setTitle(titleId)
+                .setSingleChoiceItems(names, current[0], (dialog, which) -> {
+                    dialog.dismiss();
+                    current[0] = which;
+                    AppSettings.setChoice(getActivity(), key, values[which]);
+                    summary.setText(names[which]);
+                })
+                .show());
     }
 
     private void addThemeStyle(LayoutInflater inflater, ViewGroup section) {

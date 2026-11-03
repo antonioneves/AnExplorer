@@ -69,6 +69,9 @@ public class AppSettings {
     public static final String KEY_OPENSUBTITLES_API_KEY = "openSubtitlesApiKey";
     public static final String KEY_OPENSUBTITLES_USER = "openSubtitlesUser";
     public static final String KEY_OPENSUBTITLES_PASSWORD = "openSubtitlesPassword";
+    public static final String KEY_SUBTITLE_SIZE = "subtitleSize";
+    public static final String KEY_SUBTITLE_COLOR = "subtitleColor";
+    public static final String KEY_SUBTITLE_BACKGROUND = "subtitleBackground";
     public static final String KEY_SUBTITLE_LANGUAGE = "subtitleLanguage";
 
     private AppSettings() {
@@ -196,6 +199,15 @@ public class AppSettings {
         final String value = prefs(context).getString(KEY_SUBTITLE_LANGUAGE, "");
         return TextUtils.isEmpty(value.trim())
                 ? java.util.Locale.getDefault().getLanguage() : value.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** The stored choice, or the default when none was made; used by the subtitle look settings */
+    public static String getChoice(Context context, String key, String fallback) {
+        return prefs(context).getString(key, fallback);
+    }
+
+    public static void setChoice(Context context, String key, String value) {
+        prefs(context).edit().putString(key, value).apply();
     }
 
     /** Empty goes back to the built-in key */
