@@ -10,7 +10,6 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Download subtitles for a video, using the title, season and episode already matched with TMDB.
 - Find SMB and FTP servers on the network (`NsdManager`) instead of typing an address with the remote.
 - Browse DLNA/UPnP media servers.
-- A parental PIN that locks the app, hidden folders or deleting.
 - Check for a new release on GitHub (the old update check was removed).
 
 ## Quality
