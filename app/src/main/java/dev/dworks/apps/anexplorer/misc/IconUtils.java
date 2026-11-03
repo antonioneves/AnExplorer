@@ -249,12 +249,9 @@ public class IconUtils {
 				final PackageInfo packageInfo = pm.getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
 				if (packageInfo != null) {
 					packageInfo.applicationInfo.sourceDir = packageInfo.applicationInfo.publicSourceDir = path;
-					// know issue with nine patch image instead of drawable
-                    if(Utils.hasOreo()){
-                        return new BitmapDrawable(context.getResources(), getAppIcon(pm, packageInfo.packageName));
-                    } else {
-                        return pm.getApplicationIcon(packageInfo.applicationInfo);
-                    }
+					// From the file itself: the app may not be installed, or may be another version
+					final Drawable appIcon = pm.getApplicationIcon(packageInfo.applicationInfo);
+					return new BitmapDrawable(context.getResources(), drawableToBitmap(appIcon));
 				}
 			} catch (Exception e) {
 				return ContextCompat.getDrawable(context, icon);
@@ -284,7 +281,12 @@ public class IconUtils {
     }
 
     private static Bitmap drawableToBitmap(Drawable drawable) {
-        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        if (drawable instanceof BitmapDrawable) {
+            return ((BitmapDrawable) drawable).getBitmap();
+        }
+        final int width = drawable.getIntrinsicWidth() > 0 ? drawable.getIntrinsicWidth() : 192;
+        final int height = drawable.getIntrinsicHeight() > 0 ? drawable.getIntrinsicHeight() : 192;
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
         drawable.draw(canvas);
