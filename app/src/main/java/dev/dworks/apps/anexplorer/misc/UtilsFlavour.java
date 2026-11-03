@@ -6,9 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.google.android.material.snackbar.Snackbar;
-import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
-import dev.dworks.apps.anexplorer.fragment.MoveFragment;
 
 public class UtilsFlavour {
 
@@ -18,24 +16,30 @@ public class UtilsFlavour {
 
     public static void showMessage(Activity activity, String message,
                                    int duration, String action, View.OnClickListener listener){
-        // One banner at the bottom: with the paste bar up, the message goes into it
-        if (null == listener && activity instanceof DocumentsActivity) {
-            final MoveFragment move = MoveFragment.get(activity.getFragmentManager());
-            if (move != null && move.flash(message)) {
-                return;
-            }
-        }
         Snackbar snackbar = Snackbar.make(activity.findViewById(R.id.content_view), message, duration);
         if (null != listener) {
             snackbar.setAction(action, listener)
                     .setActionTextColor(ThemeColors.getAccentColor(activity));
         }
-        // Sit above the paste bar instead of covering it
-        final View bar = activity.findViewById(R.id.container_save);
-        if (bar != null && bar.getVisibility() == View.VISIBLE && bar instanceof ViewGroup
-                && ((ViewGroup) bar).getChildCount() > 0) {
-            snackbar.setAnchorView(bar);
-        }
+        hidePasteBarWhileShown(activity, snackbar);
         snackbar.show();
+    }
+
+    /** The message sits where it always does, so the paste bar steps aside instead of stacking with it */
+    private static void hidePasteBarWhileShown(Activity activity, Snackbar snackbar) {
+        final View bar = activity.findViewById(R.id.container_save);
+        if (bar == null || bar.getVisibility() == View.GONE) {
+            return;
+        }
+        bar.setVisibility(View.INVISIBLE);
+        snackbar.addCallback(new Snackbar.Callback() {
+            @Override
+            public void onDismissed(Snackbar transientBottomBar, int event) {
+                // A message that replaces this one takes over, and puts the bar back when it goes
+                if (event != DISMISS_EVENT_CONSECUTIVE) {
+                    bar.setVisibility(View.VISIBLE);
+                }
+            }
+        });
     }
 }
