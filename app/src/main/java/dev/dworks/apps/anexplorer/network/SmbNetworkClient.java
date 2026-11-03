@@ -196,6 +196,11 @@ public class SmbNetworkClient extends NetworkClient {
      */
     @Override
     public InputStream openInputStream(String path) throws IOException {
+        return openInputStream(path, 0);
+    }
+
+    @Override
+    public InputStream openInputStream(String path, long offset) throws IOException {
         final File file = open(path, AccessMask.GENERIC_READ, SMB2CreateDisposition.FILE_OPEN);
         final long size;
         final int chunk;
@@ -210,7 +215,7 @@ public class SmbNetworkClient extends NetworkClient {
         }
         return new InputStream() {
             private final byte[] buffer = new byte[(int) Math.min(chunk, Math.max(size, 1))];
-            private long position;
+            private long position = offset;
             private int start;
             private int end;
 

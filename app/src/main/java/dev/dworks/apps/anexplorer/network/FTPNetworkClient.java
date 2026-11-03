@@ -113,7 +113,15 @@ public class FTPNetworkClient extends NetworkClient {
     /** On a connection of its own, so that browsing goes on while the file is read */
     @Override
     public InputStream openInputStream(String path) throws IOException {
+        return openInputStream(path, 0);
+    }
+
+    @Override
+    public InputStream openInputStream(String path, long offset) throws IOException {
         final FTPClient reader = openTransferClient();
+        if (offset > 0) {
+            reader.setRestartOffset(offset);
+        }
         final InputStream stream = reader.retrieveFileStream(path);
         if (null == stream) {
             reader.disconnect();

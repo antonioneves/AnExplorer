@@ -45,6 +45,34 @@ public abstract class NetworkClient{
         return null;
     }
 
+    /**
+     * Streams a file from a byte offset, so a player can seek in it without the rest being read first.
+     * Servers that can start at an offset override this; the others read and drop the bytes before it.
+     */
+    public InputStream openInputStream(String path, long offset) throws IOException {
+        final InputStream stream = openInputStream(path);
+        if (null == stream) {
+            return null;
+        }
+        skipFully(stream, offset);
+        return stream;
+    }
+
+    /** Drops bytes from the start of a stream; `skip` alone may stop short */
+    public static void skipFully(InputStream stream, long count) throws IOException {
+        long left = count;
+        while (left > 0) {
+            final long skipped = stream.skip(left);
+            if (skipped > 0) {
+                left -= skipped;
+            } else if (stream.read() < 0) {
+                break;
+            } else {
+                left--;
+            }
+        }
+    }
+
     /** Writes a file, which is in place once the stream is closed */
     public OutputStream openOutputStream(String path) throws IOException {
         throw new IOException("Can't write files to this server");

@@ -220,6 +220,11 @@ public class DlnaNetworkClient extends NetworkClient {
 
     @Override
     public InputStream openInputStream(String path) throws IOException {
+        return openInputStream(path, 0);
+    }
+
+    @Override
+    public InputStream openInputStream(String path, long offset) throws IOException {
         final Entry entry;
         synchronized (this) {
             entry = resolve(normalize(path));
@@ -227,12 +232,21 @@ public class DlnaNetworkClient extends NetworkClient {
         if (entry.directory || null == entry.url) {
             throw new FileNotFoundException(path);
         }
-        final Response response = client.newCall(new Request.Builder().url(entry.url).get().build()).execute();
+        final Request.Builder request = new Request.Builder().url(entry.url).get();
+        if (offset > 0) {
+            request.header("Range", "bytes=" + offset + "-");
+        }
+        final Response response = client.newCall(request.build()).execute();
         if (!response.isSuccessful()) {
             response.close();
             throw new IOException("GET " + path + " failed: " + response.code());
         }
-        return response.body().byteStream();
+        final InputStream stream = response.body().byteStream();
+        // A server that ignores the range sends the whole file, so the start is dropped here
+        if (offset > 0 && response.code() != 206) {
+            skipFully(stream, offset);
+        }
+        return stream;
     }
 
     @Override

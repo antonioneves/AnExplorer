@@ -183,9 +183,14 @@ public class SftpNetworkClient extends NetworkClient {
     /** On a channel of its own, so that browsing goes on while the file is read */
     @Override
     public InputStream openInputStream(String path) throws IOException {
+        return openInputStream(path, 0);
+    }
+
+    @Override
+    public InputStream openInputStream(String path, long offset) throws IOException {
         final ChannelSftp reader = openChannel();
         try {
-            return new FilterInputStream(reader.get(path)) {
+            return new FilterInputStream(reader.get(path, null, offset)) {
                 @Override
                 public void close() throws IOException {
                     try {

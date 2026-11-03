@@ -5,8 +5,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.CancellationSignal;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.ParcelFileDescriptor;
+import android.os.storage.StorageManager;
 import android.provider.BaseColumns;
 import androidx.collection.ArrayMap;
 import android.text.TextUtils;
@@ -35,6 +39,7 @@ import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.MimeTypes;
+import dev.dworks.apps.anexplorer.misc.NetworkStreamCallback;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.Utils;
@@ -239,6 +244,10 @@ public class NetworkStorageProvider extends DocumentsProvider {
             if (isWrite) {
                 return upload(connection, file);
             }
+            final ParcelFileDescriptor seekable = openSeekable(connection, file);
+            if (null != seekable) {
+                return seekable;
+            }
             final InputStream stream = connection.getClient().openInputStream(file.getPath());
             if (null != stream) {
                 return ParcelFileDescriptorUtil.pipeFrom(stream);
@@ -257,6 +266,44 @@ public class NetworkStorageProvider extends DocumentsProvider {
             CrashReportingManager.logException(e);
             throw new FileNotFoundException("Failed to open document with id " + documentId +
                     " and mode " + mode);
+        }
+    }
+
+    /**
+     * A file descriptor a player can seek in, read from the server as it goes; null where the size
+     * isn't known or the platform can't make one, and the file is piped through then
+     */
+    private ParcelFileDescriptor openSeekable(NetworkConnection connection, NetworkFile file) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return null;
+        }
+        try {
+            final NetworkClient client = connection.getClient();
+            final NetworkFile parent = file.getParentFile();
+            long size = -1;
+            for (FTPFile entry : listFiles(connection, parent)) {
+                if (file.getName().equals(entry.getName())) {
+                    size = entry.getSize();
+                    break;
+                }
+            }
+            if (size < 0) {
+                return null;
+            }
+            final HandlerThread thread = new HandlerThread("NetworkStream");
+            thread.start();
+            final StorageManager storage = (StorageManager) getContext().getSystemService(Context.STORAGE_SERVICE);
+            try {
+                return storage.openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,
+                        new NetworkStreamCallback(client, file.getPath(), size, thread::quitSafely),
+                        new Handler(thread.getLooper()));
+            } catch (IOException e) {
+                thread.quit();
+                throw e;
+            }
+        } catch (Exception e) {
+            CrashReportingManager.logException(e);
+            return null;
         }
     }
 
