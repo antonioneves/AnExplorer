@@ -85,6 +85,9 @@ public class CreateConnectionFragment extends DialogFragment {
 
     private static final String TAG = "create_connection";
     private static final String EXTRA_SCHEME = "scheme";
+    private static final String EXTRA_NAME = "name";
+    private static final String EXTRA_HOST = "host";
+    private static final String EXTRA_PORT = "port";
     /** How much of the screen a TV keyboard covers, which it doesn't say */
     private static final float TV_KEYBOARD_SHARE = 0.45f;
     private AppCompatEditText name;
@@ -117,9 +120,17 @@ public class CreateConnectionFragment extends DialogFragment {
 
     /** A new connection of the given scheme, such as "ftp" or "webdav" */
     public static void showNew(FragmentManager fm, String scheme) {
+        showNew(fm, scheme, null, null, 0);
+    }
+
+    /** A new connection with the address of a server that was found, for the rest to be filled in */
+    public static void showNew(FragmentManager fm, String scheme, String name, String host, int port) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
         final Bundle args = new Bundle();
         args.putString(EXTRA_SCHEME, scheme);
+        args.putString(EXTRA_NAME, name);
+        args.putString(EXTRA_HOST, host);
+        args.putInt(EXTRA_PORT, port);
         dialog.setArguments(args);
         dialog.show(fm, TAG);
     }
@@ -190,6 +201,12 @@ public class CreateConnectionFragment extends DialogFragment {
         showSchemes(context, null != connection ? connection.getScheme() : newScheme);
         if (null != newScheme) {
             scheme.setSelection(Math.max(0, Arrays.asList(schemes).indexOf(newScheme)));
+            final Bundle given = getArguments();
+            if (null != given.getString(EXTRA_HOST)) {
+                name.setText(given.getString(EXTRA_NAME));
+                host.setText(given.getString(EXTRA_HOST));
+                port.setText(Integer.toString(given.getInt(EXTRA_PORT)));
+            }
         }
         anonymous.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override

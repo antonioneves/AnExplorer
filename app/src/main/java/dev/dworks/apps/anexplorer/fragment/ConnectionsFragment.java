@@ -42,6 +42,7 @@ import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.network.DlnaDiscovery;
 import dev.dworks.apps.anexplorer.network.DlnaNetworkClient;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
+import dev.dworks.apps.anexplorer.network.ServerDiscovery;
 import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.CloudStorageProvider;
@@ -271,6 +272,36 @@ public class ConnectionsFragment extends RecyclerFragment
         AnalyticsManager.logEvent("connection_add");
     }
 
+    /** Looks for SMB, FTP, SFTP and WebDAV servers, and opens the form for the one picked, with its address filled in */
+    private void findServers() {
+        final BaseActivity activity = (BaseActivity) getActivity();
+        activity.setPending(true);
+        ServerDiscovery.find(activity, servers -> {
+            activity.setPending(false);
+            if (activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            if (servers.isEmpty()) {
+                Utils.showSnackBar(activity, getString(R.string.discover_none_found));
+                return;
+            }
+            final String[] labels = new String[servers.size()];
+            for (int i = 0; i < labels.length; i++) {
+                final ServerDiscovery.Found server = servers.get(i);
+                labels[i] = server.name + " (" + server.scheme.toUpperCase(java.util.Locale.ROOT)
+                        + ", " + server.host + ")";
+            }
+            new MaterialAlertDialogBuilder(activity)
+                    .setTitle(R.string.discover_choose)
+                    .setItems(labels, (dialog, which) -> {
+                        final ServerDiscovery.Found server = servers.get(which);
+                        CreateConnectionFragment.showNew(((DocumentsActivity) activity).getSupportFragmentManager(),
+                                server.scheme, server.name, server.host, server.port);
+                    })
+                    .show();
+        });
+    }
+
     /** Looks for media servers on the network, and saves the one picked from what's found */
     private void findMediaServers() {
         final BaseActivity activity = (BaseActivity) getActivity();
@@ -415,6 +446,9 @@ public class ConnectionsFragment extends RecyclerFragment
         } else if (itemId == R.id.network_smb){
             addConnection(SmbNetworkClient.SCHEME);
             AnalyticsManager.logEvent("add_smb");
+        } else if (itemId == R.id.network_discover){
+            findServers();
+            AnalyticsManager.logEvent("find_servers");
         } else if (itemId == R.id.network_dlna){
             findMediaServers();
             AnalyticsManager.logEvent("add_dlna");

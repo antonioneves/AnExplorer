@@ -428,4 +428,7 @@
     <string name="dlna_choose">Media servers found</string>
     <string name="dlna_none_found">No media server found on this network</string>
     <string name="dlna_not_editable">A media server is found, not typed in: delete it and add it again to change it</string>
+    <string name="network_discover">Find servers on the network</string>
+    <string name="discover_choose">Servers found</string>
+    <string name="discover_none_found">No SMB, FTP or WebDAV server found on this network</string>
 </resources>
