@@ -227,6 +227,10 @@
             android:enabled="true"
             android:exported="false" />
         <service
+            android:name=".service.TransferService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
             android:name=".service.QuickShareReceiveService"
             android:enabled="true"
             android:exported="false"

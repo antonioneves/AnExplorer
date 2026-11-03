@@ -23,6 +23,7 @@ import android.app.Dialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.ContentProviderClient;
@@ -31,6 +32,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.view.MenuInflater;
@@ -126,6 +128,7 @@ import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 import dev.dworks.apps.anexplorer.fragment.ServerFragment;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
+import dev.dworks.apps.anexplorer.service.TransferService;
 import dev.dworks.apps.anexplorer.misc.AsyncTask;
 import dev.dworks.apps.anexplorer.misc.ConnectionUtils;
 import dev.dworks.apps.anexplorer.misc.Trakt;
@@ -252,6 +255,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     @Override
     public void onCreate(Bundle icicle) {
         setTheme(R.style.DocumentsTheme_Document);
+        ContextCompat.registerReceiver(this, mProgressReceiver,
+                new IntentFilter(TransferService.ACTION_TRANSFER_PROGRESS), ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, mTransferReceiver,
+                new IntentFilter(TransferService.ACTION_TRANSFER_DONE), ContextCompat.RECEIVER_NOT_EXPORTED);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         setUpStatusBar();
         // The TV keyboard is a panel in the middle of the screen; resizing the window around it
@@ -603,6 +610,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if (!mLockedFolderOpen && null != root && root.isLockedFolder() && !mShowingSettings && !mShowingAbout) {
             askLockedFolderPin(null);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(mTransferReceiver);
+        unregisterReceiver(mProgressReceiver);
+        super.onDestroy();
     }
 
     @Override
@@ -2437,7 +2451,13 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     }
 
     public void onMoveRequested(ArrayList<DocumentInfo> docs, DocumentInfo toDoc, boolean deleteAfter) {
-    	new MoveTask(docs, toDoc, deleteAfter).executeOnExecutor(getCurrentExecutor());
+        final DocumentInfo cwd = null == toDoc ? getCurrentDirectory() : toDoc;
+        setMovePending(true);
+        TransferService.start(this, docs, cwd, deleteAfter);
+        Bundle params = new Bundle();
+        params.putBoolean(FILE_MOVE, deleteAfter);
+        params.putInt(FILE_COUNT, docs.size());
+        AnalyticsManager.logEvent("files_moved", params);
     }
 
     private void saveStackBlocking() {
@@ -2622,71 +2642,33 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         }
     }
 
-    private class MoveTask extends AsyncTask<Void, Void, Boolean> {
-        private final DocumentInfo toDoc;
-        private final ArrayList<DocumentInfo> docs;
-		private boolean deleteAfter;
-
-        public MoveTask(ArrayList<DocumentInfo> docs, DocumentInfo toDoc, boolean deleteAfter) {
-            this.docs = docs;
-            this.toDoc = toDoc;
-            this.deleteAfter = deleteAfter;
-        }
-
+    private final BroadcastReceiver mProgressReceiver = new BroadcastReceiver() {
         @Override
-        protected void onPreExecute() {
-        	setMovePending(true);
+        public void onReceive(Context context, Intent intent) {
+            final MoveFragment move = MoveFragment.get(getFragmentManager());
+            if (move != null) {
+                move.setProgress(intent.getLongExtra(TransferService.EXTRA_DONE, 0),
+                        intent.getLongExtra(TransferService.EXTRA_TOTAL, 0));
+            }
         }
+    };
 
+    /** The background transfer ended: its notification said how, here the bar goes and the folder reloads */
+    private final BroadcastReceiver mTransferReceiver = new BroadcastReceiver() {
         @Override
-        protected Boolean doInBackground(Void... params) {
-            final ContentResolver resolver = getContentResolver();
-            final DocumentInfo cwd = null == toDoc ? getCurrentDirectory() : toDoc;
-
-			boolean hadTrouble = false;
-			final DocumentCopier copier = new DocumentCopier(resolver);
-    		for (DocumentInfo doc : docs) {
-    			try {
-                    if (!DocumentCopier.copiesItself(doc, cwd, deleteAfter)) {
-                        // Another storage, so the files are read and written here
-                        hadTrouble |= !copier.copy(doc, cwd.derivedUri, deleteAfter);
-                    } else if(deleteAfter) {
-                        hadTrouble |= DocumentsContract.moveDocument(resolver, doc.derivedUri, null,
-                                cwd.derivedUri) == null;
-                    } else {
-                        hadTrouble |= DocumentsContract.copyDocument(resolver, doc.derivedUri,
-                                cwd.derivedUri) == null;
-                    }
-    			} catch (Exception e) {
-    				Log.w(TAG, "Failed to move " + doc);
-    				hadTrouble = true;
-                    CrashReportingManager.logException(e);
-    			}
-    		}
-
-            Bundle params2 = new Bundle();
-            params2.putBoolean(FILE_MOVE, deleteAfter);
-            params2.putInt(FILE_COUNT, docs.size());
-            AnalyticsManager.logEvent("files_moved", params2);
-
-            return hadTrouble;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            if(!Utils.isActivityAlive(DocumentsActivity.this)){
+        public void onReceive(Context context, Intent intent) {
+            if (!Utils.isActivityAlive(DocumentsActivity.this)) {
                 return;
             }
-            if (result){
-                //if(!isSAFIssue(toDoc.documentId)){
+            if (intent.getBooleanExtra(TransferService.EXTRA_FAILED, false)
+                    && !intent.getBooleanExtra(TransferService.EXTRA_CANCELLED, false)) {
                 Utils.showError(DocumentsActivity.this, R.string.save_error);
-                //}
             }
             MoveFragment.hide(getFragmentManager());
             setMovePending(false);
             refreshData();
         }
-    }
+    };
 
     public void setMovePending(boolean pending) {
         final MoveFragment move = MoveFragment.get(getFragmentManager());

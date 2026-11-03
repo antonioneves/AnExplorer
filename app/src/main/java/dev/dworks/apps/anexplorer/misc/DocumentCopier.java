@@ -16,7 +16,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 
@@ -29,9 +28,15 @@ public class DocumentCopier {
     private static final String TAG = DocumentCopier.class.getSimpleName();
 
     private final ContentResolver resolver;
+    private final TransferControl control;
 
     public DocumentCopier(ContentResolver resolver) {
+        this(resolver, new TransferControl());
+    }
+
+    public DocumentCopier(ContentResolver resolver, TransferControl control) {
         this.resolver = resolver;
+        this.control = control;
     }
 
     /** Whether a provider can copy the document itself, which is quicker */
@@ -50,6 +55,10 @@ public class DocumentCopier {
     }
 
     private boolean copy(DocumentInfo doc, Uri folder) {
+        if (control.isCancelled()) {
+            return false;
+        }
+        control.startFile(doc.displayName);
         final Uri made = DocumentsContract.createDocument(resolver, folder, doc.mimeType,
                 doc.displayName);
         if (null == made) {
@@ -64,6 +73,11 @@ public class DocumentCopier {
             }
             boolean copied = true;
             for (DocumentInfo child : children) {
+                if (!child.isDirectory()) {
+                    control.addTotal(child.size);
+                }
+            }
+            for (DocumentInfo child : children) {
                 copied &= copy(child, made);
             }
             return copied;
@@ -74,7 +88,12 @@ public class DocumentCopier {
                 throw new IOException("Can't open " + doc.displayName);
             }
             final FileOutputStream out = new FileOutputStream(target.getFileDescriptor());
-            IoUtils.copy(in, out);
+            final byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+                control.step(read);
+            }
             out.flush();
             awaitWritten(target);
             return true;

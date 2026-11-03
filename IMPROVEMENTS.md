@@ -3,7 +3,6 @@
 What's left to do, found while fixing the TV focus bugs. The app targets Android TV only.
 
 ## Features
-- Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
 
 ## Quality
@@ -33,6 +32,7 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - Sleep timer: the dialog opens, but its pause after the delay wasn't waited out. The media session was seen active with ExoPlayer only, not with VLC. Speed and audio/subtitle tracks in VLC: the menu shows, a change on a real VLC-only file isn't tested.
 - DLNA/UPnP media servers: browsing, names and file opening worked against a fake server on the emulator; the SSDP search, a real server (Plex, Jellyfin, a router's USB share), seeking while streaming and a very long list weren't tried. A server on the VLC fallback: VLC opens the file on the main thread, which fails for any network storage.
 - Find servers on the network: the menu entry and the "none found" message work on the emulator, but a real server was never seen; the list, the filled-in form and a connection made from it need a TV on a LAN with an SMB/FTP server that announces itself over mDNS (Windows shares usually don't).
+- Background transfers: copying from a DLNA server (fake, throttled, on the emulator) showed the percentage, paused, resumed to the exact size and cancelled without leaving a half file. The notification (progress, Pause/Resume/Cancel, result), moves, folders, other servers, leaving the app mid-copy and a pause longer than the server's timeout weren't tried. Copies within one storage go through the provider and show no percentage.
 - Streaming from network storage: a video from a DLNA server (fake, on the emulator) plays and seeks, including a file with its index at the end. FTP, SFTP, SMB and WebDAV share the same code but were not tried with a video, nor was a copy or move from a server (it now reads through the same seekable descriptor), nor a slow connection. On Android 7 and older (before 8.0) the file is still piped and can't be seeked.
 - Update check: Settings > About > Check for updates. Against a fake GitHub on the emulator it showed the notes and downloaded the right APK for the CPU into Downloads; against the real repo (no release yet) it says it's the latest. The workflow now publishes a release when a tag like `v4.1.0` is pushed, which hasn't run yet; the first tag needs to match `versionName`. Installing is still by opening the downloaded file.
 - FTPS on port 990 (implicit TLS) and TLS session reuse.

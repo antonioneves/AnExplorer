@@ -35,6 +35,7 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
+import dev.dworks.apps.anexplorer.service.TransferService;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -52,6 +53,8 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	private MaterialProgressBar mProgress;
 
 	private View mCancel;
+	private boolean mPending;
+	private boolean mPaused;
 	private ArrayList<DocumentInfo> docs;
 
 	private static final String EXTRA_DELETE_AFTER = "delete_after";
@@ -152,6 +155,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 
 	/** The bar only shows where the files can be pasted: Home, Connections and the like hide it */
 	public void setSaveEnabled(boolean enabled) {
+		enabled |= mPending;
 		mMoveInfo.setEnabled(enabled);
 		mSave.setEnabled(enabled);
 		if (getView() != null) {
@@ -159,9 +163,22 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		}
 	}
 
+	/** While a transfer runs the buttons pause, resume and cancel it, as the TV can't reach its notification */
 	public void setPending(boolean pending) {
-		mSave.setVisibility(pending ? View.INVISIBLE : View.VISIBLE);
-		mProgress.setVisibility(pending ? View.VISIBLE : View.GONE);
+		mPending = pending;
+		mPaused = false;
+		mProgress.setVisibility(View.GONE);
+		((TextView) mSave).setText(pending ? R.string.transfer_pause : R.string.menu_paste);
+		((TextView) mCancel).setText(android.R.string.cancel);
+		mMoveInfo.setText(pending ? getString(R.string.transfer_to)
+				: getString(R.string.paste_in, FileUtils.formatFileCount(docs.size())));
+	}
+
+	/** Shows how far the transfer is, when its size is known */
+	public void setProgress(long done, long total) {
+		if (mPending && total > 0) {
+			mMoveInfo.setText(getString(R.string.transfer_percent, (int) (done * 100 / total)));
+		}
 	}
 
 	@Override
@@ -169,13 +186,25 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		final DocumentsActivity activity = DocumentsActivity.get(MoveFragment.this);
 		switch (v.getId()) {
 		case android.R.id.button1:
-			if (mReplaceTarget != null) {
+			if (mPending) {
+				mPaused = !mPaused;
+				if (mPaused) {
+					TransferService.pause(activity);
+				} else {
+					TransferService.resume(activity);
+				}
+				((TextView) mSave).setText(mPaused ? R.string.transfer_resume : R.string.transfer_pause);
+			} else if (mReplaceTarget != null) {
 				final boolean deleteAfter = getArguments().getBoolean(EXTRA_DELETE_AFTER);
 				activity.onMoveRequested(docs, mReplaceTarget, deleteAfter);
 			}
 			break;
 
 		case android.R.id.button2:
+			if (mPending) {
+				TransferService.cancel(activity);
+				break;
+			}
 			getActivity().getFragmentManager().beginTransaction().remove(this).commit();
 			break;
 		}

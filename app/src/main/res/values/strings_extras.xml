@@ -442,4 +442,19 @@
     <string name="network_discover">Find servers on the network</string>
     <string name="discover_choose">Servers found</string>
     <string name="discover_none_found">No SMB, FTP or WebDAV server found on this network</string>
+    <string name="transfer_channel">File transfers</string>
+    <string name="transfer_starting">Starting transfer</string>
+    <string name="transfer_to">Transferring to</string>
+    <string name="transfer_copying">Copying %1$s</string>
+    <string name="transfer_moving">Moving %1$s</string>
+    <string name="transfer_paused">Transfer paused</string>
+    <string name="transfer_progress">%1$d of %2$d done · %3$s copied</string>
+    <string name="transfer_pause">Pause</string>
+    <string name="transfer_resume">Resume</string>
+    <string name="transfer_cancel">Cancel</string>
+    <string name="transfer_copied">Copied</string>
+    <string name="transfer_moved">Moved</string>
+    <string name="transfer_cancelled">Transfer cancelled</string>
+    <string name="transfer_failed">Transfer failed</string>
+    <string name="transfer_percent">%1$d%% done</string>
 </resources>
