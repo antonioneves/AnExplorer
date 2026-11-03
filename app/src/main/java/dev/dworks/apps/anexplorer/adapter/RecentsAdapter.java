@@ -14,6 +14,7 @@ import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.cursor.RootCursorWrapper;
 import dev.dworks.apps.anexplorer.misc.IconHelper;
 import dev.dworks.apps.anexplorer.misc.IconColorUtils;
+import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
@@ -93,6 +94,11 @@ public class RecentsAdapter extends CursorRecyclerViewAdapter<RecentsAdapter.Vie
     public class MoreViewHolder extends ViewHolder {
         public MoreViewHolder(View v) {
             super(v);
+            if (Utils.isRTL()) {
+                // The row ends on the left here, so that is the side to keep the remote on
+                v.setNextFocusRightId(View.NO_ID);
+                v.setNextFocusLeftId(R.id.recents);
+            }
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

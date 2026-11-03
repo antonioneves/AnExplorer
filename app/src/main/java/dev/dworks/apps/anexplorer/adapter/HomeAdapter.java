@@ -242,6 +242,13 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
             progress = (NumberProgressBar) v.findViewById(android.R.id.progress);
             action_layout = v.findViewById(R.id.action_layout);
             action = (ImageButton) v.findViewById(R.id.action);
+            if (Utils.isRTL() && card_view != null && action != null) {
+                // The layout points the card at its button with Right, which is the wrong way round here
+                card_view.setNextFocusRightId(View.NO_ID);
+                card_view.setNextFocusLeftId(R.id.action);
+                action.setNextFocusLeftId(View.NO_ID);
+                action.setNextFocusRightId(R.id.card_view);
+            }
 
             iconMime = (ImageView) v.findViewById(R.id.icon_mime);
             iconThumb = (ImageView) v.findViewById(R.id.icon_thumb);

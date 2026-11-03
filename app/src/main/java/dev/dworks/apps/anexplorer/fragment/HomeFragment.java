@@ -365,8 +365,12 @@ public class HomeFragment extends RecyclerFragment implements HomeAdapter.OnItem
             final GridLayoutManager.LayoutParams lp = (GridLayoutManager.LayoutParams) view.getLayoutParams();
             final int columns = totalSpanSize / shortcutSpanSize;
             final int column = lp.getSpanIndex() / shortcutSpanSize;
-            outRect.left = mSpacing - column * mSpacing / columns;
-            outRect.right = (column + 1) * mSpacing / columns;
+            final int start = mSpacing - column * mSpacing / columns;
+            final int end = (column + 1) * mSpacing / columns;
+            // Column 0 is on the right in a right-to-left layout
+            final boolean rtl = parent.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            outRect.left = rtl ? end : start;
+            outRect.right = rtl ? start : end;
             outRect.top = mSpacing / 2;
             outRect.bottom = mSpacing / 2;
         }

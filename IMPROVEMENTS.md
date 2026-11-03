@@ -43,6 +43,3 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 - An SFTP server whose host key changed.
 - The ADB storage dialog.
 - A custom Quick Share download folder, and receiving text over Quick Share.
-- The APKs sidebar entry.
-- Right and Left from the sidebar in a right-to-left language.
-- Unstarring one of two Starred items, and focus in the list afterwards.
