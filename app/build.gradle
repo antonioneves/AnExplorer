@@ -135,4 +135,6 @@ dependencies {
     // Plays what ExoPlayer can't read (AVI, WMV, APE, ...); LGPL, so it stays a separate library
     implementation 'org.videolan.android:libvlc-all:3.7.7'
     testImplementation 'junit:junit:4.13.2'
+    // Runs Android's cursor and resource classes in the unit tests
+    testImplementation 'org.robolectric:robolectric:4.16'
 }
