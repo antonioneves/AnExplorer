@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The paste bar's rounded body; tinted in code with a slate colour that sets it apart from the folders -->
+<!-- The paste bar's rounded body; tinted in code with bottom_bar_background -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <corners android:radius="28dp" />
     <solid android:color="@android:color/white" />
