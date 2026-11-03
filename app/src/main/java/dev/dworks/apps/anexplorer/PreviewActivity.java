@@ -2,6 +2,7 @@ package dev.dworks.apps.anexplorer;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -15,6 +16,7 @@ import android.os.ParcelFileDescriptor;
 import android.text.SpannableStringBuilder;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -33,6 +35,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Locale;
+
+import com.google.android.material.color.MaterialColors;
 
 import dev.dworks.apps.anexplorer.misc.OfficeHtml;
 import dev.dworks.apps.anexplorer.misc.PreviewFormatter;
@@ -61,6 +65,8 @@ public class PreviewActivity extends Activity {
     private static final int MAX_TEXT_BYTES = 2 * 1024 * 1024;
     private static final int MAX_TIFF_BYTES = 48 * 1024 * 1024;
     private static final int MAX_IMAGE_SIDE = 2560;
+    /** How long the photo or page counter stays up, as long as a short toast */
+    private static final int COUNTER_MILLIS = 2000;
     private static final String IMAGE_EXTENSIONS = "|png|jpg|jpeg|gif|webp|bmp|avif|heic|heif|";
     private static final String PLAIN_EXTENSIONS = "|txt|text|log|";
     private static final String TEXT_EXTENSIONS = "|txt|text|log|json|xml|yml|yaml|ini|md|markdown|csv|tsv"
@@ -73,8 +79,8 @@ public class PreviewActivity extends Activity {
     /** The folder's images and where the one on screen sits, or null when this isn't a slideshow */
     private List<Uri> mImages;
     private int mImageIndex;
-    /** The counter on screen, replaced rather than queued when the remote is pressed quickly */
-    private Toast mImagePosition;
+    /** The photo or page counter, drawn over the preview and replaced rather than queued */
+    private TextView mCounter;
     private WebView mWeb;
     private String mSlideshow;
     private int mSlides, mSlide, mStep;
@@ -377,17 +383,55 @@ public class PreviewActivity extends Activity {
     }
 
     private void showImagePosition() {
-        if (mImagePosition != null) {
-            mImagePosition.cancel();
-        }
-        mImagePosition = Toast.makeText(this,
-                getString(R.string.preview_image_position, mImageIndex + 1, mImages.size()), Toast.LENGTH_SHORT);
-        mImagePosition.show();
+        showCounter(getString(R.string.preview_image_position, mImageIndex + 1, mImages.size()));
     }
 
     private void showPageNumber() {
-        Toast.makeText(this, getString(R.string.preview_page, mPage + 1, mPdf.getPageCount()),
-                Toast.LENGTH_SHORT).show();
+        showCounter(getString(R.string.preview_page, mPage + 1, mPdf.getPageCount()));
+    }
+
+    /**
+     * Shows the counter over the preview, with the app's own folder beside it. A Toast carries
+     * the launcher icon, whose blue tile is all that shows at that size.
+     */
+    private void showCounter(String text) {
+        if (mCounter == null) {
+            // The app's surface colours, so the counter sits on either theme like the rest of
+            // the UI; the folder is drawn as it is beside the app's name
+            final Context themed = new ContextThemeWrapper(this, R.style.DocumentsTheme);
+            final int surface = MaterialColors.getColor(themed, R.attr.colorSurfaceContainerHigh, Color.DKGRAY);
+            final int onSurface = MaterialColors.getColor(themed, R.attr.colorOnSurface, Color.WHITE);
+
+            mCounter = new TextView(this);
+            mCounter.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_app_folder, 0, 0, 0);
+            mCounter.setCompoundDrawablePadding(dp(10));
+            mCounter.setTextColor(onSurface);
+            mCounter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            mCounter.setGravity(Gravity.CENTER_VERTICAL);
+            mCounter.setPadding(dp(16), dp(8), dp(20), dp(8));
+            mCounter.setBackgroundResource(R.drawable.preview_counter_background);
+            mCounter.setBackgroundTintList(ColorStateList.valueOf(surface));
+            final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            params.bottomMargin = dp(36);
+            mRoot.addView(mCounter, params);
+        }
+        mCounter.setText(text);
+        mCounter.setVisibility(View.VISIBLE);
+        mCounter.removeCallbacks(mHideCounter);
+        mCounter.postDelayed(mHideCounter, COUNTER_MILLIS);
+    }
+
+    private final Runnable mHideCounter = () -> {
+        if (mCounter != null) {
+            mCounter.setVisibility(View.GONE);
+        }
+    };
+
+    private int dp(int value) {
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value,
+                getResources().getDisplayMetrics()));
     }
 
     private void showWeb(TextView loading, String content, String mimeType) {
@@ -603,6 +647,9 @@ public class PreviewActivity extends Activity {
     protected void onDestroy() {
         mDestroyed = true;
         super.onDestroy();
+        if (mCounter != null) {
+            mCounter.removeCallbacks(mHideCounter);
+        }
         synchronized (this) {
             if (mPdf != null) {
                 mPdf.close();
