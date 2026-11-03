@@ -74,7 +74,7 @@ public abstract class NetworkClient{
         return create(scheme, host, port, userName, password, null);
     }
 
-    /** @param path the folder of the server a WebDAV or SMB connection opens at */
+    /** @param path the folder of the server a WebDAV or SMB connection opens at, or a media server's description */
     public static NetworkClient create(String scheme, String host, int port, String userName,
                                        String password, String path) {
         if(WebDavNetworkClient.isWebDav(scheme)){
@@ -88,6 +88,8 @@ public abstract class NetworkClient{
             return new SftpNetworkClient(host, port, userName, password);
         } else if(SmbNetworkClient.SCHEME.equals(scheme)){
             return new SmbNetworkClient(host, port, path, userName, password);
+        } else if(DlnaNetworkClient.SCHEME.equals(scheme)){
+            return new DlnaNetworkClient(host, port, path);
         }
         return null;
     }

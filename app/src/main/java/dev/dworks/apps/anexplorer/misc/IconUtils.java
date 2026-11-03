@@ -38,6 +38,7 @@ import android.util.TypedValue;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
+import dev.dworks.apps.anexplorer.network.DlnaNetworkClient;
 import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
 import dev.dworks.apps.anexplorer.provider.MediaDocumentsProvider;
@@ -359,6 +360,9 @@ public class IconUtils {
             if (SmbNetworkClient.SCHEME.equals(scheme)) {
                 return ContextCompat.getDrawable(context, R.drawable.ic_connection_smb);
             }
+            if (DlnaNetworkClient.SCHEME.equals(scheme)) {
+                return ContextCompat.getDrawable(context, R.drawable.ic_connection_network);
+            }
             return ContextCompat.getDrawable(context, WebDavNetworkClient.isWebDav(scheme)
                     ? R.drawable.ic_connection_webdav : R.drawable.ic_connection_ftp);
         } else {
@@ -370,6 +374,9 @@ public class IconUtils {
     public static int schemeIcon(String scheme) {
         if (SmbNetworkClient.SCHEME.equals(scheme)) {
             return R.drawable.ic_device_laptop;
+        }
+        if (DlnaNetworkClient.SCHEME.equals(scheme)) {
+            return R.drawable.ic_connection_network;
         }
         return WebDavNetworkClient.isWebDav(scheme) ? R.drawable.ic_root_webdav : R.drawable.ic_root_ftp;
     }

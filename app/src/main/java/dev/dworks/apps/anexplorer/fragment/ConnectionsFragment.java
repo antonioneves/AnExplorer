@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.provider.BaseColumns;
 
 import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -38,6 +39,8 @@ import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.RootInfo;
+import dev.dworks.apps.anexplorer.network.DlnaDiscovery;
+import dev.dworks.apps.anexplorer.network.DlnaNetworkClient;
 import dev.dworks.apps.anexplorer.network.NetworkConnection;
 import dev.dworks.apps.anexplorer.network.SmbNetworkClient;
 import dev.dworks.apps.anexplorer.network.WebDavNetworkClient;
@@ -244,7 +247,9 @@ public class ConnectionsFragment extends RecyclerFragment
         NetworkConnection networkConnection = NetworkConnection.fromConnectionsCursor(cursor);
         final int id = item.getItemId();
         if (id == R.id.menu_edit) {
-            if(!networkConnection.type.startsWith(TYPE_CLOUD)) {
+            if (DlnaNetworkClient.SCHEME.equals(networkConnection.scheme)) {
+                Utils.showSnackBar(getActivity(), getString(R.string.dlna_not_editable));
+            } else if(!networkConnection.type.startsWith(TYPE_CLOUD)) {
                 editConnection(connection_id);
             } else {
                 Utils.showSnackBar(getActivity(), "Cloud storage connection can't be edited");
@@ -264,6 +269,55 @@ public class ConnectionsFragment extends RecyclerFragment
     private void addConnection(String scheme) {
         CreateConnectionFragment.showNew(((DocumentsActivity)getActivity()).getSupportFragmentManager(), scheme);
         AnalyticsManager.logEvent("connection_add");
+    }
+
+    /** Looks for media servers on the network, and saves the one picked from what's found */
+    private void findMediaServers() {
+        final BaseActivity activity = (BaseActivity) getActivity();
+        activity.setPending(true);
+        new Thread(() -> {
+            final java.util.List<DlnaDiscovery.Server> servers = DlnaDiscovery.find();
+            activity.runOnUiThread(() -> {
+                activity.setPending(false);
+                if (activity.isFinishing() || activity.isDestroyed()) {
+                    return;
+                }
+                if (servers.isEmpty()) {
+                    Utils.showSnackBar(activity, getString(R.string.dlna_none_found));
+                    return;
+                }
+                final String[] names = new String[servers.size()];
+                for (int i = 0; i < names.length; i++) {
+                    names[i] = servers.get(i).name;
+                }
+                new MaterialAlertDialogBuilder(activity)
+                        .setTitle(R.string.dlna_choose)
+                        .setItems(names, (dialog, which) -> addMediaServer(servers.get(which)))
+                        .show();
+            });
+        }, "Media server search").start();
+    }
+
+    private void addMediaServer(DlnaDiscovery.Server server) {
+        final NetworkConnection connection = new NetworkConnection();
+        connection.name = server.name;
+        connection.scheme = DlnaNetworkClient.SCHEME;
+        connection.type = NetworkConnection.CLIENT;
+        connection.host = server.host;
+        connection.port = server.port;
+        connection.setAnonymous(true);
+        connection.build();
+        // The description's address, which build() reset to the root
+        connection.path = server.path;
+        final BaseActivity activity = (BaseActivity) getActivity();
+        new Thread(() -> {
+            final boolean saved = NetworkStorageProvider.addUpdateConnection(activity, connection, 0);
+            activity.runOnUiThread(() -> {
+                if (saved) {
+                    reload();
+                }
+            });
+        }, "Media server save").start();
     }
 
     private void editConnection(int connection_id) {
@@ -361,6 +415,9 @@ public class ConnectionsFragment extends RecyclerFragment
         } else if (itemId == R.id.network_smb){
             addConnection(SmbNetworkClient.SCHEME);
             AnalyticsManager.logEvent("add_smb");
+        } else if (itemId == R.id.network_dlna){
+            findMediaServers();
+            AnalyticsManager.logEvent("add_dlna");
         }
     }
 }

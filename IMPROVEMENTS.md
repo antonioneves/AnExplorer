@@ -7,7 +7,6 @@ What's left to do, found while fixing the TV focus bugs. The app targets Android
 - Background transfers with a notification, and pause and resume.
 - A web page served alongside the FTP server, so a phone can upload files to the TV from its browser.
 - Find SMB and FTP servers on the network (`NsdManager`) instead of typing an address with the remote.
-- Browse DLNA/UPnP media servers.
 - Check for a new release on GitHub (the old update check was removed).
 
 ## Quality
@@ -35,6 +34,7 @@ Update the Xiaomi and Grundig TVs to the latest build, then check:
 ## Untested
 - Subtitle download (SubDL, then OpenSubtitles): built and the button hides without keys, but no service was called; it needs real keys. The VLC player has the same button.
 - Sleep timer: the dialog opens, but its pause after the delay wasn't waited out. The media session was seen active with ExoPlayer only, not with VLC. Speed and audio/subtitle tracks in VLC: the menu shows, a change on a real VLC-only file isn't tested.
+- DLNA/UPnP media servers: browsing, names and file opening worked against a fake server on the emulator; the SSDP search, a real server (Plex, Jellyfin, a router's USB share), seeking while streaming and a very long list weren't tried. A server on the VLC fallback: VLC opens the file on the main thread, which fails for any network storage.
 - FTPS on port 990 (implicit TLS) and TLS session reuse.
 - An SFTP server whose host key changed.
 - The ADB storage dialog (the emulator has the Settings screen, so it only shows on a TV that lacks it).

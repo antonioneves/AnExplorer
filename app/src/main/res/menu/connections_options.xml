@@ -65,6 +65,14 @@
                 support:iconTint="?attr/colorOnSurface"
                 android:title="@string/network_smb"
                 support:showAsAction="never" />
+
+            <item
+                android:id="@+id/network_dlna"
+                android:icon="@drawable/ic_connection_network"
+                android:orderInCategory="100"
+                support:iconTint="?attr/colorOnSurface"
+                android:title="@string/network_dlna"
+                support:showAsAction="never" />
         </menu>
     </item>
 

@@ -423,4 +423,9 @@
         <item>#80000000</item>
         <item>#00000000</item>
     </string-array>
+
+    <string name="network_dlna">Media server (DLNA)</string>
+    <string name="dlna_choose">Media servers found</string>
+    <string name="dlna_none_found">No media server found on this network</string>
+    <string name="dlna_not_editable">A media server is found, not typed in: delete it and add it again to change it</string>
 </resources>

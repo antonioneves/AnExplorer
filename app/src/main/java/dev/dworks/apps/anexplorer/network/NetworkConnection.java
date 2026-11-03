@@ -316,7 +316,8 @@ public class NetworkConnection  implements Durable, Parcelable {
             networkConnection.client = new SftpNetworkClient(host, port, username, password,
                     networkConnection.privateKey);
         }
-        if (WebDavNetworkClient.isWebDav(scheme) || SmbNetworkClient.SCHEME.equals(scheme)) {
+        if (WebDavNetworkClient.isWebDav(scheme) || SmbNetworkClient.SCHEME.equals(scheme)
+                || DlnaNetworkClient.SCHEME.equals(scheme)) {
             // Opens at the saved folder, and an anonymous share gets no login at all
             final boolean anonymous = networkConnection.isAnonymousLogin;
             networkConnection.client = NetworkClient.create(scheme, host, port,
