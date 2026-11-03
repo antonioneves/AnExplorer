@@ -167,8 +167,9 @@ public class TransferService extends Service {
                 break;
             }
             try {
-                if (!DocumentCopier.copiesItself(doc, target, move)) {
-                    // Another storage, so the files are read and written here
+                if (!DocumentCopier.copiesItself(doc, target, move)
+                        || DocumentCopier.streamsForProgress(doc, move)) {
+                    // Another storage, or a local copy that is streamed to show its progress
                     failed |= !copier.copy(doc, target.derivedUri, move);
                 } else if (move) {
                     failed |= DocumentsContract.moveDocument(resolver, doc.derivedUri, null,

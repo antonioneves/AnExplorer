@@ -18,6 +18,8 @@ import java.util.List;
 
 import dev.dworks.apps.anexplorer.model.DocumentInfo;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
+import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
+import dev.dworks.apps.anexplorer.provider.UsbStorageProvider;
 
 /**
  * Copies documents by reading and writing them, for a copy from one storage to another
@@ -43,6 +45,15 @@ public class DocumentCopier {
     public static boolean copiesItself(DocumentInfo doc, DocumentInfo folder, boolean move) {
         return doc.authority.equals(folder.authority)
                 && (move ? doc.isMoveSupported() : doc.isCopySupported());
+    }
+
+    /**
+     * Whether a copy inside one storage is read and written here anyway. Local storage is quick
+     * enough for that, and only this way can the paste bar say how far the copy is.
+     */
+    public static boolean streamsForProgress(DocumentInfo doc, boolean move) {
+        return !move && (ExternalStorageProvider.AUTHORITY.equals(doc.authority)
+                || UsbStorageProvider.AUTHORITY.equals(doc.authority));
     }
 
     /** @return whether everything was copied, and for a move, taken away from where it was */
