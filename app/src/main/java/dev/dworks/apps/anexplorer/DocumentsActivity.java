@@ -226,8 +226,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     /** About is shown the same way, instead of Settings */
     private boolean mShowingAbout;
 
-    private RootsCache mRoots;
-    private State mState;
+    RootsCache mRoots;
+    State mState;
 	private boolean mAuthenticated;
     /** Whether the PIN was entered for the locked folder; it locks again on leaving it */
     private boolean mLockedFolderOpen;
@@ -345,7 +345,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if (!mState.restored) {
             if (mState.action == ACTION_MANAGE) {
                 final Uri rootUri = getIntent().getData();
-                new RestoreRootTask(rootUri).executeOnExecutor(getCurrentExecutor());
+                new DocumentsTasks.RestoreRootTask(this, rootUri).executeOnExecutor(getCurrentExecutor());
             } else {
             	if(isDownloadAuthority(getIntent())){
             		onRootPicked(getDownloadRoot(), true);
@@ -354,7 +354,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                     onRootPicked(root, true);
                 } else{
                     try {
-                        new RestoreStackTask().execute();
+                        new DocumentsTasks.RestoreStackTask(this).execute();
                     }
                     catch (SQLiteFullException e){
                         CrashReportingManager.logException(e);
@@ -493,107 +493,6 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             return true;
         }
         return false;
-    }
-
-    private class RestoreRootTask extends AsyncTask<Void, Void, RootInfo> {
-        private Uri mRootUri;
-
-        public RestoreRootTask(Uri rootUri) {
-            mRootUri = rootUri;
-        }
-
-        @Override
-        protected RootInfo doInBackground(Void... params) {
-            final String rootId = DocumentsContract.getRootId(mRootUri);
-            return mRoots.getRootOneshot(mRootUri.getAuthority(), rootId);
-        }
-
-        @Override
-        protected void onPostExecute(RootInfo root) {
-            if(!Utils.isActivityAlive(DocumentsActivity.this)){
-                return;
-            }
-            mState.restored = true;
-
-            if (root != null) {
-                onRootPicked(root, true);
-            } else {
-                Log.w(TAG, "Failed to find root: " + mRootUri);
-                finish();
-            }
-        }
-    }
-
-    private class RestoreStackTask extends AsyncTask<Void, Void, Void> {
-        private volatile boolean mRestoredStack;
-        private volatile boolean mExternal;
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            // Restore last stack for calling package
-            final String packageName = getCallingPackageMaybeExtra();
-            final Cursor cursor = getContentResolver()
-                    .query(RecentsProvider.buildResume(packageName), null, null, null, null);
-            try {
-                if (null != cursor && cursor.moveToFirst()) {
-                    mExternal = cursor.getInt(cursor.getColumnIndex(ResumeColumns.EXTERNAL)) != 0;
-                    final byte[] rawStack = cursor.getBlob(
-                            cursor.getColumnIndex(ResumeColumns.STACK));
-                    DurableUtils.readFromArray(rawStack, mState.stack);
-                    mRestoredStack = true;
-                }
-            } catch (IOException e) {
-                Log.w(TAG, "Failed to resume: " + e);
-                CrashReportingManager.logException(e);
-            } finally {
-                IoUtils.closeQuietly(cursor);
-            }
-
-            if (mRestoredStack) {
-                // Update the restored stack to ensure we have freshest data
-                final Collection<RootInfo> matchingRoots = mRoots.getMatchingRootsBlocking(mState);
-                try {
-                    mState.stack.updateRoot(matchingRoots);
-                    mState.stack.updateDocuments(getContentResolver());
-                } catch (FileNotFoundException e) {
-                    Log.w(TAG, "Failed to restore stack: " + e);
-                    CrashReportingManager.logException(e);
-                    mState.stack.reset();
-                    mRestoredStack = false;
-                }
-            }
-            else{
-            	RootInfo root = getCurrentRoot();
-                // Home and the other screens of the app's own have no documents to open
-                if(null == root || null == root.authority){
-                    return null;
-                }
-                final Uri uri = DocumentsContract.buildDocumentUri(root.authority, root.documentId);
-                DocumentInfo result;
-				try {
-					result = DocumentInfo.fromUri(getContentResolver(), uri);
-	                if (result != null) {
-	                    mState.stack.push(result);
-	                    mState.stackTouched = true;
-	                }
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-                    CrashReportingManager.logException(e);
-				}
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            if(!Utils.isActivityAlive(DocumentsActivity.this)){
-                return;
-            }
-            mState.restored = true;
-
-            onCurrentDirectoryChanged(ANIM_NONE);
-        }
     }
 
     @Override
@@ -1922,7 +1821,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         return mState.stack.peek();
     }
 
-    private String getCallingPackageMaybeExtra() {
+    String getCallingPackageMaybeExtra() {
         final String extra = getIntent().getStringExtra(DocumentsContract.EXTRA_PACKAGE_NAME);
         return (extra != null) ? extra : getCallingPackage();
     }
@@ -2178,87 +2077,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if (RootInfo.isOtherRoot(root) || mRoots.isRecentsRoot(root)) {
             onCurrentDirectoryChanged(ANIM_SIDE);
         } else {
-            new PickRootTask(root).executeOnExecutor(getCurrentExecutor());
-        }
-    }
-
-    private class PickRootTask extends AsyncTask<Void, Void, DocumentInfo> {
-        private RootInfo mRoot;
-
-        public PickRootTask(RootInfo root) {
-            mRoot = root;
-        }
-
-        @Override
-        protected DocumentInfo doInBackground(Void... params) {
-            try {
-                final Uri uri = DocumentsContract.buildDocumentUri(
-                        mRoot.authority, mRoot.documentId);
-                return DocumentInfo.fromUri(getContentResolver(), uri);
-            } catch (FileNotFoundException e) {
-                Log.w(TAG, "Failed to find root", e);
-                CrashReportingManager.logException(e);
-                return null;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(DocumentInfo result) {
-            if(!Utils.isActivityAlive(DocumentsActivity.this)){
-                return;
-            }
-            if (result != null) {
-                mState.stack.push(result);
-                mState.stackTouched = true;
-                onCurrentDirectoryChanged(ANIM_SIDE);
-            }
-        }
-    }
-
-    private class UploadFileTask extends AsyncTask<Void, Void, Boolean> {
-        private final DocumentInfo mCwd;
-        private final String mMimeType;
-        private final String mDisplayName;
-        private final Uri mUri;
-
-        public UploadFileTask(Uri uri, String name, String mimeType) {
-            mCwd = getCurrentDirectory();
-            mDisplayName = name;
-            mMimeType = mimeType;
-            mUri = uri;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            setPending(true);
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            final ContentResolver resolver = getContentResolver();
-            ContentProviderClient client = null;
-            Boolean hadTrouble = false;
-            try {
-                client = DocumentsApplication.acquireUnstableProviderOrThrow(
-                        resolver, mCwd.derivedUri.getAuthority());
-                hadTrouble = !DocumentsContract.uploadDocument(
-                        resolver, mCwd.derivedUri, mUri, mMimeType, mDisplayName);
-            } catch (Exception e) {
-                Log.w(DocumentsActivity.TAG, "Failed to upload document", e);
-                CrashReportingManager.logException(e);
-            } finally {
-                ContentProviderClientCompat.releaseQuietly(client);
-            }
-
-            return hadTrouble;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            if (result) {
-                Utils.showError(DocumentsActivity.this, R.string.upload_error);
-            }
-            setPending(false);
+            new DocumentsTasks.PickRootTask(this, root).executeOnExecutor(getCurrentExecutor());
         }
     }
 
@@ -2293,7 +2112,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             if(resultCode == Activity.RESULT_OK) {
                 final Uri uri = data.getData();
                 final String name = FileUtils.getFilenameFromContentUri(this, uri);
-                new UploadFileTask(uri, name,
+                new DocumentsTasks.UploadFileTask(this, uri, name,
                         FileUtils.getTypeForName(name)).executeOnExecutor(getCurrentExecutor());
             }
         } else {
@@ -2335,7 +2154,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             }
         } else if (mState.action == ACTION_OPEN || mState.action == ACTION_GET_CONTENT){
         	// Explicit file picked, return
-            new ExistingFinishTask(doc.derivedUri).executeOnExecutor(getCurrentExecutor());
+            new DocumentsTasks.ExistingFinishTask(this, doc.derivedUri).executeOnExecutor(getCurrentExecutor());
         } else if (mState.action == ACTION_BROWSE) {
 
             // Fall back to viewing
@@ -2432,22 +2251,22 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             for (int i = 0; i < size; i++) {
                 uris[i] = docs.get(i).derivedUri;
             }
-            new ExistingFinishTask(uris).executeOnExecutor(getCurrentExecutor());
+            new DocumentsTasks.ExistingFinishTask(this, uris).executeOnExecutor(getCurrentExecutor());
         }
     }
 
     public void onSaveRequested(DocumentInfo replaceTarget) {
-        new ExistingFinishTask(replaceTarget.derivedUri).executeOnExecutor(getCurrentExecutor());
+        new DocumentsTasks.ExistingFinishTask(this, replaceTarget.derivedUri).executeOnExecutor(getCurrentExecutor());
     }
 
     public void onSaveRequested(String mimeType, String displayName) {
-        new CreateFinishTask(mimeType, displayName).executeOnExecutor(getCurrentExecutor());
+        new DocumentsTasks.CreateFinishTask(this, mimeType, displayName).executeOnExecutor(getCurrentExecutor());
     }
 
     public void onPickRequested(DocumentInfo pickTarget) {
         final Uri viaUri = DocumentsContract.buildTreeDocumentUri(pickTarget.authority,
                 pickTarget.documentId);
-        new PickFinishTask(viaUri).executeOnExecutor(getCurrentExecutor());
+        new DocumentsTasks.PickFinishTask(this, viaUri).executeOnExecutor(getCurrentExecutor());
     }
 
     public void onMoveRequested(ArrayList<DocumentInfo> docs, DocumentInfo toDoc, boolean deleteAfter) {
@@ -2460,7 +2279,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         AnalyticsManager.logEvent("files_moved", params);
     }
 
-    private void saveStackBlocking() {
+    void saveStackBlocking() {
         final ContentResolver resolver = getContentResolver();
         final ContentValues values = new ContentValues();
 
@@ -2482,7 +2301,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
     }
 
 	@TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void onFinished(Uri... uris) {
+    void onFinished(Uri... uris) {
         Log.d(TAG, "onFinished() " + Arrays.toString(uris));
 
         final Intent intent = new Intent();
@@ -2519,127 +2338,17 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         finish();
     }
 
-    private class CreateFinishTask extends AsyncTask<Void, Void, Uri> {
-        private final String mMimeType;
-        private final String mDisplayName;
-
-        public CreateFinishTask(String mimeType, String displayName) {
-            mMimeType = mimeType;
-            mDisplayName = displayName;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            setPending(true);
-        }
-
-        @Override
-        protected Uri doInBackground(Void... params) {
-            final ContentResolver resolver = getContentResolver();
-            final DocumentInfo cwd = getCurrentDirectory();
-
-            ContentProviderClient client = null;
-            Uri childUri = null;
-            try {
-                client = DocumentsApplication.acquireUnstableProviderOrThrow(
-                        resolver, cwd.derivedUri.getAuthority());
-                childUri = DocumentsContract.createDocument(
-                		resolver, cwd.derivedUri, mMimeType, mDisplayName);
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to create document", e);
-                CrashReportingManager.logException(e);
-            } finally {
-            	ContentProviderClientCompat.releaseQuietly(client);
-            }
-
-            if (childUri != null) {
-                saveStackBlocking();
-            }
-
-            return childUri;
-        }
-
-        @Override
-        protected void onPostExecute(Uri result) {
-            if(!Utils.isActivityAlive(DocumentsActivity.this)){
-                return;
-            }
-            if (result != null) {
-                onFinished(result);
-            } else {
-                final DocumentInfo cwd = getCurrentDirectory();
-                if(!isSAFIssue(cwd.documentId)) {
-                    Utils.showError(DocumentsActivity.this, R.string.save_error);
-                }
-            }
-            setPending(false);
-        }
-    }
-
-    private class ExistingFinishTask extends AsyncTask<Void, Void, Void> {
-		private final Uri[] mUris;
-
-        public ExistingFinishTask(Uri... uris) {
-            mUris = uris;
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            saveStackBlocking();
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            onFinished(mUris);
-        }
-    }
-
-    private class PickFinishTask extends android.os.AsyncTask<Void, Void, Void> {
-        private final Uri mUri;
-
-        public PickFinishTask(Uri uri) {
-            mUri = uri;
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            saveStackBlocking();
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            onFinished(mUri);
-        }
-    }
-    
     private void emptyRecycleBin() {
         final DialogBuilder builder = new DialogBuilder(this);
         builder.setMessage(R.string.empty_bin_confirm)
                 .setPositiveButton(R.string.menu_empty_bin, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        new EmptyRecycleBinTask().execute();
+                        new DocumentsTasks.EmptyRecycleBinTask(DocumentsActivity.this).execute();
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null);
         builder.showDialog();
-    }
-
-    private class EmptyRecycleBinTask extends AsyncTask<Void, Void, Boolean> {
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            return ExternalStorageProvider.callRecycleBin(DocumentsActivity.this,
-                    ExternalStorageProvider.METHOD_EMPTY_BIN, null);
-        }
-
-        @Override
-        protected void onPostExecute(Boolean emptied) {
-            if (!emptied && Utils.isActivityAlive(DocumentsActivity.this)) {
-                Utils.showError(DocumentsActivity.this, R.string.toast_failed_delete);
-            }
-        }
     }
 
     private final BroadcastReceiver mProgressReceiver = new BroadcastReceiver() {
