@@ -40,6 +40,7 @@ import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Trakt;
 import dev.dworks.apps.anexplorer.misc.TraktSignInActivity;
 import dev.dworks.apps.anexplorer.misc.UpdateChecker;
+import dev.dworks.apps.anexplorer.misc.Snackbars;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
 import dev.dworks.apps.anexplorer.ui.RemoteEditText;
@@ -696,6 +697,7 @@ public class SettingsFragment extends Fragment {
         if (!Utils.isActivityAlive(getActivity())) {
             return;
         }
-        Snackbar.make(getActivity().findViewById(android.R.id.content), msg, Snackbar.LENGTH_SHORT).show();
+        // On the content pane, so the banner doesn't cover the sidebar
+        Snackbars.makeSnackbar(getActivity(), msg, Snackbar.LENGTH_SHORT).show();
     }
 }

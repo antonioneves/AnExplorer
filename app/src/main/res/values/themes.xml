@@ -69,9 +69,21 @@
         <item name="*android:windowAllowEnterTransitionOverlap">true</item>
         <item name="*android:windowAllowReturnTransitionOverlap">true</item>
 
+        <item name="snackbarStyle">@style/Widget.App.Snackbar</item>
+        <item name="snackbarTextViewStyle">@style/Widget.App.Snackbar.TextView</item>
+
         <item name="actionModeStyle">@style/Custom.Widget.ActionMode</item>
         <item name="actionModeCloseButtonStyle">@style/Custom.Widget.ActionButton.CloseMode</item>
         <item name="android:navigationBarColor" tools:targetApi="26">#303030</item>
+    </style>
+
+    <!-- Snackbars take the colour of the paste and save bars -->
+    <style name="Widget.App.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="backgroundTint">@color/bottom_bar_background</item>
+    </style>
+
+    <style name="Widget.App.Snackbar.TextView" parent="Widget.Material3.Snackbar.TextView">
+        <item name="android:textColor">@android:color/white</item>
     </style>
 
     <style name="DocumentsTheme.PopupOverlay" parent="@style/ThemeOverlay.Material3Expressive.Light">
