@@ -63,10 +63,11 @@
                         android:id="@+id/qr"
                         android:layout_width="168dp"
                         android:layout_height="168dp"
-                        android:contentDescription="@string/ftp_scan_to_connect" />
+                        android:contentDescription="@string/web_scan_to_send" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
+                    android:id="@+id/qr_caption"
                     android:layout_width="176dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"

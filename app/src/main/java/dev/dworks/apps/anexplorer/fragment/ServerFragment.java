@@ -274,20 +274,25 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
     }
     /**
-     * While running, the server's address as a QR code, with the user name so the phone only asks
-     * for the password, which stays off the screen
+     * While running, the upload web page's address as a QR code, which a phone opens in its browser,
+     * or the FTP address if the page didn't start. The user name is in it so the phone only asks
+     * for the password, which stays off the screen.
      */
     private void showQrCode(boolean running) {
-        final String url = ConnectionUtils.getFTPAddress(getActivity());
+        final String web = ConnectionUtils.getWebAddress(getActivity());
+        final boolean isWeb = !TextUtils.isEmpty(web);
+        final String url = isWeb ? web : ConnectionUtils.getFTPAddress(getActivity());
         final boolean show = running && !TextUtils.isEmpty(url);
         if (show) {
             String target = url;
             if (null != connection && !connection.isAnonymousLogin()
                     && !TextUtils.isEmpty(connection.getUserName())) {
-                target = url.replaceFirst("^ftp://",
-                        "ftp://" + Uri.encode(connection.getUserName()) + "@");
+                target = url.replaceFirst("^(ftp|http)://",
+                        "$1://" + Uri.encode(connection.getUserName()) + "@");
             }
             qr.setImageBitmap(QrCode.encode(target, 512));
+            ((TextView) qrGroup.findViewById(R.id.qr_caption)).setText(
+                    isWeb ? R.string.web_scan_to_send : R.string.ftp_scan_to_connect);
         }
         // Hidden rather than gone, so the screen keeps its size whether or not the server runs
         qrGroup.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
