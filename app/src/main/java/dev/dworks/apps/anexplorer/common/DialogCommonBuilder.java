@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.text.TextUtils;
 import android.view.View;
 
+import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressDialog;
@@ -26,6 +27,7 @@ public abstract class DialogCommonBuilder {
     protected boolean mCancelable = true;
     protected boolean mShowNegativeButton = true;
     protected boolean mindeterminate;
+    private boolean mFocusPositive;
 
     public DialogCommonBuilder(Context context){
         mContext = context;
@@ -105,6 +107,12 @@ public abstract class DialogCommonBuilder {
         return this;
     }
 
+    /** Starts the remote on OK, for a dialog where that is the safe answer */
+    public DialogCommonBuilder focusPositiveButton() {
+        this.mFocusPositive = true;
+        return this;
+    }
+
     public void setIndeterminate(boolean indeterminate) {
         mindeterminate = indeterminate;
     }
@@ -169,6 +177,9 @@ public abstract class DialogCommonBuilder {
         Dialog dialog = create();
         dialog.show();
         tintButtons(dialog);
+        if (mFocusPositive && dialog instanceof AlertDialog) {
+            ((AlertDialog) dialog).getButton(DialogInterface.BUTTON_POSITIVE).requestFocus();
+        }
     }
 
     public void showDialog(){

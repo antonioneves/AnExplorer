@@ -118,16 +118,17 @@ public class NoteActivity extends ActionBarActivity implements TextWatcher {
             DialogBuilder builder = new DialogBuilder(this);
             builder.setTitle(R.string.unsaved_changes)
                     .setMessage(R.string.unsaved_changes_desc)
-                    .setCancelable(false)
                     .setPositiveButton(R.string.save, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int did) {
                             save(true);
                         }
-                    }).setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    }).setNegativeButton(R.string.discard, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int did) {
                             finish();
                         }
                     });
+            // Back keeps editing; Save is the safe default for OK
+            builder.focusPositiveButton();
             builder.showDialog();
 
         } else {
