@@ -456,5 +456,5 @@
     <string name="transfer_moved">Moved</string>
     <string name="transfer_cancelled">Transfer cancelled</string>
     <string name="transfer_failed">Transfer failed</string>
-    <string name="transfer_percent">%1$s  ·  %2$d%% done</string>
+    <string name="transfer_percent">  ·  %1$d%% done</string>
 </resources>

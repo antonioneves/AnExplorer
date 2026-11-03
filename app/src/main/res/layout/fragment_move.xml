@@ -60,8 +60,7 @@
                 android:singleLine="true"
                 android:textAlignment="viewStart"
                 android:textColor="@android:color/white"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="18sp" />
         </LinearLayout>
 
         <TextView

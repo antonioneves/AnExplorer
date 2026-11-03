@@ -21,7 +21,11 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.res.ColorStateList;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -49,7 +53,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	private DocumentInfo mReplaceTarget;
 	private TextView mMoveInfo;
 	private TextView mRootInfo;
-	private CharSequence mRootName;
+	private String mRootName;
 	private View mSave;
 	private MaterialProgressBar mProgress;
 
@@ -123,7 +127,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         if (mReplaceTarget != null) {
-            mRootInfo.setText(mReplaceTarget.displayName);
+            showRoot(mReplaceTarget.displayName, "");
         } else if (getActivity() instanceof DocumentsActivity) {
             // Shown while already in the folder, so nothing has set the target yet
             final DocumentsActivity activity = (DocumentsActivity) getActivity();
@@ -150,7 +154,7 @@ public class MoveFragment extends Fragment implements OnClickListener{
 		mReplaceTarget = replaceTarget;
 
 		if (mRootInfo != null && mReplaceTarget != null) {
-			mRootInfo.setText(displayName != null ? displayName : replaceTarget.displayName);
+			showRoot(displayName != null ? displayName : replaceTarget.displayName, "");
 		}
 	}
 
@@ -167,9 +171,9 @@ public class MoveFragment extends Fragment implements OnClickListener{
 	/** While a transfer runs the buttons pause, resume and cancel it, as the TV can't reach its notification */
 	public void setPending(boolean pending) {
 		if (pending && !mPending) {
-			mRootName = mRootInfo.getText();
+			mRootName = mRootInfo.getText().toString();
 		} else if (!pending && mRootName != null) {
-			mRootInfo.setText(mRootName);
+			showRoot(mRootName, "");
 		}
 		mPending = pending;
 		mPaused = false;
@@ -180,10 +184,17 @@ public class MoveFragment extends Fragment implements OnClickListener{
 				: getString(R.string.paste_in, FileUtils.formatFileCount(docs.size())));
 	}
 
+	/** Only the folder's name is bold; the progress after it is not */
+	private void showRoot(CharSequence name, String suffix) {
+		final SpannableStringBuilder text = new SpannableStringBuilder(name).append(suffix);
+		text.setSpan(new StyleSpan(Typeface.BOLD), 0, name.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		mRootInfo.setText(text);
+	}
+
 	/** Shows how far the transfer is, when its size is known */
 	public void setProgress(long done, long total) {
 		if (mPending && total > 0) {
-			mRootInfo.setText(getString(R.string.transfer_percent, mRootName, (int) (done * 100 / total)));
+			showRoot(mRootName, getString(R.string.transfer_percent, (int) (done * 100 / total)));
 		}
 	}
 
