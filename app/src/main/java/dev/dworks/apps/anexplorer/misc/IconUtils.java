@@ -361,7 +361,7 @@ public class IconUtils {
                 return ContextCompat.getDrawable(context, R.drawable.ic_connection_smb);
             }
             if (DlnaNetworkClient.SCHEME.equals(scheme)) {
-                return ContextCompat.getDrawable(context, R.drawable.ic_connection_network);
+                return ContextCompat.getDrawable(context, R.drawable.ic_connection_media);
             }
             return ContextCompat.getDrawable(context, WebDavNetworkClient.isWebDav(scheme)
                     ? R.drawable.ic_connection_webdav : R.drawable.ic_connection_ftp);
@@ -373,10 +373,10 @@ public class IconUtils {
     /** The sidebar icon of a connection: a server for FTP, FTPS and SFTP, the web for WebDAV, a laptop for SMB */
     public static int schemeIcon(String scheme) {
         if (SmbNetworkClient.SCHEME.equals(scheme)) {
-            return R.drawable.ic_device_laptop;
+            return R.drawable.ic_connection_folder_shared;
         }
         if (DlnaNetworkClient.SCHEME.equals(scheme)) {
-            return R.drawable.ic_connection_network;
+            return R.drawable.ic_connection_media;
         }
         return WebDavNetworkClient.isWebDav(scheme) ? R.drawable.ic_root_webdav : R.drawable.ic_root_ftp;
     }
