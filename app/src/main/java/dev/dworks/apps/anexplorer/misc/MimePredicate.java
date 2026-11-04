@@ -49,7 +49,15 @@ public class MimePredicate implements Predicate<DocumentInfo> {
     public static final String[] COMPRESSED_MIMES = new String[] { 
     	"application/zip",
     	"application/rar",
-    	"application/gzip"};
+    	"application/gzip",
+    	"application/x-rar-compressed",
+    	"application/vnd.rar",
+    	"application/x-7z-compressed",
+    	"application/x-tar",
+    	"application/x-gtar",
+    	"application/x-gzip",
+    	"application/x-bzip2",
+    	"application/x-xz"};
 
     public static final String[] SHARE_SKIP_MIMES = new String[] {
             DocumentsContract.Document.MIME_TYPE_APK };

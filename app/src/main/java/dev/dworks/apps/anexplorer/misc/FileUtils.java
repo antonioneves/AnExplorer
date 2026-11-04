@@ -408,6 +408,16 @@ public class FileUtils {
     }
 
     public static boolean uncompress(File zipFile) {
+        if (ArchiveExtractor.isSupported(zipFile.getName())) {
+            try {
+                ArchiveExtractor.extract(zipFile,
+                        new File(zipFile.getParent(), ArchiveExtractor.folderName(zipFile.getName())));
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
         boolean success = false;
         try {
             FileInputStream fis = new FileInputStream(zipFile);
