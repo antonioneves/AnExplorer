@@ -64,6 +64,8 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private TextView warning;
     private View pathRow;
     private View usernameRow;
+    private View pathEdit;
+    private View usernameEdit;
     private View qrGroup;
     private View webOffGroup;
     private ImageView qr;
@@ -115,8 +117,10 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         // The details are edited by their own rows, so there is no separate edit button
         pathRow = view.findViewById(R.id.path_row);
         pathRow.setOnClickListener(this);
+        pathEdit = view.findViewById(R.id.path_edit);
         usernameRow = view.findViewById(R.id.username_row);
         usernameRow.setOnClickListener(this);
+        usernameEdit = view.findViewById(R.id.username_edit);
 
     }
 
@@ -300,13 +304,16 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     /** The rows open the settings dialog, which a running server would only apply after a restart */
     private void setRowsEnabled(boolean enabled) {
         final View[] rows = {pathRow, usernameRow};
-        for (View row : rows) {
+        final View[] pencils = {pathEdit, usernameEdit};
+        for (int i = 0; i < rows.length; i++) {
+            final View row = rows[i];
             if (null == row) {
                 continue;
             }
             row.setEnabled(enabled);
             row.setFocusable(enabled);
-            row.setAlpha(enabled ? 1f : 0.5f);
+            // A running server can't take the change yet, so only the edit hint goes away
+            pencils[i].setVisibility(enabled ? View.VISIBLE : View.GONE);
         }
     }
 

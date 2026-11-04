@@ -163,6 +163,7 @@
                     </LinearLayout>
 
                     <ImageView
+                        android:id="@+id/path_edit"
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_marginStart="12dp"
@@ -230,6 +231,7 @@
                     </LinearLayout>
 
                     <ImageView
+                        android:id="@+id/username_edit"
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_marginStart="12dp"
