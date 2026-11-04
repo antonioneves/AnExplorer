@@ -88,10 +88,10 @@ public class CreateConnectionFragment extends DialogFragment {
     private static final String EXTRA_NAME = "name";
     private static final String EXTRA_HOST = "host";
     private static final String EXTRA_PORT = "port";
-    private static final String EXTRA_FOCUS = "focus";
-    /** The field the remote starts on, for the row on the server page that opened the dialog */
-    public static final String FOCUS_PATH = "path";
-    public static final String FOCUS_USERNAME = "username";
+    private static final String EXTRA_MODE = "mode";
+    /** The part of the server the row on its page edits */
+    public static final String MODE_PATH = "path";
+    public static final String MODE_CREDENTIALS = "credentials";
     /** How much of the screen a TV keyboard covers, which it doesn't say */
     private static final float TV_KEYBOARD_SHARE = 0.45f;
     private AppCompatEditText name;
@@ -104,6 +104,7 @@ public class CreateConnectionFragment extends DialogFragment {
     private View passwordContainer;
     private View usernameContainer;
     private int connection_id;
+    private String mode;
     private AppCompatEditText path;
     private View hostContainer;
     private View pathContainer;
@@ -143,12 +144,12 @@ public class CreateConnectionFragment extends DialogFragment {
         show(fm, connection_id, null);
     }
 
-    /** @param focus the field to start on, such as FOCUS_PATH, or null for the first one */
-    public static void show(FragmentManager fm, int connection_id, String focus) {
+    /** @param mode the part of the server to edit, such as MODE_PATH, or null for a whole connection */
+    public static void show(FragmentManager fm, int connection_id, String mode) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
         final Bundle args = new Bundle();
         args.putInt(EXTRA_CONNECTION_ID, connection_id);
-        args.putString(EXTRA_FOCUS, focus);
+        args.putString(EXTRA_MODE, mode);
         dialog.setArguments(args);
         dialog.show(fm, TAG);
     }
@@ -159,17 +160,17 @@ public class CreateConnectionFragment extends DialogFragment {
         Bundle args = getArguments();
         if(null != args){
             connection_id = args.getInt(EXTRA_CONNECTION_ID);
+            mode = args.getString(EXTRA_MODE);
         }
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        final Bundle args = getArguments();
-        final String focus = null != args ? args.getString(EXTRA_FOCUS) : null;
-        final View target = FOCUS_PATH.equals(focus) ? path
-                : FOCUS_USERNAME.equals(focus) ? username : null;
-        // Anonymous access hides the user name, and a client connection has no path
+        // Anonymous access hides the user name, so the switch is the first field then
+        final View target = MODE_PATH.equals(mode) ? path
+                : MODE_CREDENTIALS.equals(mode) ? (username.isShown() ? username : anonymous)
+                : null;
         if (null != target && target.isShown()) {
             target.post(target::requestFocus);
         }
@@ -257,8 +258,13 @@ public class CreateConnectionFragment extends DialogFragment {
             if(SERVER.equals(connection.getType())){
                 editedServer = connection;
                 hostContainer.setVisibility(View.GONE);
-                pathContainer.setVisibility(View.VISIBLE);
+                pathContainer.setVisibility(MODE_CREDENTIALS.equals(mode) ? View.GONE : View.VISIBLE);
                 isServer = true;
+                if (MODE_PATH.equals(mode)) {
+                    anonymous.setVisibility(View.GONE);
+                    usernameContainer.setVisibility(View.GONE);
+                    passwordContainer.setVisibility(View.GONE);
+                }
             }
         }
         return createDialog(context, view, isServer);
@@ -293,7 +299,9 @@ public class CreateConnectionFragment extends DialogFragment {
         final AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setBackgroundInsetTop(margin)
                 .setBackgroundInsetBottom(margin)
-                .setTitle(isServer ? R.string.ftp_settings_title
+                .setTitle(MODE_PATH.equals(mode) ? R.string.connection_path
+                        : MODE_CREDENTIALS.equals(mode) ? R.string.ftp_credentials
+                        : isServer ? R.string.ftp_settings_title
                         : connection_id == 0 ? R.string.connection_new : R.string.connection_edit)
                 .setView(content)
                 .create();
@@ -326,6 +334,14 @@ public class CreateConnectionFragment extends DialogFragment {
     }
 
     private void markMissingFields(View view) {
+        if (MODE_PATH.equals(mode)) {
+            markIfEmpty(view, R.id.pathLayout, path);
+            return;
+        }
+        if (MODE_CREDENTIALS.equals(mode)) {
+            markCredentials(view);
+            return;
+        }
         if (null != editedServer) {
             markIfEmpty(view, R.id.pathLayout, path);
         } else {
@@ -337,6 +353,10 @@ public class CreateConnectionFragment extends DialogFragment {
             }
             markIfEmpty(view, R.id.portLayout, port);
         }
+        markCredentials(view);
+    }
+
+    private void markCredentials(View view) {
         if (!anonymous.isChecked()) {
             markIfEmpty(view, R.id.usernameContainer, username);
             if (!usesKey()) {

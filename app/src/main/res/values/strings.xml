@@ -171,6 +171,7 @@
     <string name="ftp_hide_password">Hide password</string>
     <string name="ftp_scan_to_connect">Scan with your phone to connect</string>
     <string name="ftp_settings_title">FTP server settings</string>
+    <string name="ftp_credentials">Credentials</string>
     <string name="connection_new">New connection</string>
     <string name="connection_edit">Edit connection</string>
     <string name="connection_add">Add</string>

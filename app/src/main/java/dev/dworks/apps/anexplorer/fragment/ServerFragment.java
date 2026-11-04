@@ -175,15 +175,15 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         }
     }
 
-    /** The settings dialog the Connections list used to offer; TV edits them here instead. */
-    private void editServer(String focus) {
+    /** The settings dialogs the Connections list used to offer; TV edits them here instead. */
+    private void editServer(String mode) {
         Cursor cursor = null;
         try {
             cursor = getActivity().getContentResolver().query(ExplorerProvider.buildConnection(),
                     null, ExplorerProvider.ConnectionColumns.TYPE + "=?", new String[]{SERVER}, null);
             if (null != cursor && cursor.moveToFirst()) {
                 CreateConnectionFragment.show(((AppCompatActivity) getActivity()).getSupportFragmentManager(),
-                        getCursorInt(cursor, BaseColumns._ID), focus);
+                        getCursorInt(cursor, BaseColumns._ID), mode);
             }
         } finally {
             IoUtils.closeQuietly(cursor);
@@ -320,9 +320,9 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.path_row) {
-            editServer(CreateConnectionFragment.FOCUS_PATH);
+            editServer(CreateConnectionFragment.MODE_PATH);
         } else if (view.getId() == R.id.username_row) {
-            editServer(CreateConnectionFragment.FOCUS_USERNAME);
+            editServer(CreateConnectionFragment.MODE_CREDENTIALS);
         } else if (view.getId() == R.id.password_row || view.getId() == R.id.password_visibility) {
             passwordShown = !passwordShown;
             showPassword();
