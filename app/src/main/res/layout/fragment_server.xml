@@ -323,7 +323,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:minHeight="32dp" />
+                    android:minHeight="12dp" />
 
                 <!-- Material buttons leave room under their shape; the offset puts their edge on the card's -->
                 <FrameLayout
@@ -363,7 +363,7 @@
                     android:layout_marginTop="12dp"
                     android:minHeight="280dp"
                     app:cardCornerRadius="28dp"
-                    app:contentPadding="24dp">
+                    app:contentPadding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
