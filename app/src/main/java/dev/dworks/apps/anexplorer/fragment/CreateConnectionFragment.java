@@ -387,12 +387,27 @@ public class CreateConnectionFragment extends DialogFragment {
                 }
             }
             final WindowManager.LayoutParams params = window.getAttributes();
-            final int gravity = keyboard > 0 ? Gravity.TOP | Gravity.CENTER_HORIZONTAL : Gravity.CENTER;
-            final int height = keyboard > 0
-                    ? screenHeight - keyboard : WindowManager.LayoutParams.WRAP_CONTENT;
-            if (params.gravity != gravity || params.height != height) {
+            int gravity = Gravity.CENTER;
+            int height = WindowManager.LayoutParams.WRAP_CONTENT;
+            int y = 0;
+            if (keyboard > 0) {
+                // A short dialog keeps its size and sits in the middle of what the keyboard leaves,
+                // so it doesn't stretch to fill it; only a tall one shrinks and scrolls
+                final int available = screenHeight - keyboard;
+                v.measure(View.MeasureSpec.makeMeasureSpec(v.getWidth(), View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                final int natural = v.getMeasuredHeight();
+                gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+                if (natural > 0 && natural < available) {
+                    y = (available - natural) / 2;
+                } else {
+                    height = available;
+                }
+            }
+            if (params.gravity != gravity || params.height != height || params.y != y) {
                 params.gravity = gravity;
                 params.height = height;
+                params.y = y;
                 window.setAttributes(params);
             }
             return ViewCompat.onApplyWindowInsets(v, insets);
