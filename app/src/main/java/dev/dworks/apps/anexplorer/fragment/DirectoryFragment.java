@@ -1398,26 +1398,22 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	/** @param wrong whether a password was already tried, so the prompt says it didn't work */
 	private void askArchivePassword(final DocumentInfo archive, boolean wrong) {
 		final Context context = getActivity();
-		final EditText input = new RemoteEditText(context);
-		input.setSingleLine(true);
+		final View view = LayoutInflater.from(context).inflate(R.layout.dialog_create_dir, null, false);
+		final EditText input = (EditText) view.findViewById(android.R.id.text1);
+		Utils.tintWidget(input);
 		input.setHint(R.string.archive_password_hint);
 		input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 		input.setTypeface(Typeface.DEFAULT);
-		final int padding = getResources().getDimensionPixelSize(R.dimen.abc_dialog_padding_material);
-		final FrameLayout frame = new FrameLayout(context);
-		frame.setPadding(padding, padding / 2, padding, 0);
-		frame.addView(input);
-		new MaterialAlertDialogBuilder(context)
-				.setTitle(wrong ? R.string.archive_password_wrong : R.string.archive_password_title)
-				.setMessage(archive.displayName)
-				.setView(frame)
-				.setPositiveButton(android.R.string.ok, (dialog, which) -> {
-					final ArrayList<DocumentInfo> docs = new ArrayList<>();
-					docs.add(archive);
-					new OperationTask(docs, R.id.menu_uncompress, input.getText().toString()).execute();
-				})
-				.setNegativeButton(android.R.string.cancel, null)
-				.show();
+		final DialogBuilder builder = new DialogBuilder(context);
+		builder.setTitle(wrong ? R.string.archive_password_wrong : R.string.archive_password_title);
+		builder.setView(view);
+		builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+			final ArrayList<DocumentInfo> docs = new ArrayList<>();
+			docs.add(archive);
+			new OperationTask(docs, R.id.menu_uncompress, input.getText().toString()).execute();
+		});
+		builder.setNegativeButton(android.R.string.cancel, null);
+		builder.showDialog();
 		input.requestFocus();
 	}
 
