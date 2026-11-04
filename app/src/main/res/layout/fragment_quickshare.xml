@@ -15,9 +15,9 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingStart="48dp"
-        android:paddingTop="32dp"
+        android:paddingTop="8dp"
         android:paddingEnd="48dp"
-        android:paddingBottom="32dp">
+        android:paddingBottom="48dp">
 
     <!-- The two columns start at the same height, and sit together in the middle of the screen -->
     <LinearLayout
