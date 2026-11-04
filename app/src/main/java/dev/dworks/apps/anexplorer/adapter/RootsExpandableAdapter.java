@@ -102,12 +102,12 @@ public class RootsExpandableAdapter extends BaseExpandableListAdapter {
             groupRoots.add(new GroupInfo(context.getString(R.string.group_storage), storageItems));
         }
 
-        connection.addAll(0, quickShare);
-        if(!network.isEmpty()){
-            network.addAll(connection);
-            groupRoots.add(new GroupInfo(context.getString(R.string.group_network), network));
-        } else if(!connection.isEmpty()){
-            groupRoots.add(new GroupInfo(context.getString(R.string.group_network), connection));
+        // Quick Share comes before the FTP server and the saved network connections
+        if(!network.isEmpty() || !connection.isEmpty() || !quickShare.isEmpty()){
+            final List<Item> networkItems = new ArrayList<>(quickShare);
+            networkItems.addAll(network);
+            networkItems.addAll(connection);
+            groupRoots.add(new GroupInfo(context.getString(R.string.group_network), networkItems));
         }
 
         if(!library.isEmpty() || !starred.isEmpty() || !libraryExtras.isEmpty()){

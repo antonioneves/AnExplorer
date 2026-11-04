@@ -62,9 +62,9 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private TextView webAddress;
     private Button action;
     private TextView warning;
-    private View iconGroup;
     private View editButton;
     private View qrGroup;
+    private View webOffGroup;
     private ImageView qr;
     private NetworkConnection connection;
     private RootInfo root;
@@ -98,6 +98,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         passwordRow = view.findViewById(R.id.password_row);
         password =(TextView) view.findViewById(R.id.password);
         passwordVisibility = (ImageButton) view.findViewById(R.id.password_visibility);
+        passwordRow.setOnClickListener(this);
         if (null != passwordVisibility) {
             passwordVisibility.setOnClickListener(this);
         }
@@ -105,8 +106,8 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         address = (TextView) view.findViewById(R.id.address);
         webAddress = (TextView) view.findViewById(R.id.web_address);
         warning = (TextView) view.findViewById(R.id.warning);
-        iconGroup = view.findViewById(R.id.icon_group);
         qrGroup = view.findViewById(R.id.qr_group);
+        webOffGroup = view.findViewById(R.id.web_off_group);
         qr = (ImageView) view.findViewById(R.id.qr);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
@@ -262,7 +263,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         if(running){
             setAddress(ConnectionUtils.getFTPAddress(getActivity()));
             final String web = ConnectionUtils.getWebAddress(getActivity());
-            setText(webAddress, TextUtils.isEmpty(web) ? "" : getString(R.string.ftp_web_address, web));
+            setText(webAddress, web);
             status.setText(getString(R.string.ftp_status_running));
             action.setText(R.string.stop_ftp);
         } else {
@@ -287,23 +288,22 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
             String target = url;
             if (null != connection && !connection.isAnonymousLogin()
                     && !TextUtils.isEmpty(connection.getUserName())) {
-                target = url.replaceFirst("^(ftp|http)://",
+                target = url.replaceFirst("^(https?|ftp)://",
                         "$1://" + Uri.encode(connection.getUserName()) + "@");
             }
             qr.setImageBitmap(QrCode.encode(target, 512));
             ((TextView) qrGroup.findViewById(R.id.qr_caption)).setText(
                     isWeb ? R.string.web_scan_to_send : R.string.ftp_scan_to_connect);
         }
-        // Hidden rather than gone, so the screen keeps its size whether or not the server runs
-        qrGroup.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        iconGroup.setVisibility(show ? View.GONE : View.VISIBLE);
+        qrGroup.setVisibility(show ? View.VISIBLE : View.GONE);
+        webOffGroup.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.edit_server) {
             editServer();
-        } else if (view.getId() == R.id.password_visibility) {
+        } else if (view.getId() == R.id.password_row || view.getId() == R.id.password_visibility) {
             passwordShown = !passwordShown;
             showPassword();
         } else if (view.getId() == R.id.action){
