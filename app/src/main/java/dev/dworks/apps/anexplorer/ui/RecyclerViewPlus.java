@@ -122,9 +122,10 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
      */
     @Override
     public View focusSearch(View focused, int direction) {
+        // Only a view inside the list reaches here, even if fast scrolling has already recycled it
         final View next = super.focusSearch(focused, direction);
-        if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical() && focused != null
-                && isDescendant(focused) && (next == null || !isDescendant(next))) {
+        if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical()
+                && (next == null || !isDescendant(next))) {
             final View bar = findBottomBarButton();
             return bar != null ? bar : focused;
         }
