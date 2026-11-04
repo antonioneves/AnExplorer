@@ -1015,8 +1015,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 			final boolean manageMode = state.action == ACTION_BROWSE;
 			final ArrayList<DocumentInfo> checked = getCheckedDocuments();
-			final boolean canDelete = mEpisodes.isActive() ? allDeletable(checked)
-					: doc != null && doc.isDeleteSupported();
+			// The folder's own flag says nothing about its children, and library views like Videos
+			// have no real folder, so each selected item says whether it can go
+			final boolean canDelete = !checked.isEmpty() && allDeletable(checked);
 			final boolean canRename = mEpisodes.isActive() ? count == 1 && !checked.isEmpty()
 					&& checked.get(0).isRenameSupported() : doc != null && doc.isRenameSupported();
 			open.setVisible(!manageMode);
@@ -1219,7 +1220,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			}
 
 			try {
-                hadTrouble = ! DocumentsContract.deleteDocument(resolver, doc.derivedUri);
+                hadTrouble |= !DocumentsContract.deleteDocument(resolver, doc.derivedUri);
 			} catch (Exception e) {
 				Log.w(TAG, "Failed to delete " + doc);
 				CrashReportingManager.logException(e);
