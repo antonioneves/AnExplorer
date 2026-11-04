@@ -429,6 +429,10 @@ public class ExternalStorageProvider extends StorageProvider {
             cursor = getContext().getContentResolver().query(ExplorerProvider.buildBookmark(), null, null, null, null);
             while (cursor.moveToNext()) {
                 try {
+                    // Bookmarks of network folders are listed by the network provider
+                    if (!TextUtils.isEmpty(getCursorString(cursor, ExplorerProvider.BookmarkColumns.AUTHORITY))) {
+                        continue;
+                    }
                     final String rootId = ROOT_ID_BOOKMARK + " " +getCursorString(cursor, ExplorerProvider.BookmarkColumns.ROOT_ID);
                     final File path = new File(getCursorString(cursor, ExplorerProvider.BookmarkColumns.PATH));
 

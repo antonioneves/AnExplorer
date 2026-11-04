@@ -417,6 +417,11 @@ public class FileUtils {
             destFolder.mkdirs();
             while ((entry = zis.getNextEntry()) != null) {
                 File dest = new File(destFolder, entry.getName());
+                // An entry named like "../x" must not write outside the folder being extracted to
+                final String root = destFolder.getCanonicalPath() + File.separator;
+                if (!dest.getCanonicalPath().startsWith(root)) {
+                    throw new IOException("Zip entry outside the destination: " + entry.getName());
+                }
                 dest.getParentFile().mkdirs();
 
                 if(entry.isDirectory()) {

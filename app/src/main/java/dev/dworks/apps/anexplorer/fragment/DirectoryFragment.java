@@ -17,6 +17,7 @@
 
 package dev.dworks.apps.anexplorer.fragment;
 
+import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Fragment;
@@ -1949,17 +1950,23 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return false;
 	}
 
+	/** The provider that lists the bookmark as a root */
+	private static String bookmarkAuthority(DocumentInfo doc) {
+		return NetworkStorageProvider.AUTHORITY.equals(doc.authority)
+				? NetworkStorageProvider.AUTHORITY : ExternalStorageProvider.AUTHORITY;
+	}
+
 	private boolean isBookmarkedDoc(DocumentInfo doc) {
-		return !TextUtils.isEmpty(doc.path) && mBookmarkedPaths.contains(doc.path);
+		return !TextUtils.isEmpty(doc.getBookmarkKey()) && mBookmarkedPaths.contains(doc.getBookmarkKey());
 	}
 
 	/** Deletes every bookmark row for the path, since duplicates can exist */
 	private void unbookmarkDocument(DocumentInfo doc) {
 		final int rows = getActivity().getContentResolver().delete(ExplorerProvider.buildBookmark(),
-				ExplorerProvider.BookmarkColumns.PATH + " = ? ", new String[]{doc.path});
+				ExplorerProvider.BookmarkColumns.PATH + " = ? ", new String[]{doc.getBookmarkKey()});
 		if (rows > 0) {
 			Utils.showSnackBar(getActivity(), getString(R.string.bookmark_removed));
-			RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
+			RootsCache.updateRoots(getActivity(), bookmarkAuthority(doc));
 			loadMarkedPaths();
 			mAdapter.notifyDataSetChanged();
 		}
@@ -1968,13 +1975,16 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private void bookmarkDocument(DocumentInfo doc) {
 		DocumentInfo document = doc;
 		ContentValues contentValues = new ContentValues();
-		contentValues.put(ExplorerProvider.BookmarkColumns.PATH, document.path);
+		contentValues.put(ExplorerProvider.BookmarkColumns.PATH, document.getBookmarkKey());
+		if (NetworkStorageProvider.AUTHORITY.equals(document.authority)) {
+			contentValues.put(ExplorerProvider.BookmarkColumns.AUTHORITY, document.authority);
+		}
 		contentValues.put(ExplorerProvider.BookmarkColumns.TITLE, document.displayName);
 		contentValues.put(ExplorerProvider.BookmarkColumns.ROOT_ID, document.displayName);
 		Uri uri = getActivity().getContentResolver().insert(ExplorerProvider.buildBookmark(), contentValues);
 		if(null != uri) {
 			Utils.showSnackBar(getActivity(), getString(R.string.bookmark_added));
-			RootsCache.updateRoots(getActivity(), ExternalStorageProvider.AUTHORITY);
+			RootsCache.updateRoots(getActivity(), bookmarkAuthority(document));
 			loadMarkedPaths();
 			mAdapter.notifyDataSetChanged();
 		}

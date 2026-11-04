@@ -1,5 +1,6 @@
 package dev.dworks.apps.anexplorer.directory;
 
+import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -152,8 +153,8 @@ public class ListDocumentHolder extends DocumentHolder {
             badgeStarred.setVisibility(isStarred() ? View.VISIBLE : View.GONE);
         }
         if (badgeBookmarked != null) {
-            badgeBookmarked.setVisibility(isLocal() && Utils.isDir(mDoc.mimeType)
-                    && mEnv.isBookmarked(mDoc.path) ? View.VISIBLE : View.GONE);
+            badgeBookmarked.setVisibility((isLocal() || isNetwork()) && Utils.isDir(mDoc.mimeType)
+                    && mEnv.isBookmarked(mDoc.getBookmarkKey()) ? View.VISIBLE : View.GONE);
         }
 
         if (icon1 != null)
@@ -325,6 +326,10 @@ public class ListDocumentHolder extends DocumentHolder {
         return !TextUtils.isEmpty(mDoc.path)
                 && (ExternalStorageProvider.AUTHORITY.equals(mDoc.authority)
                 || MediaDocumentsProvider.AUTHORITY.equals(mDoc.authority));
+    }
+
+    private boolean isNetwork() {
+        return NetworkStorageProvider.AUTHORITY.equals(mDoc.authority);
     }
 
     private boolean isStarred() {

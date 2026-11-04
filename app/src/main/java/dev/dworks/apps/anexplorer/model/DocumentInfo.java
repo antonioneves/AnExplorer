@@ -16,6 +16,7 @@
 
 package dev.dworks.apps.anexplorer.model;
 
+import dev.dworks.apps.anexplorer.provider.NetworkStorageProvider;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.database.Cursor;
@@ -258,6 +259,11 @@ public class DocumentInfo implements Durable, Parcelable {
 
     public boolean isArchiveSupported() {
         return (flags & Document.FLAG_SUPPORTS_ARCHIVE) != 0;
+    }
+
+    /** Bookmarks are stored by path, except on a network where paths repeat from one server to the next */
+    public String getBookmarkKey() {
+        return NetworkStorageProvider.AUTHORITY.equals(authority) ? documentId : path;
     }
 
     public boolean isBookmarkSupported() {

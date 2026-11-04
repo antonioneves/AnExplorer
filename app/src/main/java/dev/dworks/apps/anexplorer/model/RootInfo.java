@@ -395,7 +395,8 @@ public class RootInfo implements Durable, Parcelable {
     }
 
     public boolean isBookmarkFolder() {
-        return ExternalStorageProvider.AUTHORITY.equals(authority)
+        return (ExternalStorageProvider.AUTHORITY.equals(authority)
+                || NetworkStorageProvider.AUTHORITY.equals(authority))
                 && rootId.startsWith(ExternalStorageProvider.ROOT_ID_BOOKMARK);
     }
 

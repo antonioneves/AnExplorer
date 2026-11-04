@@ -131,6 +131,33 @@ public class NetworkStorageProvider extends DocumentsProvider {
         context.getContentResolver().notifyChange(uri, null, false);
     }
 
+    /** The folders bookmarked on a server, for as long as its connection is saved */
+    private void includeBookmarkRoots(MatrixCursor result) {
+        Cursor cursor = null;
+        try {
+            cursor = getContext().getContentResolver().query(ExplorerProvider.buildBookmark(), null,
+                    ExplorerProvider.BookmarkColumns.AUTHORITY + " = ?", new String[]{AUTHORITY}, null);
+            while (null != cursor && cursor.moveToNext()) {
+                final String docId = cursor.getString(cursor.getColumnIndex(ExplorerProvider.BookmarkColumns.PATH));
+                final NetworkConnection connection = getNetworkConnection(docId);
+                if (null == connection) {
+                    continue;
+                }
+                final RowBuilder row = result.newRow();
+                row.add(Root.COLUMN_ROOT_ID, ExternalStorageProvider.ROOT_ID_BOOKMARK + " " + docId);
+                row.add(Root.COLUMN_DOCUMENT_ID, docId);
+                row.add(Root.COLUMN_TITLE, cursor.getString(cursor.getColumnIndex(ExplorerProvider.BookmarkColumns.TITLE)));
+                row.add(Root.COLUMN_FLAGS, Root.FLAG_SUPPORTS_CREATE | Root.FLAG_LOCAL_ONLY | Root.FLAG_ADVANCED
+                        | Root.FLAG_SUPPORTS_IS_CHILD);
+                row.add(Root.COLUMN_SUMMARY, connection.name);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to load the bookmarks: " + e);
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+    }
+
     @Override
     public Cursor queryRoots(String[] projection) throws FileNotFoundException {
         final MatrixCursor result = new MatrixCursor(resolveRootProjection(projection));
@@ -167,6 +194,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
                 row.add(Root.COLUMN_SUMMARY, isServer ? networkConnection.getPath() : networkConnection.getSummary());
                 row.add(Root.COLUMN_PATH, networkConnection.getPath());
             }
+            includeBookmarkRoots(result);
         }
 
         return result;
@@ -554,6 +582,10 @@ public class NetworkStorageProvider extends DocumentsProvider {
             if (null != client && client.canDelete(file.getPath())) {
                 flags |= Document.FLAG_SUPPORTS_DELETE;
             }
+        }
+
+        if (file.isDirectory()) {
+            flags |= Document.FLAG_SUPPORTS_BOOKMARK;
         }
 
         final String mimeType = getTypeForFile(file);
