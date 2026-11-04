@@ -396,6 +396,7 @@ public class NetworkConnection  implements Durable, Parcelable {
                             BaseColumns._ID + "=? "
                             , new String[]{Integer.toString(id)});
             if (0 != resultId) {
+                NetworkStorageProvider.removeBookmarks(context, id + ":");
                 return true;
             }
         } catch (Exception e) {

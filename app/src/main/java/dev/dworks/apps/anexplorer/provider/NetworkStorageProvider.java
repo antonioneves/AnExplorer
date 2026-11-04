@@ -1,6 +1,7 @@
 package dev.dworks.apps.anexplorer.provider;
 
 import android.content.ContentValues;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,6 +37,7 @@ import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
+import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.IconUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
@@ -370,6 +373,7 @@ public class NetworkStorageProvider extends DocumentsProvider {
             if (!connection.getConnectedClient().deleteFile(file.getPath())) {
                 throw new IOException("Server refused to delete " + file.getPath());
             }
+            removeBookmarks(getContext(), documentId);
             notifyFolderChanged(getDocIdForFile(file.getParentFile()));
         } catch (IOException e) {
             throw new FileNotFoundException("Failed to delete document with id " + documentId);
@@ -405,6 +409,46 @@ public class NetworkStorageProvider extends DocumentsProvider {
             notifyFolderChanged(folderId);
         }, "Network upload").start();
         return pair[1];
+    }
+
+    /**
+     * Bookmarks keep the document id, so one whose folder is gone, or whose connection was
+     * deleted, would otherwise stay in the table. Takes the bookmarks of folders inside as well.
+     * For a whole connection pass its id followed by a colon.
+     */
+    public static void removeBookmarks(Context context, String documentId) {
+        final ContentResolver resolver = context.getContentResolver();
+        final Uri bookmarks = ExplorerProvider.buildBookmark();
+        final String prefix = documentId + "/";
+        final ArrayList<String> ids = new ArrayList<>();
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(bookmarks,
+                    new String[]{BaseColumns._ID, ExplorerProvider.BookmarkColumns.PATH},
+                    ExplorerProvider.BookmarkColumns.AUTHORITY + " = ?", new String[]{AUTHORITY}, null);
+            while (null != cursor && cursor.moveToNext()) {
+                final String bookmarked = cursor.getString(1);
+                if (null != bookmarked && (bookmarked.equals(documentId) || bookmarked.startsWith(prefix))) {
+                    ids.add(cursor.getString(0));
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to look up the bookmarks to remove: " + e);
+        } finally {
+            IoUtils.closeQuietly(cursor);
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        final StringBuilder selection = new StringBuilder(BaseColumns._ID + " IN (");
+        final String[] args = new String[ids.size()];
+        for (int i = 0; i < ids.size(); i++) {
+            selection.append(i == 0 ? "?" : ",?");
+            args[i] = ids.get(i);
+        }
+        selection.append(')');
+        resolver.delete(bookmarks, selection.toString(), args);
+        RootsCache.updateRoots(context, AUTHORITY);
     }
 
     /** So that a folder on screen lists what was made in it or taken out of it */
