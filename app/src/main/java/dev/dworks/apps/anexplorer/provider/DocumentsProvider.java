@@ -40,10 +40,12 @@ import androidx.annotation.CallSuper;
 import android.util.Log;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
 import dev.dworks.apps.anexplorer.libcore.util.Objects;
+import dev.dworks.apps.anexplorer.misc.ArchiveExtractor;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.model.DocumentsContract;
 import dev.dworks.apps.anexplorer.model.DocumentsContract.Document;
@@ -340,6 +342,11 @@ public abstract class DocumentsProvider extends ContentProvider {
 
     public String uncompressDocument(String parentDocumentId) throws FileNotFoundException {
         throw new UnsupportedOperationException("Move not supported");
+    }
+
+    /** For an encrypted archive; throws {@link ArchiveExtractor.PasswordRequiredException} if it needs one */
+    public String uncompressDocument(String parentDocumentId, String passphrase) throws IOException {
+        return uncompressDocument(parentDocumentId);
     }
 
     public boolean uploadDocument(String parentDocumentId, Uri uploadDocumentUri, String mimeType, String displayName) throws FileNotFoundException {
@@ -890,7 +897,14 @@ public abstract class DocumentsProvider extends ContentProvider {
             enforceWritePermissionInner(documentUri, null);
             final String documentIdTo = extras.getString(DocumentsContract.EXTRA_DOCUMENT_TO);
             final String documentIdToCompress = extras.getString(DocumentsContract.EXTRA_DOCUMENTS_COMPRESS);
-            uncompressDocument(documentId);
+            try {
+                uncompressDocument(documentId, extras.getString(DocumentsContract.EXTRA_PASSPHRASE));
+            } catch (ArchiveExtractor.PasswordRequiredException e) {
+                out.putBoolean(DocumentsContract.EXTRA_PASSWORD_REQUIRED, true);
+                return out;
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
 
             // Document no longer exists, clean up any grants
             revokeDocumentPermission(documentId);

@@ -63,6 +63,7 @@ import dev.dworks.apps.anexplorer.archive.DocumentArchiveHelper;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor.RowBuilder;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
+import dev.dworks.apps.anexplorer.misc.ArchiveExtractor;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.misc.DiskInfo;
 import dev.dworks.apps.anexplorer.misc.FileUtils;
@@ -1177,9 +1178,24 @@ public class ExternalStorageProvider extends StorageProvider {
 
     @Override
     public String uncompressDocument(String documentId) throws FileNotFoundException {
+        try {
+            return uncompressDocument(documentId, null);
+        } catch (FileNotFoundException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to extract " + documentId, e);
+        }
+    }
+
+    @Override
+    public String uncompressDocument(String documentId, String passphrase) throws IOException {
         final File fileFrom = getFileForDocId(documentId);
-        if (!FileUtils.uncompress(fileFrom)) {
-            throw new IllegalStateException("Failed to extract " + fileFrom);
+        try {
+            FileUtils.uncompress(fileFrom, passphrase);
+        } catch (ArchiveExtractor.PasswordRequiredException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalStateException("Failed to extract " + fileFrom, e);
         }
         notifyDocumentsChanged(documentId);
         return getDocIdForFile(fileFrom);

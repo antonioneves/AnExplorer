@@ -696,6 +696,8 @@ public final class DocumentsContract {
     public static final String EXTRA_DELETE_AFTER = "delete_after";
     public static final String EXTRA_DOCUMENTS_COMPRESS = "documents_compress";
     public static final String EXTRA_DOCUMENTS_UNCOMPRESS = "documents_uncompress";
+    public static final String EXTRA_PASSPHRASE = "passphrase";
+    public static final String EXTRA_PASSWORD_REQUIRED = "password_required";
 
     private static final String PATH_ROOT = "root";
     private static final String PATH_RECENT = "recent";
@@ -1347,18 +1349,29 @@ public final class DocumentsContract {
     }
 
     public static boolean uncompressDocument(ContentResolver resolver, Uri fromDocumentUri) {
+        return UNCOMPRESS_OK == uncompressDocument(resolver, fromDocumentUri, null);
+    }
+
+    public static final int UNCOMPRESS_OK = 0;
+    public static final int UNCOMPRESS_FAILED = 1;
+    public static final int UNCOMPRESS_PASSWORD_REQUIRED = 2;
+
+    /** @param passphrase for an encrypted archive, or null */
+    public static int uncompressDocument(ContentResolver resolver, Uri fromDocumentUri, String passphrase) {
         final ContentProviderClient client = resolver.acquireUnstableContentProviderClient(
                 fromDocumentUri.getAuthority());
         try {
             final Bundle in = new Bundle();
             in.putString(Document.COLUMN_DOCUMENT_ID, getDocumentId(fromDocumentUri));
             in.putParcelable(DocumentsContract.EXTRA_URI, fromDocumentUri);
+            in.putString(EXTRA_PASSPHRASE, passphrase);
 
-            resolver.call(fromDocumentUri, METHOD_UNCOMPRESS_DOCUMENT, null, in);
-            return true;
+            final Bundle out = resolver.call(fromDocumentUri, METHOD_UNCOMPRESS_DOCUMENT, null, in);
+            return null != out && out.getBoolean(EXTRA_PASSWORD_REQUIRED)
+                    ? UNCOMPRESS_PASSWORD_REQUIRED : UNCOMPRESS_OK;
         } catch (Exception e) {
             Log.w(TAG, "Failed to uncompress document", e);
-            return false;
+            return UNCOMPRESS_FAILED;
         } finally {
             ContentProviderClientCompat.releaseQuietly(client);
         }

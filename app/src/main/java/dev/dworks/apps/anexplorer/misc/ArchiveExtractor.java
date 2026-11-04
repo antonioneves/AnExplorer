@@ -12,11 +12,18 @@ import me.zhanghai.android.libarchive.ArchiveException;
 
 /**
  * Extracts the archives java.util.zip can't read (7z, RAR, tar and its compressed forms) with
- * libarchive. Zip stays on {@link FileUtils#uncompress} so its behaviour doesn't change.
+ * libarchive, and zips that are encrypted. Other zips stay on {@link FileUtils#uncompress}.
  */
 public final class ArchiveExtractor {
 
     private static final int BLOCK_SIZE = 64 * 1024;
+
+    /** The archive is encrypted and either no passphrase was given or it was wrong */
+    public static class PasswordRequiredException extends IOException {
+        public PasswordRequiredException(String message) {
+            super(message);
+        }
+    }
 
     private ArchiveExtractor() {
     }
@@ -48,7 +55,23 @@ public final class ArchiveExtractor {
         return name;
     }
 
-    public static void extract(File archiveFile, File destFolder) throws IOException {
+    /**
+     * @param passphrase for an encrypted archive, or null
+     * A folder this call made is removed again if it fails, so no half-extracted copy is left.
+     */
+    public static void extract(File archiveFile, File destFolder, String passphrase) throws IOException {
+        final boolean created = !destFolder.exists();
+        try {
+            extractInto(archiveFile, destFolder, passphrase);
+        } catch (IOException | RuntimeException e) {
+            if (created) {
+                FileUtils.deleteFile(destFolder);
+            }
+            throw e;
+        }
+    }
+
+    private static void extractInto(File archiveFile, File destFolder, String passphrase) throws IOException {
         destFolder.mkdirs();
         final String root = destFolder.getCanonicalPath() + File.separator;
         long archive = 0;
@@ -56,6 +79,9 @@ public final class ArchiveExtractor {
             archive = Archive.readNew();
             Archive.readSupportFilterAll(archive);
             Archive.readSupportFormatAll(archive);
+            if (passphrase != null) {
+                Archive.readAddPassphrase(archive, passphrase.getBytes(StandardCharsets.UTF_8));
+            }
             Archive.readOpenFileName(archive,
                     archiveFile.getPath().getBytes(StandardCharsets.UTF_8), BLOCK_SIZE);
             long entry;
@@ -70,8 +96,11 @@ public final class ArchiveExtractor {
                 if (!path.startsWith(root) && !(path + File.separator).equals(root)) {
                     throw new IOException("Archive entry outside the destination: " + name);
                 }
-                if (ArchiveEntry.isEncrypted(entry)) {
-                    throw new IOException("Archive entry is encrypted: " + name);
+                if (ArchiveEntry.isEncrypted(entry) && passphrase == null) {
+                    if (isSupported(archiveFile.getName())) {
+                        throw new IOException("Encrypted archives of this type aren't supported");
+                    }
+                    throw new PasswordRequiredException(name);
                 }
                 final int type = ArchiveEntry.filetype(entry) & ArchiveEntry.AE_IFMT;
                 if (type == ArchiveEntry.AE_IFDIR) {
@@ -88,6 +117,13 @@ public final class ArchiveExtractor {
                 // Links, devices and the like aren't extracted
             }
         } catch (ArchiveException e) {
+            // libarchive reports a missing or wrong passphrase only through its message
+            final String message = String.valueOf(e.getMessage()).toLowerCase();
+            // 7z and RAR encryption can't be read at all, so a passphrase wouldn't help there
+            if (!message.contains("not supported") && (message.contains("passphrase")
+                    || message.contains("password") || message.contains("encrypt"))) {
+                throw new PasswordRequiredException(e.getMessage());
+            }
             throw new IOException(e);
         } finally {
             if (archive != 0) {

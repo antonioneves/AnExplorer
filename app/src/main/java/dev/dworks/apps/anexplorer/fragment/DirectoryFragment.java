@@ -43,6 +43,8 @@ import android.provider.Settings;
 import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.graphics.Typeface;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
@@ -54,6 +56,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -103,6 +106,8 @@ import dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider;
 import dev.dworks.apps.anexplorer.provider.RecentsProvider.StateColumns;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import dev.dworks.apps.anexplorer.ui.RemoteEditText;
 import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
@@ -1390,16 +1395,49 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		return true;
 	}
 
+	/** @param wrong whether a password was already tried, so the prompt says it didn't work */
+	private void askArchivePassword(final DocumentInfo archive, boolean wrong) {
+		final Context context = getActivity();
+		final EditText input = new RemoteEditText(context);
+		input.setSingleLine(true);
+		input.setHint(R.string.archive_password_hint);
+		input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+		input.setTypeface(Typeface.DEFAULT);
+		final int padding = getResources().getDimensionPixelSize(R.dimen.abc_dialog_padding_material);
+		final FrameLayout frame = new FrameLayout(context);
+		frame.setPadding(padding, padding / 2, padding, 0);
+		frame.addView(input);
+		new MaterialAlertDialogBuilder(context)
+				.setTitle(wrong ? R.string.archive_password_wrong : R.string.archive_password_title)
+				.setMessage(archive.displayName)
+				.setView(frame)
+				.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+					final ArrayList<DocumentInfo> docs = new ArrayList<>();
+					docs.add(archive);
+					new OperationTask(docs, R.id.menu_uncompress, input.getText().toString()).execute();
+				})
+				.setNegativeButton(android.R.string.cancel, null)
+				.show();
+		input.requestFocus();
+	}
+
 	private class OperationTask extends AsyncTask<Void, Void, Boolean> {
 
 		private Dialog progressDialog;
 		private ArrayList<DocumentInfo> docs;
 		private int id;
 		private boolean toRecycleBin;
+		private String passphrase;
+		private DocumentInfo passwordDoc;
 
 		public OperationTask(ArrayList<DocumentInfo> docs, int id) {
+			this(docs, id, null);
+		}
+
+		public OperationTask(ArrayList<DocumentInfo> docs, int id, String passphrase) {
 			this.docs = docs;
 			this.id = id;
+			this.passphrase = passphrase;
 			toRecycleBin = id == R.id.menu_delete && goToRecycleBin(docs);
 			DialogBuilder builder = new DialogBuilder(getActivity());
 			builder.setCancelable(false);
@@ -1419,6 +1457,32 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			progressDialog = builder.create();
 		}
 
+		/** Stops at the first archive that needs a password, so the user can be asked for it */
+		private boolean uncompressDocuments() {
+			final ContentResolver resolver = getActivity().getContentResolver();
+			boolean hadTrouble = false;
+			for (DocumentInfo doc : docs) {
+				if (!doc.isArchiveSupported()) {
+					Log.w(TAG, "Skipping " + doc);
+					hadTrouble = true;
+					continue;
+				}
+				try {
+					final int outcome = DocumentsContract.uncompressDocument(resolver, doc.derivedUri, passphrase);
+					if (outcome == DocumentsContract.UNCOMPRESS_PASSWORD_REQUIRED) {
+						passwordDoc = doc;
+						return true;
+					}
+					hadTrouble |= outcome != DocumentsContract.UNCOMPRESS_OK;
+				} catch (Exception e) {
+					Log.w(TAG, "Failed to Uncompress " + doc);
+					CrashReportingManager.logException(e);
+					hadTrouble = true;
+				}
+			}
+			return hadTrouble;
+		}
+
 		@Override
 		protected void onPreExecute() {
 			progressDialog.show();
@@ -1436,7 +1500,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			} else if (id == R.id.menu_lock) {
 				result = onLockDocuments(docs);
 			} else if (id == R.id.menu_uncompress) {
-                result = onUncompressDocuments(docs);
+                result = uncompressDocuments();
 				params2 = new Bundle();
 				AnalyticsManager.logEvent("uncompress", params2);
 			} else if (id == R.id.menu_compress) {
@@ -1466,7 +1530,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 						Utils.showError(getActivity(), R.string.compress_error);
                     }
 				} else if (id == R.id.menu_uncompress) {
-                    if(!((BaseActivity) getActivity()).isSAFIssue(doc.documentId)) {
+					if (null != passwordDoc) {
+						askArchivePassword(passwordDoc, null != passphrase);
+					} else if(!((BaseActivity) getActivity()).isSAFIssue(doc.documentId)) {
                         Utils.showError(getActivity(), R.string.uncompress_error);
                     }
 				} else if (id == R.id.menu_restore) {
@@ -1530,30 +1596,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
             Log.w(TAG, "Failed to Compress " + doc);
 			CrashReportingManager.logException(e);
             hadTrouble = true;
-        }
-
-        return hadTrouble;
-    }
-
-    public boolean onUncompressDocuments(ArrayList<DocumentInfo> docs) {
-        final Context context = getActivity();
-        final ContentResolver resolver = context.getContentResolver();
-
-        boolean hadTrouble = false;
-        for (DocumentInfo doc : docs) {
-            if (!doc.isArchiveSupported()) {
-                Log.w(TAG, "Skipping " + doc);
-                hadTrouble = true;
-                continue;
-            }
-
-            try {
-                hadTrouble = ! DocumentsContract.uncompressDocument(resolver, doc.derivedUri);
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to Uncompress " + doc);
-				CrashReportingManager.logException(e);
-                hadTrouble = true;
-            }
         }
 
         return hadTrouble;

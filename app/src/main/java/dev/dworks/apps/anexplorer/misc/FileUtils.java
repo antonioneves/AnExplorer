@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
@@ -408,22 +409,39 @@ public class FileUtils {
     }
 
     public static boolean uncompress(File zipFile) {
-        if (ArchiveExtractor.isSupported(zipFile.getName())) {
-            try {
-                ArchiveExtractor.extract(zipFile,
-                        new File(zipFile.getParent(), ArchiveExtractor.folderName(zipFile.getName())));
-                return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        }
-        boolean success = false;
         try {
-            FileInputStream fis = new FileInputStream(zipFile);
-            ZipInputStream zis = new ZipInputStream(new BufferedInputStream(fis));
+            uncompress(zipFile, null);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * @param passphrase for an encrypted archive, or null
+     * @throws ArchiveExtractor.PasswordRequiredException if the archive needs a passphrase
+     * A folder made for the output is deleted again when this fails.
+     */
+    public static void uncompress(File zipFile, String passphrase) throws IOException {
+        if (ArchiveExtractor.isSupported(zipFile.getName())) {
+            ArchiveExtractor.extract(zipFile,
+                    new File(zipFile.getParent(), ArchiveExtractor.folderName(zipFile.getName())), passphrase);
+            return;
+        }
+        final File destFolder = new File(zipFile.getParent(), FileUtils.getNameFromFilename(zipFile.getName()));
+        // java.util.zip can't decrypt, libarchive can
+        if (passphrase != null) {
+            ArchiveExtractor.extract(zipFile, destFolder, passphrase);
+            return;
+        }
+        final boolean created = !destFolder.exists();
+        FileInputStream fis = null;
+        ZipInputStream zis = null;
+        try {
+            fis = new FileInputStream(zipFile);
+            zis = new ZipInputStream(new BufferedInputStream(fis));
             ZipEntry entry;
-            File destFolder = new File(zipFile.getParent(), FileUtils.getNameFromFilename(zipFile.getName()));
             destFolder.mkdirs();
             while ((entry = zis.getNextEntry()) != null) {
                 File dest = new File(destFolder, entry.getName());
@@ -443,23 +461,31 @@ public class FileUtils {
                     byte[] buffer = new byte[2048];
                     FileOutputStream fos = new FileOutputStream(dest);
                     BufferedOutputStream bos = new BufferedOutputStream(fos, buffer.length);
-                    while ((size = zis.read(buffer, 0, buffer.length)) != -1) {
-                        bos.write(buffer, 0, size);
+                    try {
+                        while ((size = zis.read(buffer, 0, buffer.length)) != -1) {
+                            bos.write(buffer, 0, size);
+                        }
+                        bos.flush();
+                    } finally {
+                        IoUtils.closeQuietly(bos);
                     }
-                    bos.flush();
-                    bos.close();
-                    IoUtils.flushQuietly(bos);
-                    IoUtils.closeQuietly(bos);
                 }
                 zis.closeEntry();
             }
+        } catch (IOException | RuntimeException e) {
             IoUtils.closeQuietly(zis);
             IoUtils.closeQuietly(fis);
-            success = true;
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (created) {
+                deleteFile(destFolder);
+            }
+            if (e instanceof ZipException && String.valueOf(e.getMessage()).toLowerCase().contains("encrypted")) {
+                ArchiveExtractor.extract(zipFile, destFolder, null);
+                return;
+            }
+            throw e;
         }
-        return success;
+        IoUtils.closeQuietly(zis);
+        IoUtils.closeQuietly(fis);
     }
 
     public static String getExtFromFilename(String filename) {
