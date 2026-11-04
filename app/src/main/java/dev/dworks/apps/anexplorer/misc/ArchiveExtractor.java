@@ -3,8 +3,15 @@ package dev.dworks.apps.anexplorer.misc;
 import android.os.ParcelFileDescriptor;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.zip.ZipEntry;
 
 import me.zhanghai.android.libarchive.Archive;
 import me.zhanghai.android.libarchive.ArchiveEntry;
@@ -53,6 +60,122 @@ public final class ArchiveExtractor {
             name = name.substring(0, name.length() - 4);
         }
         return name;
+    }
+
+    /**
+     * The files and folders of the archive, as zip entries (folders end in a slash) so that
+     * {@link dev.dworks.apps.anexplorer.archive.DocumentArchive} can browse them like a zip.
+     */
+    public static List<ZipEntry> listEntries(File archiveFile) throws IOException {
+        final List<ZipEntry> entries = new ArrayList<>();
+        final Set<String> seen = new LinkedHashSet<>();
+        long archive = 0;
+        try {
+            archive = openReader(archiveFile);
+            long entry;
+            while ((entry = Archive.readNextHeader(archive)) != 0) {
+                final String name = browseName(entry);
+                if (name == null || !seen.add(name)) {
+                    continue;
+                }
+                final ZipEntry zipEntry = new ZipEntry(name);
+                if (ArchiveEntry.sizeIsSet(entry)) {
+                    zipEntry.setSize(ArchiveEntry.size(entry));
+                }
+                if (ArchiveEntry.mtimeIsSet(entry)) {
+                    zipEntry.setTime(ArchiveEntry.mtime(entry) * 1000);
+                }
+                entries.add(zipEntry);
+            }
+            return entries;
+        } catch (ArchiveException e) {
+            throw new IOException(e);
+        } finally {
+            closeReader(archive);
+        }
+    }
+
+    /**
+     * Unpacks one file of the archive into the cache and opens it. The archive can only be read
+     * from the start, so this scans up to the entry; the copy is deleted as soon as it's open.
+     */
+    public static InputStream openEntry(File archiveFile, String entryName, File cacheDir) throws IOException {
+        long archive = 0;
+        File temp = null;
+        try {
+            archive = openReader(archiveFile);
+            long entry;
+            while ((entry = Archive.readNextHeader(archive)) != 0) {
+                if (!entryName.equals(browseName(entry))) {
+                    continue;
+                }
+                if (ArchiveEntry.isEncrypted(entry)) {
+                    throw new IOException("Encrypted archives aren't supported");
+                }
+                temp = File.createTempFile("archive-entry", null, cacheDir);
+                try (ParcelFileDescriptor out = ParcelFileDescriptor.open(temp,
+                        ParcelFileDescriptor.MODE_WRITE_ONLY | ParcelFileDescriptor.MODE_TRUNCATE)) {
+                    Archive.readDataIntoFd(archive, out.getFd());
+                }
+                return new FileInputStream(temp);
+            }
+            throw new IOException("No such entry: " + entryName);
+        } catch (ArchiveException e) {
+            throw new IOException(e);
+        } finally {
+            closeReader(archive);
+            if (temp != null) {
+                // Unlinked, the open stream still reads it and the space comes back when it closes
+                temp.delete();
+            }
+        }
+    }
+
+    /** The entry's path without a leading "./" or "/", with a trailing slash for a folder; null to skip it */
+    private static String browseName(long entry) {
+        String name = ArchiveEntry.pathnameUtf8(entry);
+        if (name == null) {
+            return null;
+        }
+        while (name.startsWith("./") || name.startsWith("/")) {
+            name = name.substring(name.startsWith("./") ? 2 : 1);
+        }
+        if (name.isEmpty() || name.equals(".") || ("/" + name + "/").contains("/../")) {
+            return null;
+        }
+        final int type = ArchiveEntry.filetype(entry) & ArchiveEntry.AE_IFMT;
+        if (type == ArchiveEntry.AE_IFDIR) {
+            return name.endsWith("/") ? name : name + "/";
+        }
+        // 7z entries without Unix attributes carry no type at all, and are plain files
+        return type == ArchiveEntry.AE_IFREG || type == 0 ? name : null;
+    }
+
+    private static long openReader(File archiveFile) throws ArchiveException {
+        final long archive = Archive.readNew();
+        try {
+            Archive.readSupportFilterAll(archive);
+            Archive.readSupportFormatAll(archive);
+            Archive.readOpenFileName(archive,
+                    archiveFile.getPath().getBytes(StandardCharsets.UTF_8), BLOCK_SIZE);
+            return archive;
+        } catch (ArchiveException e) {
+            closeReader(archive);
+            throw e;
+        }
+    }
+
+    private static void closeReader(long archive) {
+        if (archive != 0) {
+            try {
+                Archive.readClose(archive);
+            } catch (ArchiveException ignored) {
+            }
+            try {
+                Archive.readFree(archive);
+            } catch (ArchiveException ignored) {
+            }
+        }
     }
 
     /**

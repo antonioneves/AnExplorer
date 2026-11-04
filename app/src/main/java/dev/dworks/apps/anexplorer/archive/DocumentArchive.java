@@ -52,7 +52,9 @@ import java.util.zip.ZipFile;
 
 import dev.dworks.apps.anexplorer.cursor.MatrixCursor;
 import dev.dworks.apps.anexplorer.libcore.io.IoUtils;
+import dev.dworks.apps.anexplorer.misc.ArchiveExtractor;
 import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
+import dev.dworks.apps.anexplorer.misc.FileUtils;
 import dev.dworks.apps.anexplorer.misc.MimePredicate;
 import dev.dworks.apps.anexplorer.misc.ParcelFileDescriptorUtil;
 import dev.dworks.apps.anexplorer.misc.Preconditions;
@@ -90,6 +92,10 @@ public class DocumentArchive implements Closeable {
     private final String mDocumentId;
     private final char mIdDelimiter;
     private final Uri mNotificationUri;
+    private final File mFile;
+    /** The copy made for a libarchive format, which reads it by path and so can't have it unlinked */
+    private File mSnapshot;
+    /** Null for the formats libarchive reads, see {@link ArchiveExtractor#isSupported} */
     private final ZipFile mZipFile;
     private final ExecutorService mExecutor;
     private final Map<String, ZipEntry> mEntries;
@@ -106,7 +112,9 @@ public class DocumentArchive implements Closeable {
         mDocumentId = documentId;
         mIdDelimiter = idDelimiter;
         mNotificationUri = notificationUri;
-        mZipFile = new ZipFile(file);
+        mFile = file;
+        final boolean viaLibarchive = ArchiveExtractor.isSupported(file.getName());
+        mZipFile = viaLibarchive ? null : new ZipFile(file);
         mExecutor = Executors.newSingleThreadExecutor();
 
         // Build the tree structure in memory.
@@ -115,7 +123,8 @@ public class DocumentArchive implements Closeable {
 
         mEntries = new HashMap<String, ZipEntry>();
         ZipEntry entry;
-        final List<? extends ZipEntry> entries = Collections.list(mZipFile.entries());
+        final List<? extends ZipEntry> entries = viaLibarchive
+                ? ArchiveExtractor.listEntries(file) : Collections.list(mZipFile.entries());
         final Stack<ZipEntry> stack = new Stack<>();
         for (int i = entries.size() - 1; i >= 0; i--) {
             entry = entries.get(i);
@@ -207,12 +216,15 @@ public class DocumentArchive implements Closeable {
             char idDelimiter, @Nullable Uri notificationUri)
             throws IOException {
         File snapshotFile = null;
+        boolean keepSnapshot = false;
+        final boolean viaLibarchive = ArchiveExtractor.isSupported(documentId);
         try {
             // Create a copy of the archive, as ZipFile doesn't operate on streams.
             // Moreover, ZipInputStream would be inefficient for large files on
             // pipes.
             snapshotFile = File.createTempFile("android.support.provider.snapshot{",
-                    "}.zip", context.getCacheDir());
+                    "}." + (viaLibarchive ? FileUtils.getExtFromFilename(documentId) : "zip"),
+                    context.getCacheDir());
 
             try {
                 final FileOutputStream outputStream =
@@ -227,8 +239,13 @@ public class DocumentArchive implements Closeable {
                     outputStream.write(buffer, 0, bytes);
                 }
                 outputStream.flush();
-                return new DocumentArchive(context, snapshotFile, documentId, idDelimiter,
-                        notificationUri);
+                final DocumentArchive archive = new DocumentArchive(context, snapshotFile,
+                        documentId, idDelimiter, notificationUri);
+                if (viaLibarchive) {
+                    archive.mSnapshot = snapshotFile;
+                    keepSnapshot = true;
+                }
+                return archive;
             } catch (Exception e){
                 CrashReportingManager.logException(e);
                 return null;
@@ -236,7 +253,7 @@ public class DocumentArchive implements Closeable {
         } finally {
             // On UNIX the file will be still available for processes which opened it, even
             // after deleting it. Remove it ASAP, as it won't be used by anyone else.
-            if (snapshotFile != null) {
+            if (snapshotFile != null && !keepSnapshot) {
                 snapshotFile.delete();
             }
         }
@@ -378,7 +395,7 @@ public class DocumentArchive implements Closeable {
         InputStream inputStream = null;
         try {
             try {
-                inputStream = mZipFile.getInputStream(entry);
+                inputStream = openEntryStream(entry);
             } catch (IOException e) {
                 IoUtils.closeQuietly(inputStream);
                 // Ideally we'd simply throw IOException to the caller, but for consistency
@@ -427,7 +444,7 @@ public class DocumentArchive implements Closeable {
 
         InputStream inputStream = null;
         try {
-            inputStream = mZipFile.getInputStream(entry);
+            inputStream = openEntryStream(entry);
             final ExifInterface exif = new ExifInterface(inputStream);
             if (exif.hasThumbnail()) {
                 Bundle extras = null;
@@ -474,10 +491,22 @@ public class DocumentArchive implements Closeable {
         mExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                IoUtils.closeQuietly(mZipFile);
+                if (mZipFile != null) {
+                    IoUtils.closeQuietly(mZipFile);
+                }
+                if (mSnapshot != null) {
+                    mSnapshot.delete();
+                }
             }
         });
         mExecutor.shutdown();
+    }
+
+    private InputStream openEntryStream(ZipEntry entry) throws IOException {
+        if (mZipFile != null) {
+            return mZipFile.getInputStream(entry);
+        }
+        return ArchiveExtractor.openEntry(mFile, entry.getName(), mContext.getCacheDir());
     }
 
     private void addCursorRow(MatrixCursor cursor, ZipEntry entry) {

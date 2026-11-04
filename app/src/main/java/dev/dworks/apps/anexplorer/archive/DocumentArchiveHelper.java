@@ -62,7 +62,10 @@ public class DocumentArchiveHelper implements Closeable {
     private static final String TAG = "DocumentArchiveHelper";
     private static final int OPENED_ARCHIVES_CACHE_SIZE = 4;
     private static final String[] ZIP_MIME_TYPES = {
-            "application/zip", "application/x-zip", "application/x-zip-compressed"
+            "application/zip", "application/x-zip", "application/x-zip-compressed",
+            // Read with libarchive, see DocumentArchive
+            "application/x-7z-compressed", "application/x-rar-compressed", "application/vnd.rar",
+            "application/x-rar", "application/rar", "application/x-tar"
     };
 
     private final DocumentsProvider mProvider;
