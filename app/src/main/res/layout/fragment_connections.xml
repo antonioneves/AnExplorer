@@ -60,6 +60,8 @@
             android:clipToPadding="false"
             android:drawSelectorOnTop="true"
             android:horizontalSpacing="@dimen/grid_item_padding"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             android:scrollbars="vertical"
             app:columnWidth="@dimen/grid_item_width"
             app:type="list" />
