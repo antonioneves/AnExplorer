@@ -62,7 +62,8 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private TextView webAddress;
     private Button action;
     private TextView warning;
-    private View editButton;
+    private View pathRow;
+    private View usernameRow;
     private View qrGroup;
     private View webOffGroup;
     private ImageView qr;
@@ -111,11 +112,11 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         qr = (ImageView) view.findViewById(R.id.qr);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
-        // Only the TV layout has it
-        editButton = view.findViewById(R.id.edit_server);
-        if (null != editButton) {
-            editButton.setOnClickListener(this);
-        }
+        // The details are edited by their own rows, so there is no separate edit button
+        pathRow = view.findViewById(R.id.path_row);
+        pathRow.setOnClickListener(this);
+        usernameRow = view.findViewById(R.id.username_row);
+        usernameRow.setOnClickListener(this);
 
     }
 
@@ -171,14 +172,14 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
 
     /** The settings dialog the Connections list used to offer; TV edits them here instead. */
-    private void editServer() {
+    private void editServer(String focus) {
         Cursor cursor = null;
         try {
             cursor = getActivity().getContentResolver().query(ExplorerProvider.buildConnection(),
                     null, ExplorerProvider.ConnectionColumns.TYPE + "=?", new String[]{SERVER}, null);
             if (null != cursor && cursor.moveToFirst()) {
                 CreateConnectionFragment.show(((AppCompatActivity) getActivity()).getSupportFragmentManager(),
-                        getCursorInt(cursor, BaseColumns._ID));
+                        getCursorInt(cursor, BaseColumns._ID), focus);
             }
         } finally {
             IoUtils.closeQuietly(cursor);
@@ -256,10 +257,7 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     private void setStatus(boolean running){
         showQrCode(running);
         // The running server keeps the settings it started with, so they are changed while stopped
-        if (null != editButton) {
-            editButton.setEnabled(!running);
-            editButton.setFocusable(!running);
-        }
+        setRowsEnabled(!running);
         if(running){
             setAddress(ConnectionUtils.getFTPAddress(getActivity()));
             final String web = ConnectionUtils.getWebAddress(getActivity());
@@ -299,10 +297,25 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
         webOffGroup.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
+    /** The rows open the settings dialog, which a running server would only apply after a restart */
+    private void setRowsEnabled(boolean enabled) {
+        final View[] rows = {pathRow, usernameRow};
+        for (View row : rows) {
+            if (null == row) {
+                continue;
+            }
+            row.setEnabled(enabled);
+            row.setFocusable(enabled);
+            row.setAlpha(enabled ? 1f : 0.5f);
+        }
+    }
+
     @Override
     public void onClick(View view) {
-        if (view.getId() == R.id.edit_server) {
-            editServer();
+        if (view.getId() == R.id.path_row) {
+            editServer(CreateConnectionFragment.FOCUS_PATH);
+        } else if (view.getId() == R.id.username_row) {
+            editServer(CreateConnectionFragment.FOCUS_USERNAME);
         } else if (view.getId() == R.id.password_row || view.getId() == R.id.password_visibility) {
             passwordShown = !passwordShown;
             showPassword();

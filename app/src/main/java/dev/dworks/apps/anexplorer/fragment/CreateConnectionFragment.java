@@ -88,6 +88,10 @@ public class CreateConnectionFragment extends DialogFragment {
     private static final String EXTRA_NAME = "name";
     private static final String EXTRA_HOST = "host";
     private static final String EXTRA_PORT = "port";
+    private static final String EXTRA_FOCUS = "focus";
+    /** The field the remote starts on, for the row on the server page that opened the dialog */
+    public static final String FOCUS_PATH = "path";
+    public static final String FOCUS_USERNAME = "username";
     /** How much of the screen a TV keyboard covers, which it doesn't say */
     private static final float TV_KEYBOARD_SHARE = 0.45f;
     private AppCompatEditText name;
@@ -136,9 +140,15 @@ public class CreateConnectionFragment extends DialogFragment {
     }
 
     public static void show(FragmentManager fm, int connection_id) {
+        show(fm, connection_id, null);
+    }
+
+    /** @param focus the field to start on, such as FOCUS_PATH, or null for the first one */
+    public static void show(FragmentManager fm, int connection_id, String focus) {
         final CreateConnectionFragment dialog = new CreateConnectionFragment();
         final Bundle args = new Bundle();
         args.putInt(EXTRA_CONNECTION_ID, connection_id);
+        args.putString(EXTRA_FOCUS, focus);
         dialog.setArguments(args);
         dialog.show(fm, TAG);
     }
@@ -149,6 +159,19 @@ public class CreateConnectionFragment extends DialogFragment {
         Bundle args = getArguments();
         if(null != args){
             connection_id = args.getInt(EXTRA_CONNECTION_ID);
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        final Bundle args = getArguments();
+        final String focus = null != args ? args.getString(EXTRA_FOCUS) : null;
+        final View target = FOCUS_PATH.equals(focus) ? path
+                : FOCUS_USERNAME.equals(focus) ? username : null;
+        // Anonymous access hides the user name, and a client connection has no path
+        if (null != target && target.isShown()) {
+            target.post(target::requestFocus);
         }
     }
 

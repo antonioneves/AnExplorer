@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- TV: the FTP server laid out side by side like Quick Share, the connection details on the
-     left and the phone's browser page on the right -->
+     left and the phone's browser page on the right. The detail rows open the editor themselves. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -15,20 +15,19 @@
         android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingStart="48dp"
-        android:paddingTop="32dp"
+        android:paddingTop="24dp"
         android:paddingEnd="48dp"
-        android:paddingBottom="32dp">
+        android:paddingBottom="24dp">
 
-        <!-- The two columns start at the same height, and sit together in the middle of the screen -->
+        <!-- The card on the right fills the height the details need, so its bottom edge and the
+             buttons stay on the same line -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
             android:baselineAligned="false"
             android:clipChildren="false"
             android:orientation="horizontal">
 
-            <!-- As tall as the card beside it, so the buttons line up with the card's bottom -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -104,12 +103,15 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Where the server shares from; the same row style as Quick Share's folder -->
+                <!-- Where the server shares from; the row itself opens the editor -->
                 <LinearLayout
+                    android:id="@+id/path_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/settings_row_background"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:gravity="center_vertical"
                     android:minHeight="72dp"
                     android:orientation="horizontal"
@@ -158,13 +160,25 @@
                             android:textAppearance="?attr/textAppearanceBodyMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="12dp"
+                        android:contentDescription="@null"
+                        app:srcCompat="@drawable/ic_menu_edit"
+                        app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
+                <!-- The user name and password, which the row opens the editor for -->
                 <LinearLayout
+                    android:id="@+id/username_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/settings_row_background"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:gravity="center_vertical"
                     android:minHeight="72dp"
                     android:orientation="horizontal"
@@ -213,6 +227,14 @@
                             android:textAppearance="?attr/textAppearanceBodyMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="12dp"
+                        android:contentDescription="@null"
+                        app:srcCompat="@drawable/ic_menu_edit"
+                        app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
                 <!-- The whole row toggles the password, so the eye button is only for touch -->
@@ -301,7 +323,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:minHeight="24dp" />
+                    android:minHeight="32dp" />
 
                 <!-- Material buttons leave room under their shape; the offset puts their edge on the card's -->
                 <FrameLayout
@@ -309,33 +331,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="-4dp">
 
-                    <LinearLayout
+                    <Button
+                        android:id="@+id/action"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/action"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:minWidth="112dp"
-                            tools:text="Start" />
-
-                        <Button
-                            android:id="@+id/edit_server"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:minWidth="112dp"
-                            android:text="@string/ftp_edit" />
-                    </LinearLayout>
+                        android:minWidth="112dp"
+                        tools:text="Start" />
                 </FrameLayout>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="48dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
@@ -348,14 +355,15 @@
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
+                <!-- Fills the column, so it keeps its size whether or not the server runs -->
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Widget.Material3.CardView.Filled"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginTop="12dp"
                     android:minHeight="280dp"
                     app:cardCornerRadius="28dp"
-                    app:contentPadding="32dp">
+                    app:contentPadding="24dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
