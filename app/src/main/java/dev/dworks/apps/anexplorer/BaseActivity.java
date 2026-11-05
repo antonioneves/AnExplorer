@@ -126,7 +126,10 @@ public abstract class BaseActivity extends ActionBarActivity {
         public boolean showAdvanced = false;
         public boolean stackTouched = false;
         public boolean restored = false;
-        /** The folder BACK just left, so the list it returns to can focus it */
+        /**
+         * The row the next list load should focus: the folder BACK just left, or the row in focus
+         * when the app went to the background, since Android may close it there.
+         */
         public String backFocusDocId;
         /**
          * Apps still to uninstall, as the system asks about one at a time. Kept here because the
@@ -190,6 +193,7 @@ public abstract class BaseActivity extends ActionBarActivity {
             out.writeMap(dirState);
             out.writeStringList(uninstallQueue);
             out.writeInt(appsReturnPosition);
+            out.writeString(backFocusDocId);
         }
 
         public static final ClassLoaderCreator<State> CREATOR = new ClassLoaderCreator<State>() {
@@ -221,6 +225,7 @@ public abstract class BaseActivity extends ActionBarActivity {
                 in.readMap(state.dirState, loader);
                 in.readStringList(state.uninstallQueue);
                 state.appsReturnPosition = in.readInt();
+                state.backFocusDocId = in.readString();
                 return state;
             }
 

@@ -426,7 +426,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 						// Nothing to focus in the list, and focus would otherwise fall to the sidebar
 						focusSelectedTab();
 					} else {
-						getListView().requestFocus();
+						focusList();
 					}
 				}
 			}
@@ -581,6 +581,17 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	 * Focuses the row at mRefocusPosition, or the last one when fewer are left, once the list
 	 * has laid out what it holds now; before that the rows on screen may be ones just deleted
 	 */
+	/** A restored scroll position lays out its rows later, which leaves no row lit without this. */
+	private void focusList() {
+		final RecyclerView list = getListView();
+		list.requestFocus();
+		list.post(() -> {
+			if (isAdded() && list.isFocused() && list.getChildCount() > 0) {
+				list.getChildAt(0).requestFocus();
+			}
+		});
+	}
+
 	private void focusRow() {
 		if (!isAdded() || mRefocusPosition < 0) {
 			return;
@@ -708,6 +719,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			mShowAdapter.notifyEpisodesChanged();
 		}
 		final State state = getDisplayState(this);
+		if (null != mAdapter && mAdapter.getItemCount() > 0) {
+			// Android kept this list while the app was in the background, so focus never moved
+			state.backFocusDocId = null;
+		}
 		if (!state.uninstallQueue.isEmpty()) {
 			uninstallNext();
 		} else if (state.appsReturnPosition >= 0) {
@@ -2209,6 +2224,22 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
 		outState.putParcelable(KEY_ADAPTER, mMultiChoiceHelper.onSaveInstanceState());
+		final State state = getDisplayState(this);
+		// The uninstall flow picks its own row when it comes back
+		if (state.uninstallQueue.isEmpty() && state.appsReturnPosition < 0) {
+			state.backFocusDocId = focusedDocId();
+		}
+	}
+
+	private String focusedDocId() {
+		if (null == getView() || null == mAdapter || null != mShowAdapter) {
+			return null;
+		}
+		final RecyclerView list = getListView();
+		final View row = list.getFocusedChild();
+		final int position = null != row ? list.getChildAdapterPosition(row) : RecyclerView.NO_POSITION;
+		final Cursor cursor = position != RecyclerView.NO_POSITION ? mAdapter.getItem(position) : null;
+		return null != cursor ? getCursorString(cursor, Document.COLUMN_DOCUMENT_ID) : null;
 	}
 
 	private synchronized ContentProviderClient getExternalStorageClient() {
