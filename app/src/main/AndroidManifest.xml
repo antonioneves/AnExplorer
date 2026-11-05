@@ -323,6 +323,17 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- The package installer reads the generated shortcut APK through this -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.shortcutfiles"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shortcut_paths" />
+        </provider>
+
         <provider
             android:name="dev.dworks.apps.anexplorer.provider.UsbStorageProvider"
             android:authorities="${applicationId}.usbstorage.documents"

@@ -1,0 +1,32 @@
+apply plugin: 'com.android.application'
+
+// Builds the tiny APK that AnExplorer turns into a home screen shortcut for one app.
+// The app module copies the debug APK into its assets; the package name, label, icon and
+// banner are replaced at runtime, then the APK is signed with a key kept in AnExplorer.
+android {
+    namespace "dev.dworks.apps.anexplorer.shortcuttemplate"
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "dev.dworks.apps.anexplorer.shortcuttemplate"
+        minSdk 23
+        // Android 16 refuses apps targeting below 24, while Android 11's rule that requires a v2
+        // signature starts at 30, so 29 keeps v1 signing enough
+        targetSdk 29
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        debug {
+            // Copied into AnExplorer's assets, so it must not carry the debug flag
+            debuggable false
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    lint {
+        abortOnError false
+    }
+}

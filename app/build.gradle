@@ -103,6 +103,24 @@ android {
     buildFeatures {
         buildConfig true
     }
+    sourceSets {
+        main {
+            // The shortcut template APK, built by prepareShortcutTemplate
+            assets.srcDirs += "$buildDir/generated/shortcut-template"
+        }
+    }
+}
+
+// Packages the tiny APK that AnExplorer copies for each home screen shortcut
+tasks.register('prepareShortcutTemplate', Copy) {
+    dependsOn ':shortcut-template:assembleDebug'
+    from project(':shortcut-template').layout.buildDirectory.file('outputs/apk/debug/shortcut-template-debug.apk')
+    into layout.buildDirectory.dir('generated/shortcut-template')
+    rename { 'shortcut-template.apk' }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn 'prepareShortcutTemplate'
 }
 
 dependencies {

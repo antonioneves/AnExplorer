@@ -31,6 +31,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.Loader;
 import android.content.res.Resources;
@@ -41,6 +42,7 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.Settings;
 import androidx.appcompat.view.ActionMode;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.graphics.Typeface;
@@ -62,12 +64,14 @@ import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.BaseActivity.State;
+import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.QuickShareSendActivity;
 import dev.dworks.apps.anexplorer.R;
@@ -112,6 +116,7 @@ import dev.dworks.apps.anexplorer.ui.MaterialProgressBar;
 import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.provider.AppsProvider;
+import dev.dworks.apps.anexplorer.appshortcut.ShortcutApkBuilder;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.PreviewActivity;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -1072,6 +1077,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				menu.findItem(R.id.menu_select_all).setVisible(true);
 				menu.findItem(R.id.menu_save_apk).setVisible(true);
 				menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
+				final MenuItem addToHome = menu.findItem(R.id.menu_add_to_home);
+				if (null != addToHome) {
+					addToHome.setVisible(count == 1 && !checked.isEmpty()
+							&& canAddShortcut(checked.get(0)));
+				}
 			}
 			return true;
 		}
@@ -1769,6 +1779,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			menu.findItem(R.id.menu_save_apk).setVisible(true);
 			menu.findItem(R.id.menu_uninstall).setVisible(root.isUserApp());
 			menu.findItem(R.id.menu_app_info).setVisible(true);
+			final MenuItem addToHome = menu.findItem(R.id.menu_add_to_home);
+			if (null != addToHome) {
+				addToHome.setVisible(null != doc && canAddShortcut(doc));
+			}
 		}
 	}
 
@@ -1826,6 +1840,113 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 				});
 			}
 		}).start();
+	}
+
+	/** The launcher only lists apps with a launchable activity, so there is no shortcut without one */
+	private boolean canAddShortcut(DocumentInfo doc) {
+		final Activity activity = getActivity();
+		if (null == activity || !doc.documentId.contains(":")) {
+			return false;
+		}
+		final String packageName = AppsProvider.getPackageForDocId(doc.documentId);
+		final PackageManager manager = activity.getPackageManager();
+		return null != manager.getLeanbackLaunchIntentForPackage(packageName)
+				|| null != manager.getLaunchIntentForPackage(packageName);
+	}
+
+	private void addAppShortcut(DocumentInfo doc) {
+		final Activity activity = getActivity();
+		if (null == activity) {
+			return;
+		}
+		final String packageName = AppsProvider.getPackageForDocId(doc.documentId);
+		final String label = TextUtils.isEmpty(doc.displayName) ? packageName : doc.displayName;
+		final DialogBuilder builder = new DialogBuilder(activity);
+		builder.setTitle(R.string.shortcut_add_title);
+		builder.setMessage(getString(R.string.shortcut_add_message, label));
+		builder.setPositiveButton(R.string.shortcut_add_confirm,
+				(dialog, which) -> createAppShortcut(packageName));
+		builder.setNegativeButton(android.R.string.cancel, null);
+		builder.focusPositiveButton();
+		builder.showDialog();
+	}
+
+	/** Builds and signs the shortcut off the main thread, then hands it to the installer */
+	private void createAppShortcut(final String packageName) {
+		final Activity activity = getActivity();
+		if (null == activity) {
+			return;
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+				&& !activity.getPackageManager().canRequestPackageInstalls()) {
+			askToAllowInstalls(activity);
+			return;
+		}
+
+		final DialogBuilder progressBuilder = new DialogBuilder(activity);
+		progressBuilder.setCancelable(false);
+		progressBuilder.setIndeterminate(true);
+		progressBuilder.setMessage(R.string.shortcut_add_progress);
+		final Dialog progress = progressBuilder.create();
+
+		new AsyncTask<Void, Void, File>() {
+			@Override
+			protected void onPreExecute() {
+				progress.show();
+			}
+
+			@Override
+			protected File doInBackground(Void... params) {
+				try {
+					return ShortcutApkBuilder.build(activity, packageName);
+				} catch (Exception e) {
+					CrashReportingManager.logException(e);
+					return null;
+				}
+			}
+
+			@Override
+			protected void onPostExecute(File apk) {
+				if (!Utils.isActivityAlive(activity)) {
+					return;
+				}
+				progress.dismiss();
+				if (null == apk) {
+					Utils.showSnackBar(activity, getString(R.string.shortcut_add_failed));
+					return;
+				}
+				installShortcut(activity, apk);
+			}
+		}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+	}
+
+	private void installShortcut(Activity activity, File apk) {
+		final Uri uri = FileProvider.getUriForFile(activity,
+				BuildConfig.APPLICATION_ID + ".shortcutfiles", apk);
+		final Intent intent = new Intent(Intent.ACTION_VIEW)
+				.setDataAndType(uri, "application/vnd.android.package-archive")
+				.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		try {
+			activity.startActivity(intent);
+		} catch (ActivityNotFoundException e) {
+			Utils.showSnackBar(activity, getString(R.string.shortcut_install_failed));
+		}
+	}
+
+	private void askToAllowInstalls(final Activity activity) {
+		final DialogBuilder builder = new DialogBuilder(activity);
+		builder.setTitle(R.string.shortcut_allow_install_title);
+		builder.setMessage(R.string.shortcut_allow_install_message);
+		builder.setPositiveButton(R.string.shortcut_allow_install_settings, (dialog, which) -> {
+			try {
+				activity.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+						Uri.parse("package:" + activity.getPackageName())));
+			} catch (ActivityNotFoundException e) {
+				Utils.showSnackBar(activity, getString(R.string.shortcut_install_failed));
+			}
+		});
+		builder.setNegativeButton(android.R.string.cancel, null);
+		builder.showDialog();
 	}
 
 	/** Unselects everything; false when nothing was selected */
@@ -1974,6 +2095,11 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 						Uri.parse("package:" + packageName)));
 			} catch (ActivityNotFoundException e) {
 				Utils.showSnackBar(getActivity(), getString(R.string.unable_to_open_app));
+			}
+			return true;
+		} else if (id == R.id.menu_add_to_home) {
+			if (docs.size() == 1) {
+				addAppShortcut(docs.get(0));
 			}
 			return true;
 		} else if (id == R.id.menu_select_all) {

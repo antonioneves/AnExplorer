@@ -128,4 +128,10 @@
         android:visible="false"
         support:showAsAction="always"
         android:title="@string/menu_uninstall"/>
+    <item
+        android:id="@+id/menu_add_to_home"
+        android:icon="@drawable/ic_menu_add_to_home"
+        android:visible="false"
+        support:showAsAction="always"
+        android:title="@string/menu_add_to_home"/>
 </menu>

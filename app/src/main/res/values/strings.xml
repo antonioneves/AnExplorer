@@ -107,6 +107,17 @@
     <string name="menu_save_apk">Save APK</string>
     <string name="menu_uninstall">Uninstall</string>
     <string name="menu_app_info">App info</string>
+    <string name="menu_add_to_home">Create app shortcut</string>
+    <string name="shortcut_add_title">Create app shortcut</string>
+    <string name="shortcut_add_message">Create a shortcut to %1$s in your apps list? You can then add it to your home screen favorites.</string>
+    <string name="shortcut_add_confirm">Create</string>
+    <string name="shortcut_add_progress">Creating shortcut…</string>
+    <string name="shortcut_add_failed">Couldn\'t create the shortcut</string>
+    <string name="shortcut_no_launcher">This app has nothing to open</string>
+    <string name="shortcut_install_failed">Couldn\'t open the installer</string>
+    <string name="shortcut_allow_install_title">Allow app installs</string>
+    <string name="shortcut_allow_install_message">AnExplorer needs permission to install apps to add a shortcut.</string>
+    <string name="shortcut_allow_install_settings">Open settings</string>
     <string name="unable_to_open_app">Unable to open the app</string>
     <string name="apk_saved">Saved to the AppBackup folder</string>
     <string name="apk_save_failed">Couldn\'t save the APK</string>
