@@ -1566,7 +1566,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	private void deleteFiles(final ArrayList<DocumentInfo> docs, final int id, String title) {
 		DialogBuilder builder = new DialogBuilder(getActivity());
-		builder.setMessage(title).setCancelable(false).setPositiveButton(R.string.menu_delete, new DialogInterface.OnClickListener() {
+		builder.setMessage(title).setPositiveButton(R.string.menu_delete,new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int did) {
 				new OperationTask(docs, id).execute();
 			}

@@ -359,7 +359,6 @@ public class ConnectionsFragment extends RecyclerFragment
     private void deleteConnection(final int connection_id) {
         DialogBuilder builder = new DialogBuilder(getActivity());
         builder.setMessage(R.string.delete_connection)
-                .setCancelable(false)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int did) {
                         boolean success = NetworkConnection.deleteConnection(getActivity(), connection_id);

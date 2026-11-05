@@ -428,7 +428,6 @@ public class RootsFragment extends Fragment {
     private void removeBookark(final BookmarkItem item) {
         DialogBuilder builder = new DialogBuilder(getActivity());
         builder.setMessage(R.string.bookmark_remove)
-        .setCancelable(false)
         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int did) {
                 int rows = getActivity().getContentResolver().delete(ExplorerProvider.buildBookmark(),
