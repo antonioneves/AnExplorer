@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import java.util.ArrayList;
 
 import androidx.recyclerview.widget.LinearSnapHelper;
@@ -32,8 +31,6 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
     private int columnWidth = -1;
     private Context mContext;
     private boolean mTrapFocusAtEnd = true;
-    private int mFocusPosition = NO_POSITION;
-    private boolean mHasListFocus;
 
     public RecyclerViewPlus(Context context) {
         this(context, null);
@@ -119,63 +116,34 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
     }
 
     /**
-     * Scrolling fast with the key held can recycle the focused row before the next one takes the
-     * focus. The window is then left with no focus and gives it to the first view it finds, in
-     * the sidebar, so the focus is handed back to the row it was on.
+     * Keys can arrive faster than the scroll animation, moving the focus past the visible rows.
+     * Layout only keeps rows from the viewport inward, so it would drop that row and the window
+     * would give the focus to the sidebar. Pull the row just into view, then animate the rest.
      */
-    private final ViewTreeObserver.OnGlobalFocusChangeListener mFocusListener = (oldFocus, newFocus) -> {
-        if (newFocus != null && isDescendant(newFocus)) {
-            return;
-        }
-        if (oldFocus == null && newFocus != null && mHasListFocus) {
-            restoreFocus();
-        } else {
-            mHasListFocus = false;
-        }
-    };
-
-    private void restoreFocus() {
-        final int count = getAdapter() == null ? 0 : getAdapter().getItemCount();
-        if (count == 0 || mFocusPosition == NO_POSITION) {
-            return;
-        }
-        final int target = Math.min(mFocusPosition, count - 1);
-        post(() -> {
-            final ViewHolder holder = findViewHolderForAdapterPosition(target);
-            if (holder != null) {
-                holder.itemView.requestFocus();
-                return;
-            }
-            scrollToPosition(target);
-            post(() -> {
-                final ViewHolder late = findViewHolderForAdapterPosition(target);
-                if (late != null) {
-                    late.itemView.requestFocus();
-                }
-            });
-        });
-    }
-
     @Override
     public void requestChildFocus(View child, View focused) {
         super.requestChildFocus(child, focused);
-        final int position = getChildAdapterPosition(child);
-        if (position != NO_POSITION) {
-            mFocusPosition = position;
+        if (focused == null || layoutManager == null || isComputingLayout()) {
+            return;
         }
-        mHasListFocus = true;
+        final int dx = distanceIntoView(child.getLeft(), child.getRight(), getPaddingLeft(),
+                getWidth() - getPaddingRight());
+        final int dy = distanceIntoView(child.getTop(), child.getBottom(), getPaddingTop(),
+                getHeight() - getPaddingBottom());
+        if (dx != 0 || dy != 0) {
+            stopScroll();
+            scrollBy(dx, dy);
+            final Rect rect = new Rect(0, 0, child.getWidth(), child.getHeight());
+            layoutManager.requestChildRectangleOnScreen(this, child, rect, false, false);
+        }
     }
 
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        getViewTreeObserver().removeOnGlobalFocusChangeListener(mFocusListener);
-        super.onDetachedFromWindow();
+    /** How far to scroll so a view outside the range overlaps it by a pixel, or 0 if it already does */
+    private static int distanceIntoView(int start, int end, int rangeStart, int rangeEnd) {
+        if (start >= rangeEnd) {
+            return start - rangeEnd + 1;
+        }
+        return end <= rangeStart ? end - rangeStart - 1 : 0;
     }
 
     /**
@@ -185,10 +153,9 @@ public class RecyclerViewPlus extends RecyclerViewCompat {
      */
     @Override
     public View focusSearch(View focused, int direction) {
-        // Only a view inside the list reaches here, even if fast scrolling has already recycled it
         final View next = super.focusSearch(focused, direction);
-        if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical()
-                && (next == null || !isDescendant(next))) {
+        if (mTrapFocusAtEnd && direction == View.FOCUS_DOWN && isVertical() && focused != null
+                && isDescendant(focused) && (next == null || !isDescendant(next))) {
             final View bar = findBottomBarButton();
             return bar != null ? bar : focused;
         }
