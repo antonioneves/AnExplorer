@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <!-- Generated shortcut APKs, handed to the package installer and not readable by others -->
-    <cache-path
-        name="shortcuts"
-        path="shortcuts/" />
-</paths>

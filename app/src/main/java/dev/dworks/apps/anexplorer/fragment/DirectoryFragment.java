@@ -42,7 +42,6 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.Settings;
 import androidx.appcompat.view.ActionMode;
-import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.graphics.Typeface;
@@ -71,7 +70,6 @@ import java.util.HashSet;
 
 import dev.dworks.apps.anexplorer.BaseActivity;
 import dev.dworks.apps.anexplorer.BaseActivity.State;
-import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.QuickShareSendActivity;
 import dev.dworks.apps.anexplorer.R;
@@ -117,6 +115,7 @@ import dev.dworks.apps.anexplorer.ui.RecyclerViewPlus;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.appshortcut.ShortcutApkBuilder;
+import dev.dworks.apps.anexplorer.appshortcut.ShortcutInstaller;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.PreviewActivity;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -1871,7 +1870,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		builder.showDialog();
 	}
 
-	/** Builds and signs the shortcut off the main thread, then hands it to the installer */
+	/** Builds, signs and submits the shortcut off the main thread; the installer takes over from there */
 	private void createAppShortcut(final String packageName) {
 		final Activity activity = getActivity();
 		if (null == activity) {
@@ -1889,48 +1888,36 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 		progressBuilder.setMessage(R.string.shortcut_add_progress);
 		final Dialog progress = progressBuilder.create();
 
-		new AsyncTask<Void, Void, File>() {
+		new AsyncTask<Void, Void, Boolean>() {
 			@Override
 			protected void onPreExecute() {
 				progress.show();
 			}
 
 			@Override
-			protected File doInBackground(Void... params) {
+			protected Boolean doInBackground(Void... params) {
 				try {
-					return ShortcutApkBuilder.build(activity, packageName);
+					final File apk = ShortcutApkBuilder.build(activity, packageName);
+					ShortcutInstaller.install(activity, apk,
+							ShortcutApkBuilder.shortcutPackage(packageName));
+					return true;
 				} catch (Exception e) {
 					CrashReportingManager.logException(e);
-					return null;
+					return false;
 				}
 			}
 
 			@Override
-			protected void onPostExecute(File apk) {
+			protected void onPostExecute(Boolean submitted) {
 				if (!Utils.isActivityAlive(activity)) {
 					return;
 				}
 				progress.dismiss();
-				if (null == apk) {
+				if (!submitted) {
 					Utils.showSnackBar(activity, getString(R.string.shortcut_add_failed));
-					return;
 				}
-				installShortcut(activity, apk);
 			}
 		}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-	}
-
-	private void installShortcut(Activity activity, File apk) {
-		final Uri uri = FileProvider.getUriForFile(activity,
-				BuildConfig.APPLICATION_ID + ".shortcutfiles", apk);
-		final Intent intent = new Intent(Intent.ACTION_VIEW)
-				.setDataAndType(uri, "application/vnd.android.package-archive")
-				.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-		try {
-			activity.startActivity(intent);
-		} catch (ActivityNotFoundException e) {
-			Utils.showSnackBar(activity, getString(R.string.shortcut_install_failed));
-		}
 	}
 
 	private void askToAllowInstalls(final Activity activity) {

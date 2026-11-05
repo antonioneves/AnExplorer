@@ -149,6 +149,9 @@
             android:theme="@style/DocumentsTheme.Document" />
 
         <receiver
+            android:name=".appshortcut.ShortcutInstaller"
+            android:exported="false" />
+        <receiver
             android:name=".receiver.PackageReceiver"
             android:exported="true">
             <intent-filter>
@@ -322,17 +325,6 @@
             android:authorities="${applicationId}.explorer"
             android:enabled="true"
             android:exported="false" />
-
-        <!-- The package installer reads the generated shortcut APK through this -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.shortcutfiles"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/shortcut_paths" />
-        </provider>
 
         <provider
             android:name="dev.dworks.apps.anexplorer.provider.UsbStorageProvider"
