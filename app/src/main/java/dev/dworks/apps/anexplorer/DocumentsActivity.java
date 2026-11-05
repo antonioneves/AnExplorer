@@ -297,6 +297,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             mState = icicle.getParcelable(EXTRA_STATE);
             mAuthenticated = icicle.getBoolean(EXTRA_AUTHENTICATED);
             mActionMode = icicle.getBoolean(EXTRA_ACTIONMODE);
+            mSearchResultShown = icicle.getBoolean(EXTRA_SEARCH_STATE);
             mShowingSettings = icicle.getBoolean(EXTRA_SETTINGS);
             mShowingAbout = icicle.getBoolean(EXTRA_ABOUT);
         } else {
@@ -1684,6 +1685,7 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
                 CrashReportingManager.logException(e);
 			}
         }
+        final boolean sameFolder = anim == ANIM_NONE;
         if(!AppSettings.getFolderAnimation(this)){
             anim = 0;
         }
@@ -1710,7 +1712,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
             if (mState.currentSearch != null && mSearchResultShown) {
                 // Ongoing search
                 DirectoryFragment.showSearch(fm, root, cwd, mState.currentSearch, anim);
-                mSearchResultShown = false;
+                // Reloading the same folder keeps the results; moving to another ends them
+                mSearchResultShown = sameFolder;
             } else {
                 // Normal boring directory
                 DirectoryFragment.showNormal(fm, root, cwd, anim);
