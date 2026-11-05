@@ -22,11 +22,19 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.AdaptiveIconDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
+
+import androidx.core.graphics.ColorUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -64,6 +72,15 @@ public final class ShortcutApkBuilder {
     private static final int BANNER_WIDTH = 320;
     private static final int BANNER_HEIGHT = 180;
     private static final int BANNER_BACKGROUND = 0xFF202124;
+    private static final int BANNER_ICON_SIZE = 96;
+    private static final int BANNER_ICON_LEFT = 20;
+    private static final int BANNER_LABEL_GAP = 14;
+    private static final float BANNER_LABEL_MAX_SIZE = 32f;
+    private static final float BANNER_LABEL_MIN_SIZE = 18f;
+    private static final int ADAPTIVE_LAYER_SIZE = 108;
+    private static final int ADAPTIVE_SAFE_SIZE = 66;
+    private static final int HUE_BUCKETS = 12;
+    private static final float MIN_COLOR_WEIGHT = 8f;
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     private ShortcutApkBuilder() {
@@ -218,22 +235,143 @@ public final class ShortcutApkBuilder {
             return bitmap;
         }
 
-        final int iconSize = 92;
-        final int iconLeft = (BANNER_WIDTH - iconSize) / 2;
-        final int iconTop = 16;
-        canvas.drawBitmap(icon, null,
-                new android.graphics.Rect(iconLeft, iconTop, iconLeft + iconSize,
-                        iconTop + iconSize), null);
-
-        final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(Color.WHITE);
-        paint.setTextSize(20f);
-        paint.setTextAlign(Paint.Align.CENTER);
-        paint.setTypeface(Typeface.DEFAULT_BOLD);
-        final CharSequence text = TextUtils.ellipsize(
-                label, paint, BANNER_WIDTH - 24, TextUtils.TruncateAt.END);
-        canvas.drawText(text.toString(), BANNER_WIDTH / 2f, 152f, paint);
+        final Drawable appIcon = packageManager.getApplicationIcon(appInfo);
+        if (!drawAdaptiveIcon(canvas, appIcon)) {
+            drawIconColorBackground(canvas, icon);
+            final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
+            final int top = (BANNER_HEIGHT - BANNER_ICON_SIZE) / 2;
+            canvas.drawBitmap(icon, null, new Rect(BANNER_ICON_LEFT, top,
+                    BANNER_ICON_LEFT + BANNER_ICON_SIZE, top + BANNER_ICON_SIZE), paint);
+        }
+        drawLabel(canvas, bitmap, label);
         return bitmap;
+    }
+
+    /** Spreads the icon's background over the whole tile, so it looks made for the TV. */
+    private static boolean drawAdaptiveIcon(Canvas canvas, Drawable appIcon) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                || !(appIcon instanceof AdaptiveIconDrawable)) {
+            return false;
+        }
+        final Drawable background = ((AdaptiveIconDrawable) appIcon).getBackground();
+        final Drawable foreground = ((AdaptiveIconDrawable) appIcon).getForeground();
+        if (background == null || foreground == null) {
+            return false;
+        }
+        final int top = (BANNER_HEIGHT - BANNER_WIDTH) / 2;
+        background.setBounds(0, top, BANNER_WIDTH, top + BANNER_WIDTH);
+        background.draw(canvas);
+
+        // Only the middle of a layer is sure to show, so that part is what gets the icon's size
+        final int size = BANNER_ICON_SIZE * ADAPTIVE_LAYER_SIZE / ADAPTIVE_SAFE_SIZE;
+        final int left = BANNER_ICON_LEFT + (BANNER_ICON_SIZE - size) / 2;
+        final int foregroundTop = (BANNER_HEIGHT - size) / 2;
+        foreground.setBounds(left, foregroundTop, left + size, foregroundTop + size);
+        foreground.draw(canvas);
+        return true;
+    }
+
+    private static void drawIconColorBackground(Canvas canvas, Bitmap icon) {
+        final int color = dominantColor(icon);
+        final float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+        hsv[2] *= 0.7f;
+        final Paint paint = new Paint();
+        paint.setShader(new LinearGradient(0, 0, BANNER_WIDTH, BANNER_HEIGHT, color,
+                Color.HSVToColor(hsv), Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, BANNER_WIDTH, BANNER_HEIGHT, paint);
+    }
+
+    /** The icon's strongest colour, dimmed enough for the icon and the name to stand out on it. */
+    private static int dominantColor(Bitmap icon) {
+        final Bitmap small = Bitmap.createScaledBitmap(icon, 32, 32, true);
+        final float[] weights = new float[HUE_BUCKETS];
+        final float[] strongest = new float[HUE_BUCKETS];
+        final int[] colors = new int[HUE_BUCKETS];
+        final float[] hsv = new float[3];
+        for (int y = 0; y < small.getHeight(); y++) {
+            for (int x = 0; x < small.getWidth(); x++) {
+                final int pixel = small.getPixel(x, y);
+                Color.colorToHSV(pixel, hsv);
+                final float weight = hsv[1] * hsv[2] * Color.alpha(pixel) / 255f;
+                final int bucket = Math.min((int) (hsv[0] / 360f * HUE_BUCKETS), HUE_BUCKETS - 1);
+                weights[bucket] += weight;
+                if (weight > strongest[bucket]) {
+                    strongest[bucket] = weight;
+                    colors[bucket] = pixel;
+                }
+            }
+        }
+        small.recycle();
+
+        int best = 0;
+        for (int i = 1; i < HUE_BUCKETS; i++) {
+            if (weights[i] > weights[best]) {
+                best = i;
+            }
+        }
+        // A black, white or grey icon has no colour to borrow
+        if (weights[best] < MIN_COLOR_WEIGHT) {
+            return BANNER_BACKGROUND;
+        }
+        Color.colorToHSV(colors[best], hsv);
+        hsv[1] = Math.min(hsv[1], 0.85f);
+        hsv[2] = Math.min(hsv[2], 0.6f);
+        return Color.HSVToColor(hsv);
+    }
+
+    private static void drawLabel(Canvas canvas, Bitmap bitmap, String label) {
+        final int left = BANNER_ICON_LEFT + BANNER_ICON_SIZE + BANNER_LABEL_GAP;
+        final int width = BANNER_WIDTH - left - BANNER_LABEL_GAP;
+        final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(labelColor(bitmap, left, width));
+        paint.setTypeface(Typeface.DEFAULT_BOLD);
+
+        StaticLayout layout = null;
+        for (float size = BANNER_LABEL_MAX_SIZE; size >= BANNER_LABEL_MIN_SIZE; size -= 2) {
+            paint.setTextSize(size);
+            layout = StaticLayout.Builder.obtain(label, 0, label.length(), paint, width)
+                    .setMaxLines(2)
+                    .setEllipsize(TextUtils.TruncateAt.END)
+                    .setLineSpacing(0, 0.95f)
+                    .build();
+            if (labelFits(layout, paint, label, width)) {
+                break;
+            }
+        }
+        canvas.save();
+        canvas.translate(left, (BANNER_HEIGHT - layout.getHeight()) / 2f);
+        layout.draw(canvas);
+        canvas.restore();
+    }
+
+    /** Whether the whole name shows, with no word split across two lines. */
+    private static boolean labelFits(StaticLayout layout, TextPaint paint, String label, int width) {
+        if (layout.getEllipsisCount(layout.getLineCount() - 1) > 0) {
+            return false;
+        }
+        for (String word : label.split("\\s+")) {
+            if (paint.measureText(word) > width) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int labelColor(Bitmap bitmap, int left, int width) {
+        long red = 0, green = 0, blue = 0, count = 0;
+        for (int y = 0; y < BANNER_HEIGHT; y += 6) {
+            for (int x = left; x < left + width; x += 6) {
+                final int pixel = bitmap.getPixel(x, y);
+                red += Color.red(pixel);
+                green += Color.green(pixel);
+                blue += Color.blue(pixel);
+                count++;
+            }
+        }
+        final int average = Color.rgb((int) (red / count), (int) (green / count),
+                (int) (blue / count));
+        return ColorUtils.calculateContrast(Color.WHITE, average) >= 3 ? Color.WHITE : 0xFF202124;
     }
 
     private static void drawCenterCrop(Canvas canvas, Drawable drawable) {
