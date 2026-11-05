@@ -1848,6 +1848,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			return false;
 		}
 		final String packageName = AppsProvider.getPackageForDocId(doc.documentId);
+		if (ShortcutApkBuilder.isShortcutPackage(packageName)) {
+			return false;
+		}
 		final PackageManager manager = activity.getPackageManager();
 		return null != manager.getLeanbackLaunchIntentForPackage(packageName)
 				|| null != manager.getLaunchIntentForPackage(packageName);

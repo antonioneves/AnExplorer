@@ -53,6 +53,7 @@ import dev.dworks.apps.anexplorer.BuildConfig;
  */
 public final class ShortcutApkBuilder {
 
+    private static final String SHORTCUT_PACKAGE_PREFIX = BuildConfig.APPLICATION_ID + ".shortcut.s";
     private static final String TEMPLATE_ASSET = "shortcut-template.apk";
     private static final String TEMPLATE_PACKAGE = "dev.dworks.apps.anexplorer.shortcuttemplate";
     private static final String TEMPLATE_LABEL = "__LABEL__";
@@ -77,10 +78,14 @@ public final class ShortcutApkBuilder {
             for (int i = 0; i < 8; i++) {
                 result.append(HEX[(hash[i] >> 4) & 0x0F]).append(HEX[hash[i] & 0x0F]);
             }
-            return BuildConfig.APPLICATION_ID + ".shortcut.s" + result;
+            return SHORTCUT_PACKAGE_PREFIX + result;
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public static boolean isShortcutPackage(String packageName) {
+        return packageName.startsWith(SHORTCUT_PACKAGE_PREFIX);
     }
 
     public static File build(Context context, String packageName) throws Exception {
