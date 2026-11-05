@@ -421,9 +421,13 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					mRefocusPosition = -1;
 				} else if (mKeepTabFocus) {
 					focusSelectedTab();
-				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus
-						&& !(mAdapter.isEmpty() && hasTabs())) {
-					getListView().requestFocus();
+				} else if (!(getActivity().getCurrentFocus() instanceof EditText) && !mKeepSidebarFocus) {
+					if (mAdapter.isEmpty() && hasTabs()) {
+						// Nothing to focus in the list, and focus would otherwise fall to the sidebar
+						focusSelectedTab();
+					} else {
+						getListView().requestFocus();
+					}
 				}
 			}
 

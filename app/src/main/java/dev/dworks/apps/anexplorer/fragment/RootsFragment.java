@@ -300,6 +300,9 @@ public class RootsFragment extends Fragment {
                 }
             }
         }
+        // Empty Library roots open from Home's cards but have no row, so the last one must not stay marked
+        mList.clearChoices();
+        mList.invalidateViews();
     }
 
     private void check(int index) {
