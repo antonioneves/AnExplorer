@@ -38,6 +38,7 @@
         android:background="@drawable/item_doc_list_background" />
 
     <LinearLayout
+        android:id="@+id/doc_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="@dimen/list_item_height"

@@ -47,6 +47,8 @@ import static dev.dworks.apps.anexplorer.model.DocumentInfo.getCursorString;
 
 public class ListDocumentHolder extends DocumentHolder {
 
+    private static final float DISABLED_APP_ALPHA = 0.45f;
+
     private TextView mPosterLabel;
     private View.OnLayoutChangeListener mPosterSizer;
     private int mGridHeight;
@@ -80,6 +82,8 @@ public class ListDocumentHolder extends DocumentHolder {
 
         final boolean enabled = mEnv.isDocumentEnabled(mDoc.mimeType, mDoc.flags);
         setEnabled(enabled);
+        // Only the content: the card's focus and selection marks have to stay clear on a TV
+        content.setAlpha(mDoc.isAppDisabled() ? DISABLED_APP_ALPHA : 1f);
 
         mIconHelper.stopLoading(iconThumb);
 

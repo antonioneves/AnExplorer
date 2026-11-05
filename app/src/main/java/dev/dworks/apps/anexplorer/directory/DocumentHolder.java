@@ -42,6 +42,7 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
     protected final View line1;
     protected final View line2;
     protected final View iconView;
+    protected final View content;
 
     public DocumentHolder(Context context, ViewGroup parent, int layout,
                           OnItemClickListener onItemClickListener,
@@ -83,6 +84,7 @@ public abstract class DocumentHolder extends BaseHolder implements View.OnClickL
         line1 = itemView.findViewById(R.id.line1);
         line2 = itemView.findViewById(R.id.line2);
         iconView = itemView.findViewById(android.R.id.icon);
+        content = itemView.findViewById(R.id.doc_content);
         popupButton.setOnClickListener(this);
         popupButton.setVisibility(View.INVISIBLE);
     }
