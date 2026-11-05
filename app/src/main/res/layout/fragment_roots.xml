@@ -42,7 +42,7 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Display1"
             android:textColor="?android:attr/textColorPrimary" />
 
-        <ExpandableListView xmlns:android="http://schemas.android.com/apk/res/android"
+        <dev.dworks.apps.anexplorer.ui.RootsListView xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@android:id/list"
             android:layout_width="match_parent"
             android:layout_height="0dp"
