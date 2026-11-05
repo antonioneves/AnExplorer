@@ -109,7 +109,7 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_add_to_home">Create app shortcut</string>
     <string name="shortcut_add_title">Create app shortcut</string>
-    <string name="shortcut_add_message">Create a shortcut to %1$s in your apps list? You can then add it to your home screen favorites.</string>
+    <string name="shortcut_add_message">Create a shortcut to %1$s? It will appear with your other apps.</string>
     <string name="shortcut_add_confirm">Create</string>
     <string name="shortcut_add_progress">Creating shortcut…</string>
     <string name="shortcut_add_failed">Couldn\'t create the shortcut</string>
