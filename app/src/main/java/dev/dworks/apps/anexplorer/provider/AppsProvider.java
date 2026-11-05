@@ -204,7 +204,10 @@ public class AppsProvider extends DocumentsProvider {
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_APK);
         row.add(Document.COLUMN_LAST_MODIFIED, packageInfo.lastUpdateTime);
         row.add(Document.COLUMN_PATH, appInfo.sourceDir);
-        row.add(Document.COLUMN_FLAGS, Document.FLAG_SUPPORTS_COPY | Document.FLAG_SUPPORTS_THUMBNAIL);
+        // A disabled app looks like any other but can't be opened or get a shortcut, so the list says so
+        final int disabled = showSystem && !appInfo.enabled ? Document.FLAG_APP_DISABLED : 0;
+        row.add(Document.COLUMN_FLAGS,
+                Document.FLAG_SUPPORTS_COPY | Document.FLAG_SUPPORTS_THUMBNAIL | disabled);
     }
 
     private String getAppLabel(ApplicationInfo appInfo) {

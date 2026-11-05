@@ -425,6 +425,7 @@ public final class DocumentsContract {
         public static final int FLAG_SUPPORTS_EDIT = 1 << 18;
         public static final int FLAG_SUPPORTS_ARCHIVE = 1 << 19;
         public static final int FLAG_SUPPORTS_BOOKMARK = 1 << 20;
+        public static final int FLAG_APP_DISABLED = 1 << 21;
     }
 
     /**

@@ -177,7 +177,11 @@ public class ListDocumentHolder extends DocumentHolder {
         final View details = itemView.findViewById(R.id.details);
         final int hidden = details != null ? View.GONE : View.INVISIBLE;
 
-        if (mDoc.lastModified == -1) {
+        if (mDoc.isAppDisabled()) {
+            date.setText(R.string.app_disabled);
+            date.setVisibility(View.VISIBLE);
+            hasLine2 = true;
+        } else if (mDoc.lastModified == -1) {
             date.setText(null);
             date.setVisibility(hidden);
         } else {
