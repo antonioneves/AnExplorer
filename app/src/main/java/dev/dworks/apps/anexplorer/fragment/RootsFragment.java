@@ -75,6 +75,7 @@ import dev.dworks.apps.anexplorer.model.GroupInfo;
 import dev.dworks.apps.anexplorer.model.RootInfo;
 import dev.dworks.apps.anexplorer.provider.ExplorerProvider;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
+import dev.dworks.apps.anexplorer.provider.NonMediaDocumentsProvider;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.ui.NumberProgressBar;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
@@ -257,7 +258,12 @@ public class RootsFragment extends Fragment {
     public void onCurrentRootChanged() {
         if (mAdapter == null || mList == null) return;
 
-        final RootInfo root = ((BaseActivity) getActivity()).getCurrentRoot();
+        RootInfo root = ((BaseActivity) getActivity()).getCurrentRoot();
+        // Installed apps and System apps are tabs of APKs and have no entry of their own
+        if (null != root && root.isApp()) {
+            root = DocumentsApplication.getRootsCache(getActivity()).getRootInfo(
+                    NonMediaDocumentsProvider.TYPE_APK_ROOT, NonMediaDocumentsProvider.AUTHORITY);
+        }
         // Settings and About take the place of the current root while open, so their entry is the selected one
         final boolean settings = getActivity() instanceof DocumentsActivity
                 && ((DocumentsActivity) getActivity()).isShowingSettings();
