@@ -1245,7 +1245,19 @@ public class ExternalStorageProvider extends StorageProvider {
         final MatrixCursor result = new DirectoryCursor(
                 resolveDocumentProjection(projection), parentDocumentId, parent);
         updateSettings();
-        for (File file : parent.listFiles()) {
+        final File[] files = parent.listFiles();
+        if (null == files) {
+            if (!parent.isDirectory()) {
+                throw new FileNotFoundException("Missing folder " + parent);
+            }
+            // System folders like /system/bin exist but Android won't list them for apps
+            final Bundle extras = new Bundle();
+            extras.putString(DocumentsContract.EXTRA_ERROR,
+                    getContext().getString(R.string.folder_unreadable));
+            result.setExtras(extras);
+            return result;
+        }
+        for (File file : files) {
             includeFile(result, null, file);
         }
         return result;
