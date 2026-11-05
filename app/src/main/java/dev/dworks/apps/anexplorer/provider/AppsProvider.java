@@ -190,6 +190,10 @@ public class AppsProvider extends DocumentsProvider {
         if (appInfo == null || showSystem != isSystemApp(appInfo)) {
             return;
         }
+        // The list call also returns removed apps whose data was kept, which can't be opened
+        if ((appInfo.flags & ApplicationInfo.FLAG_INSTALLED) == 0) {
+            return;
+        }
         final String displayName = getAppLabel(appInfo);
         if (null != query && !displayName.toLowerCase().contains(query)
                 && !packageInfo.packageName.toLowerCase().contains(query)) {
