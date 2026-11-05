@@ -38,6 +38,7 @@ import android.util.SparseArray;
 import android.view.View;
 import android.widget.AbsListView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
@@ -127,6 +128,13 @@ public abstract class BaseActivity extends ActionBarActivity {
         public boolean restored = false;
         /** The folder BACK just left, so the list it returns to can focus it */
         public String backFocusDocId;
+        /**
+         * Apps still to uninstall, as the system asks about one at a time. Kept here because the
+         * directory screen is rebuilt if Android closes the app behind the confirmation.
+         */
+        public ArrayList<String> uninstallQueue = new ArrayList<>();
+        /** The row to focus on coming back from uninstall or App info, or -1 when not away */
+        public int appsReturnPosition = -1;
 
         /** Current user navigation stack; empty implies recents. */
         public DocumentStack stack = new DocumentStack();
@@ -180,6 +188,8 @@ public abstract class BaseActivity extends ActionBarActivity {
             DurableUtils.writeToParcel(out, stack);
             out.writeString(currentSearch);
             out.writeMap(dirState);
+            out.writeStringList(uninstallQueue);
+            out.writeInt(appsReturnPosition);
         }
 
         public static final ClassLoaderCreator<State> CREATOR = new ClassLoaderCreator<State>() {
@@ -209,6 +219,8 @@ public abstract class BaseActivity extends ActionBarActivity {
                 DurableUtils.readFromParcel(in, state.stack);
                 state.currentSearch = in.readString();
                 in.readMap(state.dirState, loader);
+                in.readStringList(state.uninstallQueue);
+                state.appsReturnPosition = in.readInt();
                 return state;
             }
 

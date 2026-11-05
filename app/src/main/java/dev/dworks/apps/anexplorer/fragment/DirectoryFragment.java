@@ -168,7 +168,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private boolean mKeepTabFocus;
 	// The row to focus once the selection bar closes and the files load again; -1 for none
 	private int mRefocusPosition = -1;
-	private boolean mReloadAppsOnResume;
 	private int mLastCheckedPosition = -1;
 	private final EpisodeSelection mEpisodes = new EpisodeSelection();
 	private ActionMode mEpisodeActionMode;
@@ -194,8 +193,6 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 	private DocumentInfo doc;
 	private View mAppTabs;
 	private View mVideoTabs;
-	/** Packages still to uninstall; the system asks about one app at a time */
-	private final ArrayList<String> mUninstallQueue = new ArrayList<>();
 	/** Android TV's placeholder for apps it lacks, e.g. email; it can't open anything */
 	private static final String STUB_PACKAGE = "com.android.tv.frameworkpackagestubs";
     private int mDefaultColor;
@@ -416,7 +413,9 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 					mRefocusPosition = positionOf(state.backFocusDocId);
 					state.backFocusDocId = null;
 				}
-				if (mRefocusPosition >= 0) {
+				if (state.appsReturnPosition >= 0) {
+					// The reload on resume is the one that shows the app gone, and focuses its row
+				} else if (mRefocusPosition >= 0) {
 					// The files changed after the selection bar closed, deleted ones gone
 					focusRow();
 					mRefocusPosition = -1;
@@ -704,22 +703,25 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			// Back from the player, where the viewed and viewing marks may have changed
 			mShowAdapter.notifyEpisodesChanged();
 		}
-		if (!mUninstallQueue.isEmpty()) {
+		final State state = getDisplayState(this);
+		if (!state.uninstallQueue.isEmpty()) {
 			uninstallNext();
-		} else if (mReloadAppsOnResume) {
+		} else if (state.appsReturnPosition >= 0) {
 			// Back from uninstall or App info, where the app may have gone; the reload refocuses its row
-			mReloadAppsOnResume = false;
+			mRefocusPosition = state.appsReturnPosition;
+			state.appsReturnPosition = -1;
 			AppsProvider.notifyDocumentsChanged(getActivity(), root.rootId);
 		}
 	}
 
 	/** Asks to uninstall the next queued app */
 	private void uninstallNext() {
-		final String packageName = mUninstallQueue.remove(0);
+		final ArrayList<String> queue = getDisplayState(this).uninstallQueue;
+		final String packageName = queue.remove(0);
 		try {
 			startActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + packageName)));
 		} catch (ActivityNotFoundException e) {
-			mUninstallQueue.clear();
+			queue.clear();
 			Utils.showSnackBar(getActivity(), getString(R.string.unable_to_open_app));
 		}
 	}
@@ -1811,8 +1813,7 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 
 	/** The system screen takes focus away; coming back, the list reloads and focus returns to the row */
 	private void leaveForApps() {
-		mReloadAppsOnResume = true;
-		mRefocusPosition = Math.max(mLastCheckedPosition, 0);
+		getDisplayState(this).appsReturnPosition = Math.max(mLastCheckedPosition, 0);
 	}
 
 	/** Copies the apps' APKs to the AppBackup folder, off the main thread since APKs can be large */
@@ -2070,9 +2071,10 @@ public class DirectoryFragment extends RecyclerFragment implements MenuItem.OnMe
 			clearSelection();
 			return true;
 		} else if (id == R.id.menu_uninstall) {
-			mUninstallQueue.clear();
+			final ArrayList<String> queue = getDisplayState(this).uninstallQueue;
+			queue.clear();
 			for (DocumentInfo app : docs) {
-				mUninstallQueue.add(AppsProvider.getPackageForDocId(app.documentId));
+				queue.add(AppsProvider.getPackageForDocId(app.documentId));
 			}
 			leaveForApps();
 			uninstallNext();
