@@ -391,20 +391,6 @@
     <string name="bookmark_removed">Bookmark removed</string>
     <string name="bookmark_remove">Remove bookmark?</string>
 
-    <string name="player_sleep_timer">Sleep timer</string>
-    <string name="player_sleep_off">Off</string>
-    <string name="player_sleep_minutes">%1$d minutes</string>
-    <string name="player_sleep_set">Pausing in %1$d minutes</string>
-    <string name="player_sleep_paused">Paused by the sleep timer</string>
-    <string name="player_subtitles">Subtitles</string>
-    <string name="player_subtitle_off">Off</string>
-    <string name="player_subtitle_track">Track %1$d</string>
-    <string name="player_subtitle_search">Download subtitles</string>
-    <string name="player_subtitle_searching">Looking for subtitles…</string>
-    <string name="player_subtitle_none">No subtitles found</string>
-    <string name="player_subtitle_failed">Couldn\'t get subtitles</string>
-    <string name="player_subtitle_downloading">Downloading subtitles…</string>
-    <string name="player_subtitle_choose">Choose a subtitle</string>
     <string name="pref_header_subtitles">Subtitles</string>
     <string name="pref_subtitle_language">Language (two letters, like en or pt)</string>
     <string name="pref_subdl_key">SubDL API key</string>
@@ -415,42 +401,6 @@
     <string name="pref_subtitle_size">Subtitle size</string>
     <string name="pref_subtitle_color">Subtitle color</string>
     <string name="pref_subtitle_background">Subtitle background</string>
-    <string-array name="subtitle_size_names">
-        <item>Small</item>
-        <item>Medium</item>
-        <item>Large</item>
-        <item>Extra large</item>
-    </string-array>
-    <string-array name="subtitle_size_values">
-        <item>0.04</item>
-        <item>0.0533</item>
-        <item>0.07</item>
-        <item>0.09</item>
-    </string-array>
-    <string-array name="subtitle_color_names">
-        <item>White</item>
-        <item>Yellow</item>
-        <item>Green</item>
-        <item>Cyan</item>
-        <item>Red</item>
-    </string-array>
-    <string-array name="subtitle_color_values">
-        <item>#FFFFFF</item>
-        <item>#FFEB3B</item>
-        <item>#76FF03</item>
-        <item>#18FFFF</item>
-        <item>#FF5252</item>
-    </string-array>
-    <string-array name="subtitle_background_names">
-        <item>Black</item>
-        <item>Half transparent</item>
-        <item>None, with an outline</item>
-    </string-array>
-    <string-array name="subtitle_background_values">
-        <item>#FF000000</item>
-        <item>#80000000</item>
-        <item>#00000000</item>
-    </string-array>
 
     <string name="network_dlna">Media server (DLNA)</string>
     <string name="dlna_choose">Media servers found</string>

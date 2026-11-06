@@ -33,6 +33,7 @@ import dev.dworks.apps.anexplorer.DocumentsApplication;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
 import dev.dworks.apps.anexplorer.misc.PreferenceUtils;
+import dev.dworks.apps.anexplorer.viewer.ViewerSettings;
 
 /** The app's settings, read and written in the default shared preferences; edited in {@link SettingsFragment}. */
 public class AppSettings {
@@ -55,10 +56,9 @@ public class AppSettings {
     public static final String KEY_RECYCLE_BIN = "recycleBin";
     public static final String KEY_LOCKED_FOLDER = "lockedFolder";
     public static final String KEY_STARRED = "starred";
-    public static final String KEY_RESUME_PLAYBACK = "resumePlayback";
+    public static final String KEY_RESUME_PLAYBACK = ViewerSettings.KEY_RESUME_PLAYBACK;
     public static final String KEY_VIEW_MODE = "viewMode";
     public static final String KEY_QUICKSHARE_FOLDER = "quickShareFolder";
-    public static final String KEY_SLIDESHOW_SECONDS = "slideshowSeconds";
     public static final String KEY_DROPBOX_CLIENT_ID = "dropboxClientId";
     public static final String KEY_ONEDRIVE_CLIENT_ID = "oneDriveClientId";
     public static final String KEY_BOX_CLIENT_ID = "boxClientId";
@@ -69,10 +69,10 @@ public class AppSettings {
     public static final String KEY_OPENSUBTITLES_API_KEY = "openSubtitlesApiKey";
     public static final String KEY_OPENSUBTITLES_USER = "openSubtitlesUser";
     public static final String KEY_OPENSUBTITLES_PASSWORD = "openSubtitlesPassword";
-    public static final String KEY_SUBTITLE_SIZE = "subtitleSize";
-    public static final String KEY_SUBTITLE_COLOR = "subtitleColor";
-    public static final String KEY_SUBTITLE_BACKGROUND = "subtitleBackground";
-    public static final String KEY_SUBTITLE_LANGUAGE = "subtitleLanguage";
+    public static final String KEY_SUBTITLE_SIZE = ViewerSettings.KEY_SUBTITLE_SIZE;
+    public static final String KEY_SUBTITLE_COLOR = ViewerSettings.KEY_SUBTITLE_COLOR;
+    public static final String KEY_SUBTITLE_BACKGROUND = ViewerSettings.KEY_SUBTITLE_BACKGROUND;
+    public static final String KEY_SUBTITLE_LANGUAGE = ViewerSettings.KEY_SUBTITLE_LANGUAGE;
 
     private AppSettings() {
     }
@@ -113,7 +113,7 @@ public class AppSettings {
 
     /** Whether a video left unfinished starts again from where it stopped */
     public static boolean isResumePlaybackEnabled(Context context) {
-        return prefs(context).getBoolean(KEY_RESUME_PLAYBACK, true);
+        return ViewerSettings.isResumePlaybackEnabled(context);
     }
 
     /** Whether the PIN-protected locked folder is shown */
@@ -144,15 +144,6 @@ public class AppSettings {
     public static File getDefaultQuickShareFolder() {
         return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "Quick Share");
-    }
-
-    /** How long a photo stays up in a slideshow */
-    public static int getSlideshowSeconds(Context context) {
-        return prefs(context).getInt(KEY_SLIDESHOW_SECONDS, 5);
-    }
-
-    public static void setSlideshowSeconds(Context context, int seconds) {
-        prefs(context).edit().putInt(KEY_SLIDESHOW_SECONDS, seconds).apply();
     }
 
     public static boolean isDefaultQuickShareFolder(Context context) {
@@ -196,9 +187,7 @@ public class AppSettings {
 
     /** The two-letter language code subtitles are searched in, the TV's own language unless set */
     public static String getSubtitleLanguage(Context context) {
-        final String value = prefs(context).getString(KEY_SUBTITLE_LANGUAGE, "");
-        return TextUtils.isEmpty(value.trim())
-                ? java.util.Locale.getDefault().getLanguage() : value.trim().toLowerCase(java.util.Locale.ROOT);
+        return ViewerSettings.getSubtitleLanguage(context);
     }
 
     /** The stored choice, or the default when none was made; used by the subtitle look settings */

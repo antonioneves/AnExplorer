@@ -24,6 +24,9 @@
 
     <color name="item_root_pressed">#33cccccc</color>
     <color name="item_root_focused">#66cccccc</color>
+    <!-- The player's time bar and focused buttons -->
+    <color name="viewer_accent">@color/accentColor</color>
+    <color name="viewer_focused">@color/item_root_focused</color>
     <color name="statusBarColor">#28000000</color>
     <color name="alertColor">#323232</color>
     <color name="alertDarkColor">#ff242424</color>

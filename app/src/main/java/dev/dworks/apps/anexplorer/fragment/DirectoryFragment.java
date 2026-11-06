@@ -117,7 +117,7 @@ import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.appshortcut.ShortcutApkBuilder;
 import dev.dworks.apps.anexplorer.appshortcut.ShortcutInstaller;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
-import dev.dworks.apps.anexplorer.PreviewActivity;
+import dev.dworks.apps.anexplorer.viewer.PreviewActivity;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
 
 import static android.widget.LinearLayout.VERTICAL;

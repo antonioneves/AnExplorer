@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The played part of the time bar and the focused button; the app overrides these with its own -->
+    <color name="viewer_accent">#EF3A0F</color>
+    <color name="viewer_focused">#66cccccc</color>
+</resources>

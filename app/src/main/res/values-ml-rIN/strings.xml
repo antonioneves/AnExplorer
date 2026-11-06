@@ -36,6 +36,5 @@
     <string name="root_recent" msgid="4470053704320518133">"അടുത്തിടെയുള്ളവ"</string>
     <string name="root_available_bytes" msgid="8568452858617033281">"<xliff:g id="SIZE">%1$s</xliff:g> ലഭ്യമാണ്"</string>
     <string name="empty" msgid="7858882803708117596">"ഇനങ്ങളൊന്നുമില്ല"</string>
-    <string name="toast_no_application" msgid="1339885974067891667">"ഫയൽ തുറക്കാനായില്ല"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"ചില പ്രമാണങ്ങൾ ഇല്ലാതാക്കാനായില്ല"</string>
 </resources>

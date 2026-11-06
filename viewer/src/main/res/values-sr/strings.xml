@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="toast_no_application" msgid="1339885974067891667">"Није могуће отворити датотеку"</string>
+</resources>

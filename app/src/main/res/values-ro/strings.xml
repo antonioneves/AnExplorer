@@ -36,6 +36,5 @@
     <string name="root_recent" msgid="4470053704320518133">"Recente"</string>
     <string name="root_available_bytes" msgid="8568452858617033281">"<xliff:g id="SIZE">%1$s</xliff:g> spațiu liber"</string>
     <string name="empty" msgid="7858882803708117596">"Nu există elemente"</string>
-    <string name="toast_no_application" msgid="1339885974067891667">"Fișierul nu poate fi deschis"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Unele documente nu au putut fi șterse"</string>
 </resources>

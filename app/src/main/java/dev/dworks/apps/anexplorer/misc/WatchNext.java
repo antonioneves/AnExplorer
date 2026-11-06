@@ -11,7 +11,7 @@ import androidx.tvprovider.media.tv.TvContractCompat;
 import androidx.tvprovider.media.tv.WatchNextProgram;
 
 import dev.dworks.apps.anexplorer.BuildConfig;
-import dev.dworks.apps.anexplorer.PlayerActivity;
+import dev.dworks.apps.anexplorer.viewer.PlayerActivity;
 import dev.dworks.apps.anexplorer.R;
 
 /**

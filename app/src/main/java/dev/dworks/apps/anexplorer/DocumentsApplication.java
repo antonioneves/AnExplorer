@@ -40,7 +40,9 @@ import dev.dworks.apps.anexplorer.misc.SAFManager;
 import dev.dworks.apps.anexplorer.provider.AppsProvider;
 import dev.dworks.apps.anexplorer.misc.ThumbnailCache;
 import dev.dworks.apps.anexplorer.misc.Utils;
+import dev.dworks.apps.anexplorer.misc.ViewerHost;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
+import dev.dworks.apps.anexplorer.viewer.Viewer;
 
 public class DocumentsApplication extends AppFlavour {
 	private static final long PROVIDER_ANR_TIMEOUT = 20 * DateUtils.SECOND_IN_MILLIS;
@@ -105,6 +107,8 @@ public class DocumentsApplication extends AppFlavour {
 
         mRoots = new RootsCache(this);
         mRoots.updateAsync();
+
+        Viewer.setHost(new ViewerHost());
 
         mSAFManager = new SAFManager(this);
 

@@ -166,6 +166,8 @@ import dev.dworks.apps.anexplorer.ui.PopupSpinner;
 import dev.dworks.apps.anexplorer.ui.SideMenuPopup;
 import dev.dworks.apps.anexplorer.ui.DirectoryContainerView;
 import dev.dworks.apps.anexplorer.misc.ThemeColors;
+import dev.dworks.apps.anexplorer.viewer.PlayerActivity;
+import dev.dworks.apps.anexplorer.viewer.PreviewActivity;
 
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_BROWSE;
 import static dev.dworks.apps.anexplorer.BaseActivity.State.ACTION_CREATE;

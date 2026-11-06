@@ -36,6 +36,5 @@
     <string name="root_recent" msgid="4470053704320518133">"Récents"</string>
     <string name="root_available_bytes" msgid="8568452858617033281">"<xliff:g id="SIZE">%1$s</xliff:g> disponible"</string>
     <string name="empty" msgid="7858882803708117596">"Aucun élément"</string>
-    <string name="toast_no_application" msgid="1339885974067891667">"Impossible d\'ouvrir le fichier"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Impossible de supprimer certains documents"</string>
 </resources>

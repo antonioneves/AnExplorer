@@ -125,6 +125,7 @@ tasks.named('preBuild').configure {
 
 dependencies {
     implementation project(':quickshare')
+    implementation project(':viewer')
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'me.jahnen.libaums:core:0.10.0'
     implementation 'org.apache.ftpserver:ftpserver-core:1.2.1'
@@ -150,14 +151,8 @@ implementation 'me.zhanghai.android.libarchive:library:1.1.6'
     implementation 'androidx.interpolator:interpolator:1.0.0'
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.vectordrawable:vectordrawable-animated:1.2.0'
-    // Embedded player; the ffmpeg decoder adds the audio codecs ExoPlayer lacks (DTS, AC3, ...)
+    // The launcher's Watch Next row
     implementation 'androidx.tvprovider:tvprovider:1.0.0'
-    implementation 'androidx.media3:media3-exoplayer:1.8.0'
-    implementation 'androidx.media3:media3-ui:1.8.0'
-    implementation 'androidx.media3:media3-session:1.8.0'
-    implementation 'org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1'
-    // Plays what ExoPlayer can't read (AVI, WMV, APE, ...); LGPL, so it stays a separate library
-    implementation 'org.videolan.android:libvlc-all:3.7.7'
     testImplementation 'junit:junit:4.13.2'
     // Runs Android's cursor and resource classes in the unit tests
     testImplementation 'org.robolectric:robolectric:4.16'

@@ -36,6 +36,5 @@
     <string name="root_recent" msgid="4470053704320518133">"ថ្មីៗ"</string>
     <string name="root_available_bytes" msgid="8568452858617033281">"ទំនេរ <xliff:g id="SIZE">%1$s</xliff:g>"</string>
     <string name="empty" msgid="7858882803708117596">"គ្មានធាតុ​"</string>
-    <string name="toast_no_application" msgid="1339885974067891667">"មិន​អាច​បើក​ឯកសារ"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"មិន​អាច​លុប​ឯកសារ​មួយ​ចំនួន"</string>
 </resources>

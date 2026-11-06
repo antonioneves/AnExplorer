@@ -46,20 +46,15 @@ public final class SubtitleFinder {
     }
 
     /** One subtitle a service offers */
-    public static final class Subtitle {
+    public static final class Subtitle extends dev.dworks.apps.anexplorer.viewer.Subtitle {
         final boolean subdl;
         /** SubDL's download path, or OpenSubtitles' file id */
         final String ref;
-        public final String release;
-        public final String language;
-        public final boolean hearingImpaired;
 
         Subtitle(boolean subdl, String ref, String release, String language, boolean hearingImpaired) {
+            super(release, language, hearingImpaired);
             this.subdl = subdl;
             this.ref = ref;
-            this.release = release;
-            this.language = language;
-            this.hearingImpaired = hearingImpaired;
         }
     }
 

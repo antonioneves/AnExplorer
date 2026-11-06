@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="toast_no_application">Can\'t open file</string>
+
+    <!-- Previews and the photo slideshow -->
+    <string name="preview_loading">Loading…</string>
+    <string name="preview_failed">Can\'t preview this file</string>
+    <string name="preview_page">Page %1$d of %2$d</string>
+    <string name="preview_image_position">Image %1$d of %2$d</string>
+    <string name="slideshow_play">Play</string>
+    <string name="slideshow_pause">Pause</string>
+    <string name="slideshow_playing">Slideshow playing</string>
+    <string name="slideshow_paused">Slideshow paused</string>
+    <string name="slideshow_zoom">Zoom</string>
+    <string name="slideshow_interval">%1$d s</string>
+    <string name="preview_truncated">… file continues, only the first 2 MB is shown</string>
+
+    <!-- The video and audio player -->
+    <string name="player_sleep_timer">Sleep timer</string>
+    <string name="player_sleep_off">Off</string>
+    <string name="player_sleep_minutes">%1$d minutes</string>
+    <string name="player_sleep_set">Pausing in %1$d minutes</string>
+    <string name="player_sleep_paused">Paused by the sleep timer</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_subtitle_off">Off</string>
+    <string name="player_subtitle_track">Track %1$d</string>
+    <string name="player_subtitle_search">Download subtitles</string>
+    <string name="player_subtitle_searching">Looking for subtitles…</string>
+    <string name="player_subtitle_none">No subtitles found</string>
+    <string name="player_subtitle_failed">Couldn\'t get subtitles</string>
+    <string name="player_subtitle_downloading">Downloading subtitles…</string>
+    <string name="player_subtitle_choose">Choose a subtitle</string>
+
+    <!-- Subtitle styles offered in Settings; the values are what the player reads -->
+    <string-array name="subtitle_size_names">
+        <item>Small</item>
+        <item>Medium</item>
+        <item>Large</item>
+        <item>Extra large</item>
+    </string-array>
+    <string-array name="subtitle_size_values">
+        <item>0.04</item>
+        <item>0.0533</item>
+        <item>0.07</item>
+        <item>0.09</item>
+    </string-array>
+    <string-array name="subtitle_color_names">
+        <item>White</item>
+        <item>Yellow</item>
+        <item>Green</item>
+        <item>Cyan</item>
+        <item>Red</item>
+    </string-array>
+    <string-array name="subtitle_color_values">
+        <item>#FFFFFF</item>
+        <item>#FFEB3B</item>
+        <item>#76FF03</item>
+        <item>#18FFFF</item>
+        <item>#FF5252</item>
+    </string-array>
+    <string-array name="subtitle_background_names">
+        <item>Black</item>
+        <item>Half transparent</item>
+        <item>None, with an outline</item>
+    </string-array>
+    <string-array name="subtitle_background_values">
+        <item>#FF000000</item>
+        <item>#80000000</item>
+        <item>#00000000</item>
+    </string-array>
+</resources>

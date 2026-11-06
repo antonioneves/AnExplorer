@@ -119,12 +119,5 @@
 -dontwarn javax.el.**
 -dontwarn org.ietf.jgss.**
 
-# Media3 loads the ffmpeg renderers by reflection
--keep class androidx.media3.decoder.ffmpeg.** { *; }
--keep class org.jellyfin.media3.** { *; }
-
-# libVLC is called from native code
--keep class org.videolan.libvlc.** { *; }
-
 # libarchive's native code calls back into these classes by name
 -keep class me.zhanghai.android.libarchive.** { *; }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The icon beside the photo and page counter; none unless the app's ViewerTheme sets one -->
+    <attr name="viewerCounterIcon" format="reference" />
+</resources>

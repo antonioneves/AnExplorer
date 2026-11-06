@@ -115,4 +115,9 @@
         <item name="colorControlActivated">@color/defaultThemeColor</item>
         <item name="colorControlHighlight">@color/defaultThemeColor</item>
     </style>
+
+    <!-- The previews' counter and slideshow bar, in the app's colours with its folder beside them -->
+    <style name="ViewerTheme" parent="DocumentsTheme">
+        <item name="viewerCounterIcon">@drawable/ic_app_folder</item>
+    </style>
 </resources>

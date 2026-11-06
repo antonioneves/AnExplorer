@@ -10,6 +10,7 @@ An Android file manager that now targets **Android TV only**. Every change is de
   - `misc/`: helpers. `DocumentCopier` copies and moves between different storages; `RootsCache` holds the list of roots.
 - `protocol/`: the Quick Share (Nearby Share) protocol: protobuf definitions plus framing. This is the only module with unit tests.
 - `quickshare/`: an Android library that sends (`QuickShareSender`) and receives (`QuickShareReceiver`) over Nearby Connections, on top of `protocol/`. It has no UI: the app's `QuickShareReceiveService`, `QuickShareSendActivity` and `QuickShareFragment` own the notifications, settings, strings and screens.
+- `viewer/`: an Android library with the video and audio player (`PlayerActivity`) and the previews of images, PDFs, text and Office files (`PreviewActivity`). The app supplies titles, resume points, Watch Next and subtitles through `Viewer.Host` (`misc/ViewerHost`), and overrides the `ViewerTheme` style and the `viewer_*` colours to match its own theme.
 - `web/`: the website. It isn't part of the app build.
 
 The SDK levels and version are set in the root `build.gradle` (`ext`). `minSdk` is 23 and `compileSdk`/`targetSdk` is 37.

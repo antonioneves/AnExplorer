@@ -35,7 +35,6 @@
     <string name="pref_advanced_devices" msgid="903257239609301276">"Qabaqcıl cihazları görüntüləyin"</string>
     <string name="pref_file_size" msgid="2826879315743961459">"Fayl ölçüsünü görüntüləyin"</string>
     <string name="empty" msgid="7858882803708117596">"Element yoxdur"</string>
-    <string name="toast_no_application" msgid="1339885974067891667">"Faylı aça bilmir"</string>
     <string name="toast_failed_delete" msgid="2180678019407244069">"Bəzi sənədləri silə bilmir"</string>
     <string name="loading" msgid="7933681260296021180">"Yüklənir…"</string>
 </resources>
