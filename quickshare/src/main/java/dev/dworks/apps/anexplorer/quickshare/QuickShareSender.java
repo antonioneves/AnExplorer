@@ -1,4 +1,4 @@
-package dev.dworks.apps.anexplorer.service;
+package dev.dworks.apps.anexplorer.quickshare;
 
 import android.content.Context;
 import android.net.Uri;
@@ -34,13 +34,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import dev.dworks.apps.anexplorer.misc.CrashReportingManager;
 import dev.dworks.apps.anexplorer.protocol.EndpointInfo;
 
 /**
  * Sends files with Quick Share: finds phones whose Quick Share is ready to receive, through
  * Play services' Nearby Connections under Quick Share's own service id, and speaks the sharing
- * frames {@link QuickShareReceiveService} answers, from the other side. One transfer per
+ * frames {@link QuickShareReceiver} answers, from the other side. One transfer per
  * instance; everything runs on the main thread.
  */
 public class QuickShareSender {
@@ -86,7 +85,6 @@ public class QuickShareSender {
     }
 
     private static final String TAG = "QuickShareSend";
-    private static final String SERVICE_ID = "NearbySharing";
 
     private final Context context;
     private final ConnectionsClient connectionsClient;
@@ -138,11 +136,10 @@ public class QuickShareSender {
             return;
         }
         discovering = true;
-        connectionsClient.startDiscovery(SERVICE_ID, discoveryCallback,
+        connectionsClient.startDiscovery(QuickShare.SERVICE_ID, discoveryCallback,
                         new DiscoveryOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build())
                 .addOnFailureListener(e -> {
                     Log.w(TAG, "Discovery failed", e);
-                    CrashReportingManager.logException(e);
                     discovering = false;
                     setStatus(Status.FAILED);
                 });
@@ -193,7 +190,7 @@ public class QuickShareSender {
         target = device;
         stopDiscovery();
         setStatus(Status.CONNECTING);
-        byte[] endpointInfo = EndpointInfo.serialize(QuickShareReceiveService.getDeviceName(context),
+        byte[] endpointInfo = EndpointInfo.serialize(QuickShare.getDeviceName(context),
                 EndpointInfo.DeviceType.LAPTOP);
         connectionsClient.requestConnection(endpointInfo, device.endpointId, lifecycleCallback)
                 .addOnFailureListener(this::fail);
@@ -202,7 +199,7 @@ public class QuickShareSender {
     private final ConnectionLifecycleCallback lifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo info) {
-            pin = QuickShareReceiveService.pinCode(info.getRawAuthenticationToken());
+            pin = QuickShare.pinCode(info.getRawAuthenticationToken());
             connectionsClient.acceptConnection(endpointId, payloadCallback)
                     .addOnFailureListener(QuickShareSender.this::fail);
         }
@@ -435,12 +432,7 @@ public class QuickShareSender {
     }
 
     private void sendFrame(Protocol.V1Frame.Builder v1) {
-        byte[] body = Protocol.Frame.newBuilder()
-                .setVersion(Protocol.Frame.Version.V1)
-                .setV1(v1)
-                .build()
-                .toByteArray();
-        connectionsClient.sendPayload(target.endpointId, Payload.fromBytes(body))
+        connectionsClient.sendPayload(target.endpointId, QuickShare.framePayload(v1))
                 .addOnFailureListener(this::fail);
     }
 

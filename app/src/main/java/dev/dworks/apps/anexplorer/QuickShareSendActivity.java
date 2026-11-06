@@ -24,7 +24,7 @@ import java.util.Locale;
 import dev.dworks.apps.anexplorer.common.ActionBarActivity;
 import dev.dworks.apps.anexplorer.fragment.QuickShareFragment;
 import dev.dworks.apps.anexplorer.protocol.EndpointInfo;
-import dev.dworks.apps.anexplorer.service.QuickShareSender;
+import dev.dworks.apps.anexplorer.quickshare.QuickShareSender;
 
 /**
  * Sends the files it is given with Quick Share: lists the nearby phones that are ready to

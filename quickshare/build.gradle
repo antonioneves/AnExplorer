@@ -1,0 +1,24 @@
+apply plugin: 'com.android.library'
+
+// Quick Share sending and receiving over Play services' Nearby Connections, on top of the
+// wire format in :protocol. Notifications, settings and screens stay with the app.
+android {
+    namespace "dev.dworks.apps.anexplorer.quickshare"
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdk rootProject.ext.minSdkVersion
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    // EndpointInfo is part of this library's API
+    api project(':protocol')
+    implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
+    implementation 'com.google.android.gms:play-services-nearby:19.3.0'
+    implementation 'androidx.annotation:annotation:1.9.1'
+}

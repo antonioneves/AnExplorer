@@ -9,6 +9,7 @@ An Android file manager that now targets **Android TV only**. Every change is de
   - `fragment/`: the screens (`DirectoryFragment`, `HomeFragment`, `CreateConnectionFragment`, `QuickShareFragment`, …). `DocumentsActivity` is the main activity.
   - `misc/`: helpers. `DocumentCopier` copies and moves between different storages; `RootsCache` holds the list of roots.
 - `protocol/`: the Quick Share (Nearby Share) protocol: protobuf definitions plus framing. This is the only module with unit tests.
+- `quickshare/`: an Android library that sends (`QuickShareSender`) and receives (`QuickShareReceiver`) over Nearby Connections, on top of `protocol/`. It has no UI: the app's `QuickShareReceiveService`, `QuickShareSendActivity` and `QuickShareFragment` own the notifications, settings, strings and screens.
 - `web/`: the website. It isn't part of the app build.
 
 The SDK levels and version are set in the root `build.gradle` (`ext`). `minSdk` is 23 and `compileSdk`/`targetSdk` is 37.

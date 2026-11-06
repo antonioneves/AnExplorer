@@ -1,3 +1,4 @@
 include ":app"
 include ":protocol"
+include ":quickshare"
 include ":shortcut-template"

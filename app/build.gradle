@@ -124,8 +124,7 @@ tasks.named('preBuild').configure {
 }
 
 dependencies {
-    implementation project(':protocol')
-    implementation 'com.google.protobuf:protobuf-javalite:4.36.2'
+    implementation project(':quickshare')
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'me.jahnen.libaums:core:0.10.0'
     implementation 'org.apache.ftpserver:ftpserver-core:1.2.1'
@@ -143,7 +142,6 @@ implementation 'me.zhanghai.android.libarchive:library:1.1.6'
     }
     implementation 'com.zsoltsafrany:needle:1.0.0'
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
-    implementation 'com.google.android.gms:play-services-nearby:19.3.0'
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.appcompat:appcompat:1.8.0'
     implementation 'androidx.cardview:cardview:1.0.0'

@@ -45,6 +45,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Locale;
 
 import dev.dworks.apps.anexplorer.R;
+import dev.dworks.apps.anexplorer.quickshare.QuickShare;
 import dev.dworks.apps.anexplorer.service.QuickShareReceiveService;
 import dev.dworks.apps.anexplorer.setting.AppSettings;
 import dev.dworks.apps.anexplorer.setting.FolderPickerDialog;
@@ -123,7 +124,7 @@ public class QuickShareFragment extends Fragment implements View.OnClickListener
         visibility = (TextView) view.findViewById(R.id.visibility);
         action = (Button) view.findViewById(R.id.action);
         action.setOnClickListener(this);
-        final String deviceName = QuickShareReceiveService.getDeviceName(getActivity());
+        final String deviceName = QuickShare.getDeviceName(getActivity());
         ((TextView) view.findViewById(R.id.hint)).setText(getString(R.string.quickshare_receive_hint,
                 deviceName));
         ((TextView) view.findViewById(R.id.device_name)).setText(deviceName);
