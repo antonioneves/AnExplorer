@@ -105,10 +105,11 @@ public class ConnectionsFragment extends RecyclerFragment
         getListView().addItemDecoration(new MarginDecoration(getActivity()));
 
         mEmptyGroup = view.findViewById(R.id.empty_group);
+        view.findViewById(R.id.find_servers).setOnClickListener(v -> findServers());
         view.findViewById(R.id.add_connection).setOnClickListener(this::showAddMenu);
     }
 
-    /** Hides the toolbar's add button for the one in the middle of the screen while there are none */
+    /** Hides the toolbar buttons for the ones in the middle of the screen while there are none */
     private void showEmpty(boolean empty) {
         if (mEmptyGroup != null) {
             mEmptyGroup.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -225,11 +226,17 @@ public class ConnectionsFragment extends RecyclerFragment
             add.setVisible(!mEmpty);
             showConfiguredClouds(add.getSubMenu());
         }
+        final MenuItem discover = menu.findItem(R.id.network_discover);
+        if (discover != null) {
+            discover.setVisible(!mEmpty);
+        }
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        menuItemAction(item);
+        if (menuItemAction(item)) {
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -275,7 +282,12 @@ public class ConnectionsFragment extends RecyclerFragment
     /** Looks for SMB, FTP, SFTP and WebDAV servers, and opens the form for the one picked, with its address filled in */
     private void findServers() {
         final BaseActivity activity = (BaseActivity) getActivity();
+        if(!DocumentsApplication.isPurchased()){
+            DocumentsApplication.openPurchaseActivity(activity);
+            return;
+        }
         activity.setPending(true);
+        AnalyticsManager.logEvent("find_servers");
         ServerDiscovery.find(activity, servers -> {
             activity.setPending(false);
             if (activity.isFinishing() || activity.isDestroyed()) {
@@ -421,36 +433,45 @@ public class ConnectionsFragment extends RecyclerFragment
         }
     }
 
-    public void menuItemAction(MenuItem menuItem) {
+    public boolean menuItemAction(MenuItem menuItem) {
         final BaseActivity activity = (BaseActivity) getActivity();
         if(!DocumentsApplication.isPurchased()){
             DocumentsApplication.openPurchaseActivity(activity);
-            return;
+            return true;
         }
         final int itemId = menuItem.getItemId();
         if (itemId == R.id.cloud_gdrive){
             addCloudConnection(TYPE_GDRIVE);
+            return true;
         } else if (itemId == R.id.cloud_dropbox){
             addCloudConnection(TYPE_DROPBOX);
+            return true;
         } else if (itemId == R.id.cloud_onedrive){
             addCloudConnection(TYPE_ONEDRIVE);
+            return true;
         } else if (itemId == R.id.cloud_box){
             addCloudConnection(TYPE_BOX);
+            return true;
         } else if (itemId == R.id.network_ftp){
             addConnection("ftp");
             AnalyticsManager.logEvent("add_ftp");
+            return true;
         } else if (itemId == R.id.network_webdav){
             addConnection(WebDavNetworkClient.SCHEME);
             AnalyticsManager.logEvent("add_webdav");
+            return true;
         } else if (itemId == R.id.network_smb){
             addConnection(SmbNetworkClient.SCHEME);
             AnalyticsManager.logEvent("add_smb");
+            return true;
         } else if (itemId == R.id.network_discover){
             findServers();
-            AnalyticsManager.logEvent("find_servers");
+            return true;
         } else if (itemId == R.id.network_dlna){
             findMediaServers();
             AnalyticsManager.logEvent("add_dlna");
+            return true;
         }
+        return false;
     }
 }

@@ -78,7 +78,7 @@
             android:visibility="gone"
             app:drawableTop="@drawable/ic_empty_file" />
 
-        <!-- With no connections yet, adding one is the only thing to do here -->
+        <!-- With no connections yet, finding or adding one is the only thing to do here -->
         <LinearLayout
             android:id="@+id/empty_group"
             android:layout_width="wrap_content"
@@ -104,13 +104,29 @@
                 android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
                 android:textColor="?android:attr/textColorSecondary" />
 
-            <Button
-                android:id="@+id/add_connection"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:minWidth="112dp"
-                android:text="@string/connection_add_new" />
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/find_servers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="112dp"
+                    android:text="@string/network_discover" />
+
+                <Button
+                    android:id="@+id/add_connection"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:minWidth="112dp"
+                    android:text="@string/connection_add_new" />
+            </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 

@@ -887,6 +887,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         if(menuAction(item)){
             return true;
         }
+        final ConnectionsFragment connections = ConnectionsFragment.get(getFragmentManager());
+        if (connections != null && connections.isAdded() && connections.onOptionsItemSelected(item)) {
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 

@@ -4,6 +4,12 @@
 
     <!-- The icons take the text's color, so they show on a light menu and a dark one -->
     <item
+        android:id="@+id/network_discover"
+        android:icon="@drawable/ic_connection_search"
+        android:title="@string/network_discover"
+        support:showAsAction="always" />
+
+    <item
         android:id="@+id/menu_add_connection"
         android:alphabeticShortcut="s"
         android:icon="@drawable/fab_ic_add"
@@ -64,14 +70,6 @@
                 android:orderInCategory="100"
                 support:iconTint="?attr/colorOnSurface"
                 android:title="@string/network_smb"
-                support:showAsAction="never" />
-
-            <item
-                android:id="@+id/network_discover"
-                android:icon="@drawable/ic_connection_search"
-                android:orderInCategory="100"
-                support:iconTint="?attr/colorOnSurface"
-                android:title="@string/network_discover"
                 support:showAsAction="never" />
 
             <item
