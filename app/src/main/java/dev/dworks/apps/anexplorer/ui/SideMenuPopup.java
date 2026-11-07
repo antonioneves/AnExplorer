@@ -127,8 +127,8 @@ public class SideMenuPopup {
         if (below) {
             x = Math.max(margin, Math.min(alignStart ? anchorLeft : anchorRight - width,
                     root.getWidth() - margin - width));
-            // The folder dropdown's ring sits inside the bar, so its panel tucks closer
-            y = anchorTop + anchor.getHeight() + (alignStart ? dp(context, 2) : gap);
+            // Both toolbar dropdowns drop the same distance below the bar
+            y = anchorTop + anchor.getHeight() + gap;
         } else if (anchorRight + gap + width <= root.getWidth() - margin) {
             x = anchorRight + gap;
         } else if (anchorLeft - gap - width >= margin && anchor.getWidth() < root.getWidth() / 2) {
