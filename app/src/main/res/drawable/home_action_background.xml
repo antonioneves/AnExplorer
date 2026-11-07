@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The round button at the end of a Home card: the round ring of the other icon
+     buttons, inset so it fits inside the card's rounded corner -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <inset android:inset="8dp">
+            <shape android:shape="oval">
+                <solid android:color="@color/item_root_pressed" />
+                <stroke android:width="3dp" android:color="?attr/colorSecondary" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:state_pressed="true">
+        <inset android:inset="8dp">
+            <shape android:shape="oval">
+                <solid android:color="@color/item_root_pressed" />
+            </shape>
+        </inset>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

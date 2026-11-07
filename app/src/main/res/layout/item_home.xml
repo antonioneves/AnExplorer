@@ -93,6 +93,8 @@
             <ImageButton
                 android:id="@+id/action"
                 style="@style/ButtonAppTheme"
+                android:background="@drawable/home_action_background"
+                android:defaultFocusHighlightEnabled="false"
                 android:nextFocusLeft="@id/card_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
