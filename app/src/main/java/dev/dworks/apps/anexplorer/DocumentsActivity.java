@@ -1276,6 +1276,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         final int margin = (int) (8 * density);
         // Buttons are as tall as the pill so their round highlight follows its border
         final int iconSize = (int) (36 * density);
+        // Lines the pill up with the cards, which sit half a card gap inside the list
+        final int startInset = getResources().getDimensionPixelSize(R.dimen.doc_card_spacing) / 2;
         // Puts the search button's centre where the toolbar's search icon was
         final int endInset = (int) (6 * density);
         final ColorStateList iconTint = ColorStateList.valueOf(fill);
@@ -1286,9 +1288,10 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
         pill.setGravity(Gravity.CENTER_VERTICAL);
         // The toolbar ignores margins on action views, so inset the drawn pill instead
         // The search button keeps the toolbar search icon's spot, so the pill ends just past it
-        mSearchPill = new SearchPillDrawable(background, iconSize, endInset);
+        mSearchPill = new SearchPillDrawable(background, iconSize, startInset, endInset);
         pill.setBackground(mSearchPill);
         pill.setMinimumWidth((int) (640 * density));
+        pill.setPadding(startInset, 0, 0, 0);
         pill.setLayoutParams(newSearchPillParams(margin, density));
 
         final ImageButton back = newSearchPillButton(R.drawable.abc_ic_ab_back_material, iconSize, iconTint);

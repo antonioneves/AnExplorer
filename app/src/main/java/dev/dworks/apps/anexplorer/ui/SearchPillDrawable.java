@@ -15,12 +15,14 @@ import com.google.android.material.shape.MaterialShapeDrawable;
 public class SearchPillDrawable extends Drawable {
     private final MaterialShapeDrawable mShape;
     private final int mHeight;
+    private final int mStartInset;
     private final int mEndInset;
     private float mCollapsed;
 
-    public SearchPillDrawable(MaterialShapeDrawable shape, int height, int endInset) {
+    public SearchPillDrawable(MaterialShapeDrawable shape, int height, int startInset, int endInset) {
         mShape = shape;
         mHeight = height;
+        mStartInset = startInset;
         mEndInset = endInset;
     }
 
@@ -37,7 +39,8 @@ public class SearchPillDrawable extends Drawable {
         final int right = bounds.right - mEndInset;
         // Fully collapsed it is a circle as wide as it is tall
         final int collapsedLeft = right - (bottom - top);
-        final int left = (int) (bounds.left + (collapsedLeft - bounds.left) * mCollapsed);
+        final int start = bounds.left + mStartInset;
+        final int left = (int) (start + (collapsedLeft - start) * mCollapsed);
         mShape.setBounds(left, top, right, bottom);
         mShape.draw(canvas);
     }
