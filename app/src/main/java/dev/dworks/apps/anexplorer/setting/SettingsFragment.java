@@ -1,15 +1,11 @@
 package dev.dworks.apps.anexplorer.setting;
 
 import android.app.Dialog;
-import android.app.DownloadManager;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -17,7 +13,6 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.InputType;
 import android.text.TextUtils;
-import androidx.core.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,7 +31,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import dev.dworks.apps.anexplorer.BuildConfig;
 import dev.dworks.apps.anexplorer.DocumentsActivity;
 import dev.dworks.apps.anexplorer.R;
 import dev.dworks.apps.anexplorer.common.RootsCommonFragment;
@@ -44,7 +38,6 @@ import dev.dworks.apps.anexplorer.misc.PinViewHelper;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.Trakt;
 import dev.dworks.apps.anexplorer.misc.TraktSignInActivity;
-import dev.dworks.apps.anexplorer.misc.UpdateChecker;
 import dev.dworks.apps.anexplorer.misc.Snackbars;
 import dev.dworks.apps.anexplorer.misc.Utils;
 import dev.dworks.apps.anexplorer.provider.ExternalStorageProvider;
@@ -223,9 +216,6 @@ public class SettingsFragment extends Fragment {
         addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_USER, R.string.pref_opensubtitles_user, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_OPENSUBTITLES_PASSWORD, R.string.pref_opensubtitles_password, true);
 
-        section = addSection(inflater, R.string.pref_header_about);
-        addUpdateRow(inflater, section);
-
         section = addSection(inflater, R.string.pref_header_cloud);
         addCloudKeyRow(inflater, section, AppSettings.KEY_DROPBOX_CLIENT_ID, R.string.pref_cloud_dropbox, false);
         addCloudKeyRow(inflater, section, AppSettings.KEY_ONEDRIVE_CLIENT_ID, R.string.pref_cloud_onedrive, false);
@@ -246,82 +236,6 @@ public class SettingsFragment extends Fragment {
             }
         });
         stopFocus(section.getChildAt(section.getChildCount() - 1), View.FOCUS_DOWN);
-    }
-
-    /** Asks GitHub for a newer release, and offers to download it into Downloads */
-    private void addUpdateRow(LayoutInflater inflater, ViewGroup section) {
-        final View row = addRow(inflater, section, R.drawable.ic_root_download, R.string.pref_check_update, 0);
-        final TextView summary = (TextView) row.findViewById(android.R.id.summary);
-        summary.setText(getString(R.string.pref_version, BuildConfig.VERSION_NAME));
-        row.setOnClickListener(v -> {
-            summary.setText(R.string.pref_update_checking);
-            UpdateChecker.check(BuildConfig.VERSION_NAME, new UpdateChecker.Listener() {
-                @Override
-                public void onChecked(UpdateChecker.Release newer) {
-                    summary.setText(getString(R.string.pref_version, BuildConfig.VERSION_NAME));
-                    if (getActivity() == null) {
-                        return;
-                    }
-                    if (newer == null) {
-                        showSnackbar(R.string.pref_update_latest);
-                    } else {
-                        showUpdate(newer);
-                    }
-                }
-
-                @Override
-                public void onFailed() {
-                    summary.setText(getString(R.string.pref_version, BuildConfig.VERSION_NAME));
-                    if (getActivity() != null) {
-                        showSnackbar(R.string.pref_update_failed);
-                    }
-                }
-            });
-        });
-    }
-
-    private void showUpdate(UpdateChecker.Release release) {
-        final Context context = getActivity();
-        final MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(context)
-                .setTitle(getString(R.string.pref_update_available, release.version))
-                .setNegativeButton(android.R.string.cancel, null);
-        if (release.apkUrl == null) {
-            dialog.setMessage(R.string.pref_update_no_apk);
-        } else {
-            dialog.setMessage(TextUtils.isEmpty(release.notes) ? getString(R.string.pref_update_message)
-                    : release.notes)
-                    .setPositiveButton(R.string.pref_update_download, (d, which) -> {
-                        final long id = UpdateChecker.download(context, release);
-                        showSnackbar(R.string.pref_update_downloading);
-                        offerInstall(context, release, id);
-                    });
-        }
-        dialog.show();
-    }
-
-    /** Once the APK is downloaded, asks whether to install it, so nobody has to find it in Downloads */
-    private void offerInstall(Context context, UpdateChecker.Release release, long id) {
-        final Context app = context.getApplicationContext();
-        final BroadcastReceiver done = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context c, Intent intent) {
-                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != id) {
-                    return;
-                }
-                app.unregisterReceiver(this);
-                if (!isAdded()) {
-                    return;
-                }
-                new MaterialAlertDialogBuilder(getActivity())
-                        .setTitle(getString(R.string.pref_update_downloaded, release.version))
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(R.string.pref_update_install,
-                                (d, which) -> UpdateChecker.install(app, id))
-                        .show();
-            }
-        };
-        ContextCompat.registerReceiver(app, done,
-                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED);
     }
 
     /** Signs in with a code shown on the TV, or offers to sign out when already signed in */

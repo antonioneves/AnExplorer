@@ -76,6 +76,7 @@
     <string name="name">AnExplorer</string>
     <string name="app_name">AnExplorer</string>
     <string name="app_ver">Another Explorer</string>
+    <string name="about_version">%1$s %2$s</string>
     <string name="pref_folder_size">Folder size</string>
     <string name="pref_thumbnail">Thumbnails</string>
     <string name="pref_hidden">Hidden files</string>
@@ -122,9 +123,7 @@
     <!-- Size unit, displayed in a button next to an attachment  [CHAR LIMIT=5] -->
     <string name="gigabytes"><xliff:g id="count">%s</xliff:g> GB</string>
     <string name="save">Save</string>
-    <string name="pref_header_about">About</string>
     <string name="pref_check_update">Check for updates</string>
-    <string name="pref_version">Version %1$s</string>
     <string name="pref_update_checking">Checking…</string>
     <string name="pref_update_latest">You have the latest version</string>
     <string name="pref_update_failed">Couldn\'t reach GitHub to check for updates</string>
