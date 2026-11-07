@@ -348,6 +348,7 @@ public class WebUploadServer {
             }
         }
         return new String(bytes.toByteArray(), StandardCharsets.UTF_8)
+                .replace("{{app}}", TextUtils.htmlEncode(context.getString(R.string.app_name)))
                 .replace("{{title}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_title)))
                 .replace("{{choose}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_choose)))
                 .replace("{{drop}}", TextUtils.htmlEncode(context.getString(R.string.web_upload_drop)))
