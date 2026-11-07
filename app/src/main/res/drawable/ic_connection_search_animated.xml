@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ic_connection_search while it looks: the waves pulse outward from the dot -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_connection_search_waves">
+    <target
+        android:name="inner"
+        android:animation="@animator/connection_search_inner" />
+    <target
+        android:name="outer"
+        android:animation="@animator/connection_search_outer" />
+</animated-vector>

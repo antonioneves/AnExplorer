@@ -116,7 +116,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:minWidth="112dp"
-                    android:text="@string/network_discover" />
+                    android:text="@string/network_discover"
+                    app:icon="@drawable/ic_connection_search" />
 
                 <Button
                     android:id="@+id/add_connection"
@@ -125,7 +126,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:minWidth="112dp"
-                    android:text="@string/connection_add_new" />
+                    android:text="@string/connection_add_new"
+                    app:icon="@drawable/fab_ic_add" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

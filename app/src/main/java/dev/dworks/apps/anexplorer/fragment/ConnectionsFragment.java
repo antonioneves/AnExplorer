@@ -15,7 +15,10 @@ import android.os.Bundle;
 import android.provider.BaseColumns;
 
 import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import android.graphics.drawable.Animatable;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -75,6 +78,9 @@ public class ConnectionsFragment extends RecyclerFragment
     private RootInfo mConnectionsRoot;
     private View mEmptyGroup;
     private boolean mEmpty;
+    private boolean mSearching;
+    private MenuItem mDiscoverItem;
+    private MaterialButton mFindButton;
 
     public static void show(FragmentManager fm) {
         final ConnectionsFragment fragment = new ConnectionsFragment();
@@ -105,7 +111,8 @@ public class ConnectionsFragment extends RecyclerFragment
         getListView().addItemDecoration(new MarginDecoration(getActivity()));
 
         mEmptyGroup = view.findViewById(R.id.empty_group);
-        view.findViewById(R.id.find_servers).setOnClickListener(v -> findServers());
+        mFindButton = view.findViewById(R.id.find_servers);
+        mFindButton.setOnClickListener(v -> findServers());
         view.findViewById(R.id.add_connection).setOnClickListener(this::showAddMenu);
     }
 
@@ -229,6 +236,28 @@ public class ConnectionsFragment extends RecyclerFragment
         final MenuItem discover = menu.findItem(R.id.network_discover);
         if (discover != null) {
             discover.setVisible(!mEmpty);
+            mDiscoverItem = discover;
+            showSearching(mSearching);
+        }
+    }
+
+    /** Pulses the waves of the toolbar and empty-screen icons for as long as the network is being searched */
+    private void showSearching(boolean searching) {
+        mSearching = searching;
+        final int icon = searching ? R.drawable.ic_connection_search_animated : R.drawable.ic_connection_search;
+        if (mDiscoverItem != null) {
+            mDiscoverItem.setIcon(icon);
+            start(mDiscoverItem.getIcon());
+        }
+        if (mFindButton != null) {
+            mFindButton.setIconResource(icon);
+            start(mFindButton.getIcon());
+        }
+    }
+
+    private static void start(Drawable drawable) {
+        if (drawable instanceof Animatable) {
+            ((Animatable) drawable).start();
         }
     }
 
@@ -287,9 +316,11 @@ public class ConnectionsFragment extends RecyclerFragment
             return;
         }
         activity.setPending(true);
+        showSearching(true);
         AnalyticsManager.logEvent("find_servers");
         ServerDiscovery.find(activity, servers -> {
             activity.setPending(false);
+            showSearching(false);
             if (activity.isFinishing() || activity.isDestroyed()) {
                 return;
             }
