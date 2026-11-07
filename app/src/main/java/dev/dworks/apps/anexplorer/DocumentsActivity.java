@@ -711,6 +711,8 @@ public class DocumentsActivity extends BaseActivity implements MenuItem.OnMenuIt
 
             @Override
             public boolean onMenuItemActionCollapse(MenuItem item) {
+                // Closing the field leaves the keyboard behind unless the app hides it
+                hideSearchKeyboard();
                 mSearchExpanded = mSearchResultShown = false;
                 setToolbarCollapseButtonVisible(true);
                 if (mToolbarInsetStart >= 0) {
