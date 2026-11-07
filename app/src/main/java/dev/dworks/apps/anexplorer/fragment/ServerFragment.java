@@ -152,10 +152,12 @@ public class ServerFragment extends Fragment implements View.OnClickListener {
     }
 
     private void showPassword() {
-        // Anonymous access has no password to show
+        // Anonymous access has no password to show: hide the row but keep its space, so the
+        // card doesn't jump when the authentication changes
         final boolean hasPassword = !TextUtils.isEmpty(passwordValue);
-        passwordRow.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
+        passwordRow.setVisibility(hasPassword ? View.VISIBLE : View.INVISIBLE);
         if (!hasPassword) {
+            password.setText("");
             return;
         }
         if (passwordShown || null == passwordVisibility) {
